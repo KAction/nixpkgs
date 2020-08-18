@@ -27481,4 +27481,6 @@ in
   gpio-utils = callPackage ../os-specific/linux/kernel/gpio-utils.nix { };
 
   navidrome = callPackage ../servers/misc/navidrome {};
+
+  psftools = callPackage ../os-specific/linux/psftools {};
 }
