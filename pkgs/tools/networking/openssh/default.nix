@@ -72,6 +72,15 @@ stdenv.mkDerivation rec {
     # Setting LD causes `configure' and `make' to disagree about which linker
     # to use: `configure' wants `gcc', but `make' wants `ld'.
     unset LD
+  ''
+  # During static build, configure flag fails to recognize "libedit",
+  # since it uses "pkg-config" which reports "-ledit" LDFLAGS, while
+  # "-ledit -lncurses" actually needed (this is what used if pkg-config
+  # is not available). Not sure why it works during dynamic build.
+  #
+  #     ~kaction
+  + optionalString stdenv.hostPlatform.isStatic ''
+    export NIX_LDFLAGS="$NIX_LDFLAGS -lncurses"
   '';
 
   # I set --disable-strip because later we strip anyway. And it fails to strip
