@@ -81,6 +81,9 @@ stdenv.mkDerivation rec {
   #     ~kaction
   + optionalString stdenv.hostPlatform.isStatic ''
     export NIX_LDFLAGS="$NIX_LDFLAGS -lncurses"
+  ''
+  + optionalString (stdenv.hostPlatform.isStatic && withKerberos) ''
+    export NIX_LDFLAGS="$NIX_LDFLAGS -lkrb5 -lk5crypto -lcom_err -lkrb5support -lkeyutils"
   '';
 
   # I set --disable-strip because later we strip anyway. And it fails to strip
