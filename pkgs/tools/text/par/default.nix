@@ -1,6 +1,10 @@
 {stdenv, fetchurl, fetchpatch}:
+let
+  isCross = stdenv.buildPlatform != stdenv.hostPlatform;
+  cross = "${stdenv.hostPlatform.config}";
 
-stdenv.mkDerivation {
+  cc = if !isCross then "cc" else "${cross}-cc";
+in stdenv.mkDerivation {
   pname = "par";
   version = "1.52";
 
@@ -18,7 +22,7 @@ stdenv.mkDerivation {
     })
   ];
 
-  buildPhase = ''make -f protoMakefile'';
+  buildPhase = ''make -f protoMakefile CC="${cc} -c" LINK1=${cc}'';
 
   installPhase = ''
     mkdir -p $out/bin
