@@ -67,13 +67,18 @@ stdenv.mkDerivation {
     "--with-guile-site-dir=\${out}/share/guile/site"
     "--with-guile-site-ccache-dir=\${out}/share/guile/site"
     "--with-guile-extension-dir=\${out}/share/guile/site"
+  ] ++ lib.optional stdenv.hostPlatform.isStatic [
+    "--without-p11-kit"
   ];
 
   enableParallelBuilding = true;
 
-  buildInputs = [ lzo lzip libtasn1 libidn p11-kit zlib gmp autogen libunistring unbound gettext libiconv ]
+  buildInputs = [ lzo lzip libtasn1 libidn zlib gmp autogen libunistring unbound gettext libiconv ]
     ++ lib.optional (isDarwin && withSecurity) Security
     ++ lib.optional (tpmSupport && stdenv.isLinux) trousers
+    # p11-kit does not support static build, which is reported by its
+    # configure script.
+    ++ lib.optional (!stdenv.hostPlatform.isStatic) p11-kit
     ++ lib.optional guileBindings guile;
 
   nativeBuildInputs = [ perl pkgconfig ]
