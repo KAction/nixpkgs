@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, ncurses, autoreconfHook, flex }:
+{ stdenv, fetchurl, ncurses, autoreconfHook, flex, lib }:
 let rev = "431604647f89d5aac7b199a7883e98e56e4ccf9e";
 in stdenv.mkDerivation rec {
   pname = "mmh-unstable";
@@ -9,6 +9,10 @@ in stdenv.mkDerivation rec {
     name = "mmh-${rev}.tgz";
     sha256 = "1q97p4g3f1q2m567i2dbx7mm7ixw3g91ww2rymwj42cxk9iyizhv";
   };
+
+  postPatch = lib.optional (stdenv.buildPlatform != stdenv.hostPlatform) ''
+    sed -i 's/ar /${stdenv.hostPlatform.config}-ar /' sbr/Makefile.in
+ '';
 
   buildInputs = [ ncurses ];
   nativeBuildInputs = [ autoreconfHook flex ];
