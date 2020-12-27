@@ -37,8 +37,28 @@ stdenv.mkDerivation rec {
       sha256 = "0lg4l9phvy2n8gy17qsn6zn0qq52vm8g01pgq5kqpr8sd3fb21c2";
     })
   ];
-  preConfigure = ''
+
+  preConfigure = with stdenv; ''
     ./autogen.sh
+  ''
+  # Upstream does not use Automake and write Makefile.in manually. Of
+  # course, they forgot to handle --disable-shared case.
+  #
+  # Also we now need to fix build of example programs, which must be
+  # linked with src/lib/libgpm.a
+  + lib.optionalString hostPlatform.isStatic ''
+    sed -i 's#SHLIB=libgpm.so#SHLIB=#' configure
+    sed -i 's#lib/libgpm.so.@abi_lev@##' src/Makefile.in
+
+    sed -i 's#prog/%.o$#prog/%.o lib/libgpm.a#' src/Makefile.in
+    echo 'prog/gpm-root: LIBS += lib/libgpm.a' >> src/Makefile.in
+    echo 'prog/mouse-test: LIBS += lib/libgpm.a' >> src/Makefile.in
+
+  ''
+  # Upstream build system does not support cross-compilation either,
+  # assuming that unprefixed ar(1) is in PATH.
+  + lib.optionalString (hostPlatform != buildPlatform) ''
+    sed -i 's#= ar#= ${hostPlatform.config}-ar#' Makefile.include.in
   '';
 
   configureFlags = [
@@ -48,7 +68,7 @@ stdenv.mkDerivation rec {
   ];
 
   # Provide libgpm.so for compatability
-  postInstall = ''
+  postInstall = stdenv.lib.optionalString (!stdenv.hostPlatform.isStatic) ''
     ln -sv $out/lib/libgpm.so.2 $out/lib/libgpm.so
   '';
 
