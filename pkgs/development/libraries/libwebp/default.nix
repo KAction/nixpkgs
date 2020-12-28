@@ -50,6 +50,11 @@ stdenv.mkDerivation rec {
     (mkFlag libwebpdecoderSupport "libwebpdecoder")
   ];
 
+  # Without this tweak examples fail to link with undefined reference.
+  preBuild = with stdenv; lib.optionalString hostPlatform.isStatic ''
+    makeFlagsArray=(LIBS='-lz ${lib.optionalString tiffSupport "-llzma -ljpeg"}')
+  '';
+
   buildInputs = [ ]
     ++ optionals openglSupport [ freeglut libGL libGLU ]
     ++ optional pngSupport libpng
