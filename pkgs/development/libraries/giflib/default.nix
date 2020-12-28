@@ -19,6 +19,12 @@ stdenv.mkDerivation rec {
   postPatch = ''
     substituteInPlace Makefile \
       --replace 'PREFIX = /usr/local' 'PREFIX = ${builtins.placeholder "out"}'
+  ''
+  # Upstream Makefile builds shared library unconditionally.
+  + stdenv.lib.optionalString stdenv.hostPlatform.isStatic ''
+    sed -i -e '/all:/s#libgif.so##' -e '/all:/s#libutil.so##' Makefile
+    sed -i -e '/-m 755 libgif.so/ d' Makefile
+    sed -i -e '/ln -sf/ d' Makefile
   '';
 
   nativeBuildInputs = stdenv.lib.optionals stdenv.isDarwin [ fixDarwinDylibNames ];
