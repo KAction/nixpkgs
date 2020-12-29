@@ -20,6 +20,10 @@ stdenv.mkDerivation {
     "--x-includes=${libX11.dev}/include"
     "--x-libraries=${libX11.out}/lib"
   ];
+  preConfigure = with stdenv; lib.optionalString hostPlatform.isStatic ''
+    sed -i 's#SUPPORT_LIBS=""#SUPPORT_LIBS="-llzma"#' configure
+    sed -i 's#-ljpeg#-ljpeg -llzma#g' configure
+  '';
 
   buildInputs = [libjpeg libXext libX11 xorgproto libtiff libungif libpng];
 
