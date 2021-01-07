@@ -26,6 +26,8 @@ stdenv.mkDerivation rec {
     install_name_tool -id $out/lib/libadns.so.${suffix} $out/lib/libadns.so.${suffix}
   '';
 
+  makeFlags = stdenv.lib.optional stdenv.hostPlatform.isStatic "ENABLE_DYNAMIC=no";
+
   # darwin executables fail, but I don't want to fail the 100-500 packages depending on this lib
   doInstallCheck = !stdenv.isDarwin;
   installCheckPhase = ''
