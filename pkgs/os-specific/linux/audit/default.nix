@@ -53,8 +53,56 @@ stdenv.mkDerivation rec {
     )
   ];
 
-  prePatch = ''
+  # Executables in src/ directory are built from source files in src/
+  # and are linked to libauparse, with both src/auditd-config.c and
+  # auparse/auditd-config.c defining "free_config" function.
+  #
+  # It is known (although obscure) behaviour of shared libraries that
+  # symbol defined in binary itself overrides symbol in shared library;
+  # with static linkage it expectedly results in multiple definition
+  # error.
+  #
+  # This set of fixes explicitly marks libauparse versions of
+  # conflicting functions as weak to have behaviour coherent with
+  # dynamic linkage version -- definitions in src/ overriding definition
+  # in auparse/.
+  #
+  # According to https://stackoverflow.com/questions/13089166
+  # --whole-archive linker flag is required to be sure that linker
+  # correctly chooses strong version of symbol regardless of order of
+  # object files at command line.
+  #
+  # Still, this architecture is very strange and confusing.
+  prePatch = let weak = "__attribute__((weak)) "; in ''
     sed -i 's,#include <sys/poll.h>,#include <poll.h>\n#include <limits.h>,' audisp/audispd.c
+
+    cat << EOF >> auparse/auditd-config.c
+    #pragma weak clear_config
+    #pragma weak free_config
+    EOF
+
+    cat << EOF >> auparse/nvlist.c
+    #pragma weak nvlist_create
+    #pragma weak nvlist_append
+    #pragma weak nvlist_clear
+    #pragma weak nvlist_next
+    EOF
+
+    cat << EOF >> auparse/strsplit.c
+    #pragma weak audit_strsplit
+    EOF
+
+    cat << EOF >> lib/strsplit.c
+    #pragma weak audit_strsplit_r
+    EOF
+
+    cat << EOF >> auparse/interpret.c
+    #pragma weak aulookup_destroy_uid_list
+    #pragma weak interpret
+    #pragma weak audit_strsplit_r
+    EOF
+  '' + stdenv.lib.optionalString stdenv.targetPlatform.isStatic ''
+    export LDFLAGS=-Wl,--whole-archive
   '';
   meta = {
     description = "Audit Library";
