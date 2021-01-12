@@ -44,6 +44,11 @@ stdenv.mkDerivation rec {
 
   preConfigure = ''
     export MAN_PAGE_DATE=$(date '+%Y-%m-%d' -d "@$SOURCE_DATE_EPOCH")
+  ''
+  # We need to pass -lz to statically link to libxml2. Otherwise it
+  # would fail with undefined reference to "gzopen".
+  + stdenv.lib.optionalString stdenv.hostPlatform.isStatic ''
+    configureFlagsArray+=("--with-libxml2-libs=-lxml2 -lz")
   '';
 
   configureFlags =
@@ -62,7 +67,9 @@ stdenv.mkDerivation rec {
       # the configure check for regcomp wants to run a host program
       "libopts_cv_with_libregex=yes"
       #"MAKEINFO=${buildPackages.texinfo}/bin/makeinfo"
-    ]);
+    ]) ++ stdenv.lib.optionals stdenv.hostPlatform.isStatic [
+      "--disable-rpath"
+    ];
 
   #doCheck = true; # not reliable
 
@@ -76,7 +83,8 @@ stdenv.mkDerivation rec {
       sed -e "s|$lib/lib|/no-such-autogen-lib-path|" -i $f
     done
 
-  '' + stdenv.lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
+  '' + stdenv.lib.optionalString
+    (!stdenv.hostPlatform.isDarwin && !stdenv.hostPlatform.isStatic) ''
     # remove /build/** from RPATHs
     for f in "$bin"/bin/*; do
       local nrp="$(patchelf --print-rpath "$f" | sed -E 's@(:|^)/build/[^:]*:@\1@g')"
