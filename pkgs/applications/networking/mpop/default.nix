@@ -15,6 +15,13 @@ stdenv.mkDerivation rec {
   buildInputs = [ gnutls gsasl libidn ]
     ++ optional stdenv.isDarwin Security;
 
+  # I searched generated ./configure script and it does not look like it
+  # knows that sometimes pkg-config must be called with --static flag,
+  # so let us force it as needed.
+  preConfigure = optionalString stdenv.hostPlatform.isStatic ''
+    PKG_CONFIG="$PKG_CONFIG --static"
+  '';
+
   configureFlags = optional stdenv.isDarwin [ "--with-macosx-keyring" ];
 
   meta = {
