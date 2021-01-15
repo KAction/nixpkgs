@@ -4,6 +4,7 @@
 , guileBindings ? config.gnutls.guile or false, guile
 , tpmSupport ? false, trousers, which, nettools, libunistring
 , withSecurity ? false, Security  # darwin Security.framework
+, autoreconfHook
 }:
 
 assert guileBindings -> guile != null;
@@ -53,6 +54,11 @@ stdenv.mkDerivation {
     sed 's:/usr/lib64/pkcs11/ /usr/lib/pkcs11/ /usr/lib/x86_64-linux-gnu/pkcs11/:`pkg-config --variable=p11_module_path p11-kit-1`:' -i tests/p11-kit-trust.sh
   '' + lib.optionalString stdenv.hostPlatform.isMusl '' # See https://gitlab.com/gnutls/gnutls/-/issues/945
     sed '2iecho "certtool tests skipped in musl build"\nexit 0' -i tests/cert-tests/certtool
+  ''
+  # For some reason libtool gets confused and tries to link static
+  # library just built to libstdc++.so from gcc. Not essential.
+  + lib.optionalString stdenv.hostPlatform.isStatic ''
+    sed -ri -e '/ex[-_]cxx/ d' doc/examples/Makefile.am
   '';
 
   preConfigure = "patchShebangs .";
@@ -82,6 +88,7 @@ stdenv.mkDerivation {
     ++ lib.optional guileBindings guile;
 
   nativeBuildInputs = [ perl pkgconfig ]
+    ++ lib.optionals stdenv.hostPlatform.isStatic [ autoreconfHook ]
     ++ lib.optionals (isDarwin && !withSecurity) [ autoconf automake ]
     ++ lib.optionals doCheck [ which nettools util-linux ];
 
