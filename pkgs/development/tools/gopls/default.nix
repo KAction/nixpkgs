@@ -11,6 +11,11 @@ buildGoModule rec {
     sha256 = "sha256-aaRaStQ35a/SK4YIR5rjvp8gPxvoNuhLh2AGbr0c6p4=";
   };
 
+  # Fix privacy breach.
+  postPatch = ''
+    find -type f | xargs sed -i 's/utm_source=gopls//g'
+  '';
+
   modRoot = "gopls";
   vendorSha256 = "sha256-8+sWd48w+ghQzznobBPcCQMuc9HLgOuAZPwD6lbbfj8=";
 
