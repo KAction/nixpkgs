@@ -1005,6 +1005,8 @@ in
 
   terminator = callPackage ../applications/terminal-emulators/terminator { };
 
+  terminal-colors = callPackage ../applications/misc/terminal-colors { };
+
   terminus = callPackage ../applications/terminal-emulators/terminus { };
 
   termite = callPackage ../applications/terminal-emulators/termite/wrapper.nix {
