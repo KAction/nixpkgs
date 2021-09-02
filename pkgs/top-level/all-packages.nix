@@ -13906,7 +13906,7 @@ with pkgs;
 
   gnome-video-effects = callPackage ../development/libraries/gnome-video-effects { };
 
-  gnum4 = callPackage ../development/tools/misc/gnum4 { };
+  gnum4 = callPackage ../development/tools/misc/gnum4 { bootstrap = false; };
   m4 = gnum4;
 
   gnumake = callPackage ../development/tools/build-managers/gnumake { };

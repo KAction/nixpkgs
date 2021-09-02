@@ -227,10 +227,11 @@ in
     name = "bootstrap-stage2";
 
     overrides = self: super: {
+      gnum4 = prevStage.gnum4.override { bootstrap = true; };
       inherit (prevStage)
         ccWrapperStdenv
         gcc-unwrapped coreutils gnugrep
-        perl gnum4 bison;
+        perl bison;
       dejagnu = super.dejagnu.overrideAttrs (a: { doCheck = false; } );
 
       # We need libidn2 and its dependency libunistring as glibc dependency.
