@@ -8812,6 +8812,8 @@ in {
 
   sphinx-serve = callPackage ../development/python-modules/sphinx-serve { };
 
+  sphinx-tabs = callPackage ../development/python-modules/sphinx-tabs { };
+
   sphinx-testing = callPackage ../development/python-modules/sphinx-testing { };
 
   sphinxext-opengraph = callPackage ../development/python-modules/sphinxext-opengraph { };
