@@ -73,6 +73,15 @@ stdenv.mkDerivation rec {
     CONFIG_CTRL_IFACE_DBUS=y
     CONFIG_CTRL_IFACE_DBUS_NEW=y
     CONFIG_CTRL_IFACE_DBUS_INTRO=y
+  ''
+    # Upstream uses conditionals based on ifdef, so opposite of =y is
+    # not =n, as one may expect, but undefine.
+    #
+    # This config is sourced into makefile.
+    + optionalString (!dbusSupport) ''
+    undefine CONFIG_CTRL_IFACE_DBUS
+    undefine CONFIG_CTRL_IFACE_DBUS_NEW
+    undefine CONFIG_CTRL_IFACE_DBUS_INTRO
   '' + (if withReadline then ''
     CONFIG_READLINE=y
   '' else ''
