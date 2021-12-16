@@ -54,7 +54,9 @@ let
                   else "$out/lib/${ghc.targetPrefix}${ghc.haskellCompilerName}";
   docDir        = "$out/share/doc/ghc/html";
   packageCfgDir = "${libDir}/package.conf.d";
-  paths         = lib.filter (x: x ? isHaskellLibrary) (lib.closePropagation packages);
+  paths'1         = lib.filter (x: x ? isHaskellLibrary) (lib.closePropagation packages);
+  paths'2 = map (x: x.doc or null) paths'1;
+  paths = lib.filter (x: x != null) (paths'1 ++ paths'2 ++ [ghc.doc]);
   hasLibraries  = lib.any (x: x.isHaskellLibrary) paths;
   # CLang is needed on Darwin for -fllvm to work:
   # https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/codegens.html#llvm-code-generator-fllvm
