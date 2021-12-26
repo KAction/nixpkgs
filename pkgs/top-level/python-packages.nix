@@ -10520,6 +10520,8 @@ self: super: with self; {
 
   sphinx = callPackage ../development/python-modules/sphinx { };
 
+  sphinx-aiohttp-theme = callPackage ../development/python-modules/sphinx-aiohttp-theme { };
+
   sphinx-argparse = callPackage ../development/python-modules/sphinx-argparse { };
 
   sphinx-autobuild = callPackage ../development/python-modules/sphinx-autobuild { };
