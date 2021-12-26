@@ -1,9 +1,10 @@
 { lib, buildPythonPackage, fetchFromGitHub
-, requests, urllib3, mock, setuptools, stone }:
+, requests, urllib3, mock, setuptools, stone, sphinxHook }:
 
 buildPythonPackage rec {
   pname = "dropbox";
   version = "11.25.0";
+  outputs = ["out" "doc"];
 
   src = fetchFromGitHub {
     owner = "dropbox";
@@ -18,6 +19,8 @@ buildPythonPackage rec {
   '';
 
   propagatedBuildInputs = [ requests urllib3 mock setuptools stone ];
+
+  nativeBuildInputs = [ sphinxHook ];
 
   # Set DROPBOX_TOKEN environment variable to a valid token.
   doCheck = false;
