@@ -10514,6 +10514,8 @@ self: super: with self; {
     texLive = pkgs.texlive.combine { inherit (pkgs.texlive) scheme-small standalone pgfplots; };
   };
 
+  sphinxcontrib-towncrier = callPackage ../development/python-modules/sphinxcontrib-towncrier { };
+
   sphinxcontrib-websupport = callPackage ../development/python-modules/sphinxcontrib-websupport { };
 
   sphinx = callPackage ../development/python-modules/sphinx { };
