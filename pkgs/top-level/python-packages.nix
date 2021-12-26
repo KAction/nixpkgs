@@ -8739,7 +8739,9 @@ in {
 
   selenium = callPackage ../development/python-modules/selenium { };
 
-  semantic-version = callPackage ../development/python-modules/semantic-version { };
+  semantic-version = (callPackage ../development/python-modules/semantic-version { }).latest;
+
+  semantic-version_2_6 = (callPackage ../development/python-modules/semantic-version { }).release_2_6;
 
   semver = callPackage ../development/python-modules/semver { };
 

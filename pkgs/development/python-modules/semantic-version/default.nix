@@ -1,20 +1,32 @@
 { lib, fetchPypi, buildPythonPackage }:
 
-buildPythonPackage rec {
-  pname = "semantic_version";
-  version = "2.8.5";
+let f = { version, sha256 }:
+  buildPythonPackage rec {
+    pname = "semantic_version";
+    inherit version;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "d2cb2de0558762934679b9a104e82eca7af448c9f4974d1f3eeccff651df8a54";
+    src = fetchPypi {
+      inherit pname version sha256;
+    };
+
+    # ModuleNotFoundError: No module named 'tests'
+    doCheck = false;
+
+    meta = with lib; {
+      description = "A library implementing the 'SemVer' scheme";
+      license = licenses.bsdOriginal;
+      maintainers = with maintainers; [ layus makefu ];
+    };
+  };
+in {
+  latest = f {
+    version = "2.8.5";
+    sha256 = "0m4avx8zdkzc7qglv5zlr54g8yna5vl098drg5396ql7aph2vjyj";
   };
 
-  # ModuleNotFoundError: No module named 'tests'
-  doCheck = false;
-
-  meta = with lib; {
-    description = "A library implementing the 'SemVer' scheme";
-    license = licenses.bsdOriginal;
-    maintainers = with maintainers; [ layus makefu ];
+  # We need version < 2.7 as dependency of sphinx-releases. Sigh.
+  release_2_6 = f {
+    version = "2.6.0";
+    sha256 = "1h2l9xyg1zzsda6kjcmfcgycbvrafwci283vcr1v5sbk01l2hhra";
   };
 }
