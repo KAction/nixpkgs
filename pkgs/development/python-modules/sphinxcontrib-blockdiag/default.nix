@@ -26,6 +26,12 @@ buildPythonPackage rec {
     ${python.interpreter} -m unittest discover -s tests
   '';
 
+  # For some reason upstream build system does not install __init__.py, so
+  # "import sphinxcontrib.blockdiag" does not work.
+  postInstall = ''
+    cp sphinxcontrib/__init__.py $out/lib/python*/site-packages/sphinxcontrib/
+  '';
+
   meta = with lib; {
     description = "Sphinx blockdiag extension";
     homepage = "https://github.com/blockdiag/sphinxcontrib-blockdiag";
