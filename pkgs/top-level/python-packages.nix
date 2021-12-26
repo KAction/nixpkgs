@@ -9154,6 +9154,7 @@ in {
 
   sphinx_rtd_theme = callPackage ../development/python-modules/sphinx_rtd_theme { };
 
+  sphinx-releases = callPackage ../development/python-modules/sphinx-releases {};
   sphinx-serve = callPackage ../development/python-modules/sphinx-serve { };
 
   sphinx-testing = callPackage ../development/python-modules/sphinx-testing { };
