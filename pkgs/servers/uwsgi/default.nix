@@ -75,7 +75,7 @@ stdenv.mkDerivation rec {
         ./additional-php-ldflags.patch
   ];
 
-  nativeBuildInputs = [ python3 pkg-config makeWrapper ];
+  nativeBuildInputs = [ python3 pkg-config makeWrapper python3.pkgs.sphinxHook ];
 
   buildInputs =  [ jansson pcre libxcrypt ]
               ++ lib.optionals (stdenv.isDarwin && stdenv.isAarch64) [ expat zlib ]
@@ -94,6 +94,14 @@ stdenv.mkDerivation rec {
 
   passthru = {
     inherit python2 python3;
+  };
+
+  # Documentation is maintained separately, without any releases.
+  sphinxRoot = fetchFromGitHub {
+    owner = "unbit";
+    repo = "uwsgi-docs";
+    rev = "d278af14178fab1297c284b52265e37e519c40bc";
+    sha256 = "0v9yazd45kp0g77if0fqmqz0253asz1p6vr16zrmmn7wmj3szi9g";
   };
 
   postPatch = ''
