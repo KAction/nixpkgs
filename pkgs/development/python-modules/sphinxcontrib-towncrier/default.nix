@@ -23,7 +23,7 @@ buildPythonPackage rec {
 
   checkInputs = [ pytest ];
 
-  pythonImportsCheck = [ "sphinxcontrib.towncrier" ];
+  # pythonImportsCheck = [ "sphinxcontrib.towncrier" ];
 
   meta = with lib; {
     description = "RST directive for injecting towncrier-generated changelog";
