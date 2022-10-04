@@ -15,7 +15,7 @@ python3Packages.buildPythonApplication rec {
     click
     httpie
     parsimonious
-    (python.pkgs.callPackage ../../../development/python-modules/prompt-toolkit/1.nix {})
+    prompt-toolkit_1
     pygments
     six
     pyyaml
