@@ -17583,6 +17583,8 @@ with pkgs;
 
   sawjap = callPackage ../development/tools/java/sawjap { };
 
+  saws = callPackage ../tools/admin/saws { };
+
   sd-local = callPackage ../development/tools/sd-local { };
 
   seer = libsForQt5.callPackage ../development/tools/misc/seer { };
