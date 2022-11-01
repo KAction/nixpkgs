@@ -20,9 +20,6 @@ stdenv.mkDerivation rec {
     sha256 = "9uOQ2Ta5HzEpbCz2vbqZEEksPuIjL8lvmfmynfqxMeM=";
   };
 
-  # otherwise confuses ./configure
-  dontDisableStatic = true;
-
   configureFlags = [
     (lib.optionalString withTimestamp "--with-timestamp") # to allow the "persist" setting
     (lib.optionalString (!withPAM) "--without-pam")
@@ -34,8 +31,14 @@ stdenv.mkDerivation rec {
     ./0001-add-NixOS-specific-dirs-to-safe-PATH.patch
   ];
 
+  # Standard environment supports "dontDisableStatic" knob, but has no
+  # equivalent for "--disable-shared", so I have to patch "configure"
+  # script instead.
   postPatch = ''
     sed -i '/\(chown\|chmod\)/d' GNUmakefile
+    sed -i '/unknown option/d' configure
+  '' + lib.optionalString (withPAM && stdenv.hostPlatform.isStatic) ''
+    sed -i 's/-lpam/-lpam -laudit/' configure
   '';
 
   nativeBuildInputs = [ bison ];
