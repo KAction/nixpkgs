@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+commit=${1?Commit is not specified}
+commit=$(git log -n1 --format=%H "$commit")
+echo "https://github.com/NixOS/nixpkgs/commit/${commit}.patch"
