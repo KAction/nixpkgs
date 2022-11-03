@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+commit=${1?Commit is not specified}
+commit=$(git log -n1 --format=%H "$commit")
+
+branch=$(git log -n1 --format=%s "$commit" | awk -F: '{ print "patch/v1/" $1 }')
+git branch -D "$branch" 2>/dev/null || :
+git checkout -b "$branch" master
+git cherry-pick "$commit"
+git push fork HEAD -f
+nix-build -A "${branch#patch/v1/}"
