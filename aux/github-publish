@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+trap 'git checkout experimental' EXIT
+commit=${1?Commit is not specified}
+base=${2:-master}
+commit=$(git log -n1 --format=%H "$commit")
+
+branch=$(git log -n1 --format=%s "$commit" | awk -F: '{ print "patch/v1/" $1 }')
+attr="${branch#patch/v1/}"
+
+git branch -D "$branch" 2>/dev/null || :
+git checkout -b "$branch" "$base"
+git cherry-pick "$commit"
+git push fork HEAD -f
+nix-build -A "${attr}"
+gist=$(nix log $(nix-instantiate -A "$attr") | sed -E 's/\\e[^\\]*m//g' | :gh gist create --public)
+
+maintainers=$(nix eval --raw --impure --expr "
+	with (import ./. {});
+	builtins.concatStringsSep \" \" (map (x: \"@\${x.github}\") $attr.meta.maintainers)
+")
+title=$(git log -n1 --format=%s "$commit")
+body=$(git log -n1 --format=%b "$commit")
+:gh pr create --base "$base" --title "$title" --body "
+$body
+
+maintainers: $maintainers
+build log on x86_64 NixOS: $gist
+"
