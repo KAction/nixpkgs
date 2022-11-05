@@ -36,8 +36,10 @@ stdenv.mkDerivation rec {
     sha256 = "0b4i00chvx6zj9pcb06x2jysmrcb2znn831lcy32cgfds6gr3nsi";
   });
 
+  nativeBuildInputs = [ which perl ];
+
   buildInputs =
-    [ ncurses which perl ]
+    [ ncurses ]
     ++ lib.optional headerCache  gdbm
     ++ lib.optional sslSupport   openssl
     ++ lib.optional gssSupport   libkrb5
