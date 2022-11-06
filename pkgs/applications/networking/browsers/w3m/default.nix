@@ -50,6 +50,7 @@ in stdenv.mkDerivation rec {
     ln -s ${mktable}/bin/mktable mktable
     # stop make from recompiling mktable
     sed -ie 's!mktable.*:.*!mktable:!' Makefile.in
+    sed -i '/int LINES/s,int,extern int,' terms.c
   '';
 
   nativeBuildInputs = [ pkg-config gettext ];
