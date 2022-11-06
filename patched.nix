@@ -23,6 +23,7 @@ let
       # nothing to do with authentication, so have no choice.
       sslSupport = true;
     };
+    nix = super.nix.override { withAWS = false; };
   };
 in import ./default.nix
 (args // { overlays = [ overlay ] ++ (args.overlays or [ ]); })
