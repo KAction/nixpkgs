@@ -14,6 +14,15 @@ let
       smimeSupport = false;
       gpgmeSupport = false;
     };
+    w3m = super.w3m.override {
+      x11Support = false;
+      mouseSupport = false;
+      graphicsSupport = false;
+
+      # It is common to redirect http to https even for websites that have
+      # nothing to do with authentication, so have no choice.
+      sslSupport = true;
+    };
   };
 in import ./default.nix
 (args // { overlays = [ overlay ] ++ (args.overlays or [ ]); })
