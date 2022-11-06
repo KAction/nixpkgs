@@ -3,5 +3,6 @@ let
 in {
   tup = pkgs.pkgsStatic.tup;
 
-  inherit (pkgs) mutt;
+  inherit (pkgs.pkgsStatic) mutt;
+  inherit (pkgs.pkgsStatic) w3m;
 }
