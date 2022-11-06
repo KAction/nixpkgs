@@ -9,6 +9,8 @@ stdenv.mkDerivation rec {
     sha256 = "sha256-ebho47mXbcSE1ZspygroiXvpbOTTbTKu1dk1p6Mwd1k=";
   };
 
+  patches = lib.optional stdenv.hostPlatform.isMusl ./gsasl.patch;
+
   buildInputs = [ libidn libkrb5 ];
 
   configureFlags = [ "--with-gssapi-impl=mit" ];
