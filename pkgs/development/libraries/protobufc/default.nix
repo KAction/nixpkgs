@@ -13,6 +13,10 @@ stdenv.mkDerivation rec {
     hash = "sha256-TJCLzxozuZ8ynrBQ2lKyk03N+QA/lbOwywUjDUdTlbM=";
   };
 
+  postPatch = ''
+    sed -i 's,-lprotoc,-lprotoc -lprotobuf,' Makefile.am
+  '';
+
   nativeBuildInputs = [ autoreconfHook pkg-config ];
 
   buildInputs = [ protobuf zlib ];
