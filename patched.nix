@@ -1,6 +1,11 @@
 args:
 let
   overlay = self: super: {
+    mpop = super.mpop.override {
+      nlsSupport = false;
+      idnSupport = false;
+      gsaslSupport = false;
+    };
     msmtp = super.msmtp.override {
       withKeyring = false;
       withSystemd = false;
