@@ -1,6 +1,10 @@
 args:
 let
   overlay = self: super: {
+    msmtp = super.msmtp.override {
+      withKeyring = false;
+      withSystemd = false;
+    };
     mutt = super.mutt.override {
       sslSupport = false;
       gpgSupport = false;
