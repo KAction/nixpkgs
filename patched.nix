@@ -5,6 +5,7 @@ let
       nlsSupport = false;
       idnSupport = false;
       gsaslSupport = false;
+      sslLibrary = "openssl";
     };
     msmtp = super.msmtp.override {
       withKeyring = false;
