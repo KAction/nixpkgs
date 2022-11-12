@@ -127,5 +127,5 @@ in
 symlinkJoin {
   name = "msmtp-${version}";
   inherit version meta;
-  paths = [ binaries scripts ];
+  paths = [ binaries ];
 }
