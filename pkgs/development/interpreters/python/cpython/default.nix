@@ -17,6 +17,7 @@
 , libxcrypt
 , self
 , configd
+, writeText
 , autoreconfHook
 , autoconf-archive
 , pkg-config
@@ -51,6 +52,21 @@
 , enableLTO ? stdenv.is64bit && stdenv.isLinux
 , reproducibleBuild ? false
 , pythonAttr ? "python${sourceVersion.major}${sourceVersion.minor}"
+
+# This parameter configures which modules are built into static python,
+# otherwise even "import math" won't work.
+#
+# This parameter can be either path/derivation which is then copied into
+# "Modules/Setup.local" or function that accepts default "Setup.local" and
+# produces path/derivation. This way downstream user have access to default
+# configuration, so he can append to it instead of re-implementing it from
+# scratch.
+, modulesConfig ? (def: if static then def else null)
+
+# If non-null, content of this directory is copied verbatim into "Modules",
+# allowing building into python modules that are not part of python standard
+# distribution.
+, modulesSources ? null
 } @ inputs:
 
 # Note: this package is used for bootstrapping fetchurl, and thus
@@ -80,6 +96,115 @@ let
   # cpython does support/build with openssl 3.0, but some libraries using the ssl module seem to have issues with it
   # null check for Minimal
   openssl' = if openssl != null then openssl_1_1 else null;
+
+  modulesConfig' =
+    if builtins.isFunction modulesConfig
+    then modulesConfig defaultModulesConfig
+    else modulesConfig;
+
+  # Build absolutely everything to have feature parity with dynamically-linked
+  # python; user is free to override "modulesConfig" in his overlay assuming he
+  # knows exactly which modules he needs.
+  #
+  # This config is based on stock Modules/Setup which, unfortunately, does not
+  # exactly caters for automatic processing.
+  defaultModulesConfig =
+    let content =
+      lib.optionalString (readline != null) ''
+        readline readline.c -lreadline -lncurses
+      ''
+      # Modules that should always be present (non UNIX dependent):
+      + ''
+        array -DPy_BUILD_CORE_MODULE arraymodule.c         # array objects
+        cmath cmathmodule.c _math.c -DPy_BUILD_CORE_MODULE # -lm # complex math library functions
+        math mathmodule.c _math.c -DPy_BUILD_CORE_MODULE   # -lm # math library functions, e.g. sin()
+        _contextvars _contextvarsmodule.c                  # Context Variables
+        _struct -DPy_BUILD_CORE_MODULE _struct.c           # binary structure packing/unpacking
+        _weakref _weakref.c                                # basic weak reference support
+        _random _randommodule.c -DPy_BUILD_CORE_MODULE     # Random number generator
+      ''
+      + lib.optionalString (expat != null) ''
+        _elementtree -I$(srcdir)/Modules/expat -DHAVE_EXPAT_CONFIG_H -DUSE_PYEXPAT_CAPI _elementtree.c # elementtree accelerator
+      ''
+      + ''
+        _pickle -DPy_BUILD_CORE_MODULE _pickle.c           # pickle accelerator
+        _datetime _datetimemodule.c                        # datetime accelerator
+        _zoneinfo _zoneinfo.c -DPy_BUILD_CORE_MODULE       # zoneinfo accelerator
+        _bisect _bisectmodule.c                            # Bisection algorithms
+        _heapq _heapqmodule.c -DPy_BUILD_CORE_MODULE       # Heap queue algorithm
+        _asyncio _asynciomodule.c                          # Fast asyncio Future
+        _statistics _statisticsmodule.c                    # statistics accelerator
+        unicodedata unicodedata.c -DPy_BUILD_CORE_BUILTIN  # static Unicode character database
+        _json -I$(srcdir)/Include/internal -DPy_BUILD_CORE_BUILTIN _json.c # _json speedups
+        binascii binascii.c                                # Helper module for various ascii-encoders
+        _queue _queuemodule.c
+      ''
+      # Modules with some UNIX dependencies
+      + ''
+        fcntl fcntlmodule.c    # fcntl(2) and ioctl(2)
+        spwd spwdmodule.c      # spwd(3)
+        grp grpmodule.c        # grp(3)
+        select selectmodule.c  # select(2); not on ancient System V
+        _posixsubprocess -DPy_BUILD_CORE_BUILTIN _posixsubprocess.c  # POSIX subprocess module helper
+        syslog syslogmodule.c  # syslog daemon interface
+        mmap mmapmodule.c
+        _socket socketmodule.c
+        termios termios.c      # Steen Lumholt's termios module
+        resource resource.c    # Jeremy Hylton's rlimit interface
+      ''
+      # CSV file helper
+      + ''
+        _csv _csv.c
+      ''
+      # Not sure that all of these flags actually necessary, but so is written
+      # in Modules/Setup.
+      #
+      # Caveat: One may assume that _hashlib is enough for operational "import hashlib",
+      # but blake2 is actually also required.
+      + lib.optionalString (openssl' != null) ''
+        _ssl _ssl.c
+            -I$(OPENSSL)/include -L$(OPENSSL)/lib \
+            -l:libssl.a -Wl,--exclude-libs,libssl.a \
+            -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
+        _hashlib _hashopenssl.c \
+            -I$(OPENSSL)/include -L$(OPENSSL)/lib \
+            -l:libcrypto.a -Wl,--exclude-libs,libcrypto.a
+        _blake2 _blake2/blake2module.c _blake2/blake2b_impl.c _blake2/blake2s_impl.c
+      ''
+      # Curses support, requiring the System V version of curses, often
+      # provided by the ncurses library.  e.g. on Linux, link with -lncurses
+      + lib.optionalString (ncurses != null) ''
+        _curses _cursesmodule.c -lncurses -DPy_BUILD_CORE_MODULE
+      ''
+      + lib.optionalString (gdbm != null) ''
+        _dbm _dbmmodule.c -lgdbm_compat -lgdbm -DHAVE_NDBM_H
+        _gdbm _gdbmmodule.c -lgdbm
+      ''
+      # Andrew Kuchling's zlib module.
+      # See http://www.gzip.org/zlib/
+      + lib.optionalString (zlib != null) ''
+        zlib zlibmodule.c -I$(prefix)/include -L$(exec_prefix)/lib -lz
+      ''
+      # Not sure how all this works when compiled dynamically, but I found no
+      # better way than to enumerate all source files manually.
+      + lib.optionalString (sqlite != null) ''
+        _sqlite3 \
+                _sqlite/cache.c \
+                _sqlite/connection.c \
+                _sqlite/cursor.c \
+                _sqlite/microprotocols.c \
+                _sqlite/module.c \
+                _sqlite/prepare_protocol.c \
+                _sqlite/row.c \
+                _sqlite/statement.c \
+                _sqlite/util.c \
+                -lsqlite3
+      ''
+      + lib.optionalString (bzip2 != null) ''
+        _bz2 _bz2module.c -lbz2
+      '';
+      # TODO: x11
+    in writeText "Setup.local" content;
 
   buildPackages = pkgsBuildHost;
   inherit (passthru) pythonForBuild;
@@ -386,6 +511,14 @@ in with passthru; stdenv.mkDerivation {
   optionalString enableNoSemanticInterposition ''
     export CFLAGS_NODIST="-fno-semantic-interposition"
   '';
+
+  postConfigure =
+    optionalString (modulesConfig' != null) ''
+      cp -v ${modulesConfig'} Modules/Setup.local
+    ''
+    + optionalString (modulesSources != null) ''
+      cp ${modulesSources}/* Modules
+    '';
 
   setupHook = python-setup-hook sitePackages;
 
