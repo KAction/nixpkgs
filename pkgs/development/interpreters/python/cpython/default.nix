@@ -12,6 +12,7 @@
 , sqlite
 , tcl ? null, tk ? null, tix ? null, libX11 ? null, xorgproto ? null, x11Support ? false
 , bluez ? null, bluezSupport ? false
+, mpdecimal
 , zlib
 , tzdata ? null
 , libxcrypt
@@ -246,7 +247,7 @@ let
   ];
 
   buildInputs = filter (p: p != null) ([
-    zlib bzip2 expat xz libffi gdbm sqlite readline ncurses openssl' ]
+    zlib bzip2 expat xz libffi gdbm sqlite readline ncurses openssl' mpdecimal ]
     ++ optionals x11Support [ tcl tk libX11 xorgproto ]
     ++ optionals (bluezSupport && stdenv.isLinux) [ bluez ]
     ++ optionals stdenv.isDarwin [ configd ])
@@ -443,6 +444,8 @@ in with passthru; stdenv.mkDerivation {
     "--with-system-ffi"
   ] ++ optionals (!static) [
     "--enable-shared"
+  ] ++ optionals (mpdecimal != null) [
+    "--with-system-libmpdec"
   ] ++ optionals enableOptimizations [
     "--enable-optimizations"
   ] ++ optionals enableLTO [
