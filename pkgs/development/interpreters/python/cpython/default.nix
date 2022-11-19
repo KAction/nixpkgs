@@ -203,6 +203,9 @@ let
       ''
       + lib.optionalString (bzip2 != null) ''
         _bz2 _bz2module.c -lbz2
+      ''
+      + lib.optionalString (expat != null) ''
+        pyexpat pyexpat.c -lexpat
       '';
       # TODO: x11
     in writeText "Setup.local" content;
