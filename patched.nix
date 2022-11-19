@@ -1,18 +1,6 @@
 args:
 let
   overlay = self: super: {
-
-    # Avoid dependency on statically-built python which can't load C modules,
-    # so even standard library is not fully functional.
-    fish =
-      let
-        stage1 = super.fish.override {
-          usePython = false;
-        };
-      in stage1.overrideAttrs (old: {
-        doCheck = false;
-        checkInputs = [];
-      });
     mpop = super.mpop.override {
       nlsSupport = false;
       idnSupport = false;
