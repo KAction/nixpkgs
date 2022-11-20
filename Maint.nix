@@ -4,6 +4,7 @@ in {
   tup = pkgs.pkgsStatic.tup;
   inherit (pkgs) cachix;
 
+  inherit (pkgs.pkgsStatic) htop;
   inherit (pkgs.pkgsStatic) curl;
   inherit (pkgs.pkgsStatic) exa;
   inherit (pkgs.pkgsStatic) gnumake;
