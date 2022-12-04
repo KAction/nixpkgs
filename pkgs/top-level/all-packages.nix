@@ -2760,6 +2760,8 @@ with pkgs;
 
   ili2c = callPackage ../tools/misc/ili2c { };
 
+  incbin = callPackage ../development/libraries/incbin { };
+
   imagelol = callPackage ../tools/compression/imagelol { };
 
   imageworsener = callPackage ../tools/graphics/imageworsener { };
