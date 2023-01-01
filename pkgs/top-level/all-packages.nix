@@ -39436,4 +39436,6 @@ with pkgs;
   gnss-share = callPackage ../servers/gnss-share { };
 
   ali = callPackage ../tools/networking/ali { };
+
+  gqt = python3Packages.callPackage ../applications/misc/gqt { };
 }
