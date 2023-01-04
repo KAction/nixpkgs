@@ -10,17 +10,27 @@
 , lib
 , stdenv
 , argon2-cffi-bindings
+, sphinxHook
+, sphinx-notfound-page
+, furo
 }:
 
 buildPythonPackage rec {
   pname = "argon2-cffi";
   version = "21.3.0";
   format = "flit";
+  outputs = [ "out" "doc" ];
 
   src = fetchPypi {
     inherit pname version;
     sha256 = "d384164d944190a7dd7ef22c6aa3ff197da12962bd04b17f64d4e93d934dba5b";
   };
+
+  nativeBuildInputs = [
+    sphinxHook
+    sphinx-notfound-page
+    furo
+  ];
 
   propagatedBuildInputs = [ cffi six argon2-cffi-bindings ]
     ++ lib.optional (!isPy3k) enum34;
