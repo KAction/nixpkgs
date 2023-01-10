@@ -11046,8 +11046,6 @@ self: super: with self; {
 
   sphinx-serve = callPackage ../development/python-modules/sphinx-serve { };
 
-  sphinx-selective-exclude = callPackage ../development/python-modules/sphinx-selective-exclude { };
-
   sphinx-testing = callPackage ../development/python-modules/sphinx-testing { };
 
   sphinx-version-warning = callPackage ../development/python-modules/sphinx-version-warning { };
