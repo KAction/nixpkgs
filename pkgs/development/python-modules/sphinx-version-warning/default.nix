@@ -29,12 +29,12 @@ buildPythonPackage rec {
 
   # It tries to write to file relative to it own location at runtime
   # and gets permission denied, since Nix store is immutable.
-  patches = [
-    (fetchpatch {
-      url = "https://github.com/humitos/sphinx-version-warning/commit/cb1b47becf2a0d3b2570ca9929f42f7d7e472b6f.patch";
-      hash = "sha256-Vj0QAHIBmc0VxE+TTmJePzvr5nc45Sn2qqM+C/pkgtM=";
-    })
-  ];
+  # patches = [
+  #   (fetchpatch {
+  #     url = "https://github.com/humitos/sphinx-version-warning/commit/cb1b47becf2a0d3b2570ca9929f42f7d7e472b6f.patch";
+  #     hash = "sha256-Vj0QAHIBmc0VxE+TTmJePzvr5nc45Sn2qqM+C/pkgtM=";
+  #   })
+  # ];
 
   nativeBuildInputs = [
     pythonImportsCheckHook
