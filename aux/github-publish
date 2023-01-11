@@ -13,7 +13,6 @@ git checkout -b "$branch" "$base"
 git cherry-pick "$commit"
 git push fork HEAD -f
 nix-build -A "${attr}"
-gist=$(nix log $(nix-instantiate -A "$attr") | sed -E 's/\\e[^\\]*m//g' | :gh gist create --public)
 
 maintainers=$(nix eval --raw --impure --expr "
 	with (import ./. {});
@@ -25,5 +24,4 @@ body=$(git log -n1 --format=%b "$commit")
 $body
 
 maintainers: $maintainers
-build log on x86_64 NixOS: $gist
 "
