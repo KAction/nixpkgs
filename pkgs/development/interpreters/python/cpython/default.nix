@@ -3,6 +3,7 @@
 , expat
 , libffi
 , gdbm
+, mpdecimal
 , xz
 , mailcap, mimetypesSupport ? true
 , ncurses
@@ -121,7 +122,7 @@ let
   ];
 
   buildInputs = filter (p: p != null) ([
-    zlib bzip2 expat xz libffi libxcrypt gdbm sqlite readline ncurses openssl' ]
+    zlib bzip2 expat xz libffi libxcrypt gdbm sqlite readline ncurses openssl' mpdecimal ]
     ++ optionals x11Support [ tcl tk libX11 xorgproto ]
     ++ optionals (bluezSupport && stdenv.isLinux) [ bluez ]
     ++ optionals stdenv.isDarwin [ configd ])
@@ -308,6 +309,8 @@ in with passthru; stdenv.mkDerivation {
     "--without-ensurepip"
     "--with-system-expat"
     "--with-system-ffi"
+  ] ++ optionals (mpdecimal != null) [
+    "--with-system-libmpdec"
   ] ++ optionals (!static) [
     "--enable-shared"
   ] ++ optionals enableOptimizations [
