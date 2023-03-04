@@ -82145,7 +82145,6 @@ self: {
        ];
        description = "Gemini client";
        license = lib.licenses.gpl3Only;
-       hydraPlatforms = lib.platforms.none;
        mainProgram = "diohsc";
      }) {};
 
@@ -86580,8 +86579,6 @@ self: {
        libraryHaskellDepends = [ array base bytestring pureMD5 ];
        description = "An implementation of the Drunken Bishop visual fingerprinting algorithm";
        license = lib.licenses.bsd3;
-       hydraPlatforms = lib.platforms.none;
-       broken = true;
      }) {};
 
   "ds-kanren" = callPackage
