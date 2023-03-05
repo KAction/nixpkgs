@@ -11,6 +11,7 @@
 stdenv.mkDerivation rec {
   pname = "zig";
   version = "0.10.1";
+  outputs = [ "out" "doc" ];
 
   src = fetchFromGitHub {
     owner = "ziglang";
@@ -52,7 +53,18 @@ stdenv.mkDerivation rec {
     "-DZIG_TARGET_MCPU=baseline"
   ];
 
+  postBuild = ''
+    ln -sf ../doc .
+    ./zig2 build-exe ./doc/docgen.zig
+    ./docgen ./zig2 ./doc/langref.html.in ./langref.html
+  '';
+
   doCheck = true;
+
+  postInstall = ''
+    install -D -m644 -t $out/share/doc/$name/html ./langref.html
+  '';
+
   installCheckPhase = ''
     $out/bin/zig test --cache-dir "$TMPDIR" -I $src/test $src/test/behavior.zig
   '';
