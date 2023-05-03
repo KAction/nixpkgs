@@ -1,5 +1,6 @@
 { lib
 , stdenv
+, python
 , buildPythonPackage
 , pythonOlder
 , fetchPypi
@@ -10,60 +11,77 @@
 , pallets-sphinx-themes
 , sphinxcontrib-log-cabinet
 , sphinx-issues
-, enableDocumentation ? false
 }:
 
-buildPythonPackage rec {
+let
   pname = "Jinja2";
   version = "3.1.2";
-  outputs = [ "out" ] ++ lib.optional enableDocumentation "doc";
-
-  disabled = pythonOlder "3.7";
-
   src = fetchPypi {
     inherit pname version;
     hash = "sha256-MTUacCpAip51laj8YVD8P0O7a/fjGXcMvA2535Q36FI=";
   };
 
-  patches = lib.optionals enableDocumentation [ ./patches/import-order.patch ];
+  doc = stdenv.mkDerivation {
+    inherit src pname version;
 
-  propagatedBuildInputs = [
-    babel
-    markupsafe
-  ];
+    patches = [ ./patches/import-order.patch ];
 
-  nativeBuildInputs = lib.optionals enableDocumentation [
-    sphinxHook
-    sphinxcontrib-log-cabinet
-    pallets-sphinx-themes
-    sphinx-issues
-  ];
+    # Forge look and feel of multi-output derivation as best as we can.
+    #
+    # Using 'outputs = [ "doc" ];', but it breaks a lot of assumptions.
+    name = "${pname}-${version}-doc";
 
-  # Multiple tests run out of stack space on 32bit systems with python2.
-  # See https://github.com/pallets/jinja/issues/1158
-  doCheck = !stdenv.is32bit;
-
-  nativeCheckInputs = [
-    pytestCheckHook
-  ];
-
-  pytestFlagsArray = [
-    # Avoid failure due to deprecation warning
-    # Fixed in https://github.com/python/cpython/pull/28153
-    # Remove after cpython 3.9.8
-    "-p no:warnings"
-  ];
-
-  meta = with lib; {
-    homepage = "https://jinja.palletsprojects.com/";
-    description = "Stand-alone template engine";
-    license = licenses.bsd3;
-    longDescription = ''
-      Jinja is a fast, expressive, extensible templating engine. Special
-      placeholders in the template allow writing code similar to Python
-      syntax. Then the template is passed data to render the final document.
-      an optional sandboxed environment.
+    postInstallSphinx = ''
+      mv $out/share/doc/* $out/share/doc/python$pythonVersion-$pname-$version
     '';
-    maintainers = with maintainers; [ pierron ];
+
+    nativeBuildInputs = [
+      sphinxHook
+      sphinxcontrib-log-cabinet
+      pallets-sphinx-themes
+      sphinx-issues
+    ];
+
+    inherit (python) pythonVersion;
   };
-}
+
+  package = buildPythonPackage rec {
+    inherit pname version src;
+
+    disabled = pythonOlder "3.7";
+
+    propagatedBuildInputs = [
+      babel
+      markupsafe
+    ];
+
+
+    # Multiple tests run out of stack space on 32bit systems with python2.
+    # See https://github.com/pallets/jinja/issues/1158
+    doCheck = !stdenv.is32bit;
+
+    nativeCheckInputs = [
+      pytestCheckHook
+    ];
+
+    pytestFlagsArray = [
+      # Avoid failure due to deprecation warning
+      # Fixed in https://github.com/python/cpython/pull/28153
+      # Remove after cpython 3.9.8
+      "-p no:warnings"
+    ];
+
+    meta = with lib; {
+      homepage = "https://jinja.palletsprojects.com/";
+      description = "Stand-alone template engine";
+      license = licenses.bsd3;
+      longDescription = ''
+        Jinja is a fast, expressive, extensible templating engine. Special
+        placeholders in the template allow writing code similar to Python
+        syntax. Then the template is passed data to render the final document.
+        an optional sandboxed environment.
+      '';
+      maintainers = with maintainers; [ pierron ];
+    };
+  };
+in package // { inherit doc; }
