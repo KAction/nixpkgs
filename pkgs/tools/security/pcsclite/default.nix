@@ -9,8 +9,10 @@
 , dbus
 , polkit
 , systemdMinimal
+, systemdSupport ? lib.meta.availableOn stdenv.hostPlatform systemdMinimal
 , IOKit
 , pname ? "pcsclite"
+, libusb
 , polkitSupport ? false
 }:
 
@@ -36,7 +38,8 @@ stdenv.mkDerivation rec {
     "--enable-confdir=/etc"
     # The OS should care on preparing the drivers into this location
     "--enable-usbdropdir=/var/lib/pcsc/drivers"
-    (lib.enableFeature stdenv.isLinux "libsystemd")
+    (lib.enableFeature systemdSupport "libsystemd")
+    (lib.enableFeature systemdSupport "libudev")
     (lib.enableFeature polkitSupport "polkit")
   ] ++ lib.optionals stdenv.isLinux [
     "--enable-ipcdir=/run/pcscd"
@@ -58,8 +61,8 @@ stdenv.mkDerivation rec {
 
   nativeBuildInputs = [ autoreconfHook autoconf-archive pkg-config perl ];
 
-  buildInputs = [ python3 ]
-    ++ lib.optionals stdenv.isLinux [ systemdMinimal ]
+  buildInputs = [ python3 libusb ]
+    ++ lib.optionals systemdSupport [ systemdMinimal ]
     ++ lib.optionals stdenv.isDarwin [ IOKit ]
     ++ lib.optionals polkitSupport [ dbus polkit ];
 
