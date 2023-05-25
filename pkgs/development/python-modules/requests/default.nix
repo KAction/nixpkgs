@@ -5,15 +5,16 @@
 , certifi
 , chardet
 , charset-normalizer
-, fetchPypi
-, fetchpatch
+, fetchFromGitHub
 , idna
 , pysocks
 , pytest-mock
 , pytest-xdist
 , pytestCheckHook
 , pythonOlder
+, python
 , urllib3
+, sphinxHook
 }:
 
 buildPythonPackage rec {
@@ -25,9 +26,11 @@ buildPythonPackage rec {
 
   __darwinAllowLocalNetworking = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-8uNKdfR0kBm7Dj7/tmaDYw5P/q91gZ+1G+vvG/Wu8Fk=";
+  src = fetchFromGitHub {
+    owner = "psf";
+    repo = "requests";
+    rev = "v${version}";
+    sha256 = "sha256-Zj75qTE21P1h6M20jFZc3vjCMZl7HFXLDBGKPLtLpa8=";
   };
 
   propagatedBuildInputs = [
@@ -38,14 +41,37 @@ buildPythonPackage rec {
     urllib3
   ];
 
-  passthru.optional-dependencies = {
-    security = [];
-    socks = [
-      pysocks
-    ];
-    use_chardet_on_py3 = [
-      chardet
-    ];
+  passthru = {
+    optional-dependencies = {
+      security = [];
+      socks = [
+        pysocks
+      ];
+      use_chardet_on_py3 = [
+        chardet
+      ];
+    };
+
+    doc = stdenv.mkDerivation {
+      # Forge look and feel of multi-output derivation as best as we can.
+      #
+      # Using 'outputs = [ "doc" ];' breaks a lot of assumptions.
+      name = "${pname}-${version}-doc";
+      inherit src pname version;
+
+      nativeBuildInputs = [ sphinxHook ];
+
+      dontConfigure = true;
+      dontBuild = true;
+      dontInstall = true;
+
+      postInstallSphinx = ''
+        mv $out/share/doc/* $out/share/doc/python$pythonVersion-$pname-$version
+      '';
+
+      inherit (python) pythonVersion;
+      inherit meta;
+    };
   };
 
   nativeCheckInputs = [
