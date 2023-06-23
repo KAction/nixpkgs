@@ -14,11 +14,374 @@
 let
   inherit (pkgs) fetchpatch fetchpatch2 lib;
   inherit (lib) throwIfNot versionOlder versions;
+
+  # Hackage release is outdated by couple years, and does not build with aeson
+  # >= 2.0, yet has somewhere in dependency tree package that does not build
+  # with aeson < 2.0. I have to build from master, which builds and works just
+  # fine.
+  #
+  # All amazonka libraries are closely related, and old releases of services
+  # (e.g amazonka-ssm) do not work with master build of "amazonka" and
+  # "amazonka-core.
+  #
+  # Upstream planned to make new Hackage release in Q3 2023, but that didn't
+  # happen.
+  #
+  # https://github.com/brendanhay/amazonka/issues/800#issuecomment-1196250824
+  amazonka-src = pkgs.fetchFromGitHub {
+    owner = "brendanhay";
+    repo = "amazonka";
+    rev = "3e66cc1b07f2818d0b4fc346310ecdb1c3c27599"; # 2023-06-06
+    hash = "sha256-2HpkiaHuCrP+8IG/UF3b5r+7rYjmz7gg4w669BBpyTI=";
+  };
 in
 
 with haskellLib;
 
-self: super: {
+self: super:
+  let
+    buildAmazonka = { name, subdir ? "lib/services" }:
+      self.callCabal2nix name "${amazonka-src}/${subdir}/${name}" {};
+in {
+
+  amazonka = buildAmazonka { name = "amazonka"; subdir = "lib"; };
+  amazonka-core = buildAmazonka { name = "amazonka-core"; subdir = "lib"; };
+  amazonka-s3-encryption = buildAmazonka { name = "amazonka-s3-encryption"; subdir = "lib"; };
+  amazonka-test = buildAmazonka { name = "amazonka-test"; subdir = "lib"; };
+
+  amazonka-accessanalyzer = buildAmazonka { name = "amazonka-accessanalyzer"; };
+  amazonka-account = buildAmazonka { name = "amazonka-account"; };
+  amazonka-alexa-business = buildAmazonka { name = "amazonka-alexa-business"; };
+  amazonka-amp = buildAmazonka { name = "amazonka-amp"; };
+  amazonka-amplify = buildAmazonka { name = "amazonka-amplify"; };
+  amazonka-amplifybackend = buildAmazonka { name = "amazonka-amplifybackend"; };
+  amazonka-amplifyuibuilder = buildAmazonka { name = "amazonka-amplifyuibuilder"; };
+  amazonka-apigateway = buildAmazonka { name = "amazonka-apigateway"; };
+  amazonka-apigatewaymanagementapi = buildAmazonka { name = "amazonka-apigatewaymanagementapi"; };
+  amazonka-apigatewayv2 = buildAmazonka { name = "amazonka-apigatewayv2"; };
+  amazonka-appconfig = buildAmazonka { name = "amazonka-appconfig"; };
+  amazonka-appconfigdata = buildAmazonka { name = "amazonka-appconfigdata"; };
+  amazonka-appflow = buildAmazonka { name = "amazonka-appflow"; };
+  amazonka-appintegrations = buildAmazonka { name = "amazonka-appintegrations"; };
+  amazonka-application-autoscaling = buildAmazonka { name = "amazonka-application-autoscaling"; };
+  amazonka-application-insights = buildAmazonka { name = "amazonka-application-insights"; };
+  amazonka-applicationcostprofiler = buildAmazonka { name = "amazonka-applicationcostprofiler"; };
+  amazonka-appmesh = buildAmazonka { name = "amazonka-appmesh"; };
+  amazonka-apprunner = buildAmazonka { name = "amazonka-apprunner"; };
+  amazonka-appstream = buildAmazonka { name = "amazonka-appstream"; };
+  amazonka-appsync = buildAmazonka { name = "amazonka-appsync"; };
+  amazonka-arc-zonal-shift = buildAmazonka { name = "amazonka-arc-zonal-shift"; };
+  amazonka-athena = buildAmazonka { name = "amazonka-athena"; };
+  amazonka-auditmanager = buildAmazonka { name = "amazonka-auditmanager"; };
+  amazonka-autoscaling = buildAmazonka { name = "amazonka-autoscaling"; };
+  amazonka-autoscaling-plans = buildAmazonka { name = "amazonka-autoscaling-plans"; };
+  amazonka-backup = buildAmazonka { name = "amazonka-backup"; };
+  amazonka-backup-gateway = buildAmazonka { name = "amazonka-backup-gateway"; };
+  amazonka-backupstorage = buildAmazonka { name = "amazonka-backupstorage"; };
+  amazonka-batch = buildAmazonka { name = "amazonka-batch"; };
+  amazonka-billingconductor = buildAmazonka { name = "amazonka-billingconductor"; };
+  amazonka-braket = buildAmazonka { name = "amazonka-braket"; };
+  amazonka-budgets = buildAmazonka { name = "amazonka-budgets"; };
+  amazonka-certificatemanager = buildAmazonka { name = "amazonka-certificatemanager"; };
+  amazonka-certificatemanager-pca = buildAmazonka { name = "amazonka-certificatemanager-pca"; };
+  amazonka-chime = buildAmazonka { name = "amazonka-chime"; };
+  amazonka-chime-sdk-identity = buildAmazonka { name = "amazonka-chime-sdk-identity"; };
+  amazonka-chime-sdk-media-pipelines = buildAmazonka { name = "amazonka-chime-sdk-media-pipelines"; };
+  amazonka-chime-sdk-meetings = buildAmazonka { name = "amazonka-chime-sdk-meetings"; };
+  amazonka-chime-sdk-messaging = buildAmazonka { name = "amazonka-chime-sdk-messaging"; };
+  amazonka-chime-sdk-voice = buildAmazonka { name = "amazonka-chime-sdk-voice"; };
+  amazonka-cloud9 = buildAmazonka { name = "amazonka-cloud9"; };
+  amazonka-cloudcontrol = buildAmazonka { name = "amazonka-cloudcontrol"; };
+  amazonka-clouddirectory = buildAmazonka { name = "amazonka-clouddirectory"; };
+  amazonka-cloudformation = buildAmazonka { name = "amazonka-cloudformation"; };
+  amazonka-cloudfront = buildAmazonka { name = "amazonka-cloudfront"; };
+  amazonka-cloudhsm = buildAmazonka { name = "amazonka-cloudhsm"; };
+  amazonka-cloudhsmv2 = buildAmazonka { name = "amazonka-cloudhsmv2"; };
+  amazonka-cloudsearch = buildAmazonka { name = "amazonka-cloudsearch"; };
+  amazonka-cloudsearch-domains = buildAmazonka { name = "amazonka-cloudsearch-domains"; };
+  amazonka-cloudtrail = buildAmazonka { name = "amazonka-cloudtrail"; };
+  amazonka-cloudwatch = buildAmazonka { name = "amazonka-cloudwatch"; };
+  amazonka-cloudwatch-events = buildAmazonka { name = "amazonka-cloudwatch-events"; };
+  amazonka-cloudwatch-logs = buildAmazonka { name = "amazonka-cloudwatch-logs"; };
+  amazonka-codeartifact = buildAmazonka { name = "amazonka-codeartifact"; };
+  amazonka-codebuild = buildAmazonka { name = "amazonka-codebuild"; };
+  amazonka-codecommit = buildAmazonka { name = "amazonka-codecommit"; };
+  amazonka-codedeploy = buildAmazonka { name = "amazonka-codedeploy"; };
+  amazonka-codeguru-reviewer = buildAmazonka { name = "amazonka-codeguru-reviewer"; };
+  amazonka-codeguruprofiler = buildAmazonka { name = "amazonka-codeguruprofiler"; };
+  amazonka-codepipeline = buildAmazonka { name = "amazonka-codepipeline"; };
+  amazonka-codestar = buildAmazonka { name = "amazonka-codestar"; };
+  amazonka-codestar-connections = buildAmazonka { name = "amazonka-codestar-connections"; };
+  amazonka-codestar-notifications = buildAmazonka { name = "amazonka-codestar-notifications"; };
+  amazonka-cognito-identity = buildAmazonka { name = "amazonka-cognito-identity"; };
+  amazonka-cognito-idp = buildAmazonka { name = "amazonka-cognito-idp"; };
+  amazonka-cognito-sync = buildAmazonka { name = "amazonka-cognito-sync"; };
+  amazonka-comprehend = buildAmazonka { name = "amazonka-comprehend"; };
+  amazonka-comprehendmedical = buildAmazonka { name = "amazonka-comprehendmedical"; };
+  amazonka-compute-optimizer = buildAmazonka { name = "amazonka-compute-optimizer"; };
+  amazonka-config = buildAmazonka { name = "amazonka-config"; };
+  amazonka-connect = buildAmazonka { name = "amazonka-connect"; };
+  amazonka-connect-contact-lens = buildAmazonka { name = "amazonka-connect-contact-lens"; };
+  amazonka-connectcampaigns = buildAmazonka { name = "amazonka-connectcampaigns"; };
+  amazonka-connectcases = buildAmazonka { name = "amazonka-connectcases"; };
+  amazonka-connectparticipant = buildAmazonka { name = "amazonka-connectparticipant"; };
+  amazonka-controltower = buildAmazonka { name = "amazonka-controltower"; };
+  amazonka-cost-explorer = buildAmazonka { name = "amazonka-cost-explorer"; };
+  amazonka-cur = buildAmazonka { name = "amazonka-cur"; };
+  amazonka-customer-profiles = buildAmazonka { name = "amazonka-customer-profiles"; };
+  amazonka-databrew = buildAmazonka { name = "amazonka-databrew"; };
+  amazonka-dataexchange = buildAmazonka { name = "amazonka-dataexchange"; };
+  amazonka-datapipeline = buildAmazonka { name = "amazonka-datapipeline"; };
+  amazonka-datasync = buildAmazonka { name = "amazonka-datasync"; };
+  amazonka-detective = buildAmazonka { name = "amazonka-detective"; };
+  amazonka-devicefarm = buildAmazonka { name = "amazonka-devicefarm"; };
+  amazonka-devops-guru = buildAmazonka { name = "amazonka-devops-guru"; };
+  amazonka-directconnect = buildAmazonka { name = "amazonka-directconnect"; };
+  amazonka-discovery = buildAmazonka { name = "amazonka-discovery"; };
+  amazonka-dlm = buildAmazonka { name = "amazonka-dlm"; };
+  amazonka-dms = buildAmazonka { name = "amazonka-dms"; };
+  amazonka-docdb = buildAmazonka { name = "amazonka-docdb"; };
+  amazonka-docdb-elastic = buildAmazonka { name = "amazonka-docdb-elastic"; };
+  amazonka-drs = buildAmazonka { name = "amazonka-drs"; };
+  amazonka-ds = buildAmazonka { name = "amazonka-ds"; };
+  amazonka-dynamodb = buildAmazonka { name = "amazonka-dynamodb"; };
+  amazonka-dynamodb-dax = buildAmazonka { name = "amazonka-dynamodb-dax"; };
+  amazonka-dynamodb-streams = buildAmazonka { name = "amazonka-dynamodb-streams"; };
+  amazonka-ebs = buildAmazonka { name = "amazonka-ebs"; };
+  amazonka-ec2 = buildAmazonka { name = "amazonka-ec2"; };
+  amazonka-ec2-instance-connect = buildAmazonka { name = "amazonka-ec2-instance-connect"; };
+  amazonka-ecr = buildAmazonka { name = "amazonka-ecr"; };
+  amazonka-ecr-public = buildAmazonka { name = "amazonka-ecr-public"; };
+  amazonka-ecs = buildAmazonka { name = "amazonka-ecs"; };
+  amazonka-efs = buildAmazonka { name = "amazonka-efs"; };
+  amazonka-eks = buildAmazonka { name = "amazonka-eks"; };
+  amazonka-elastic-inference = buildAmazonka { name = "amazonka-elastic-inference"; };
+  amazonka-elasticache = buildAmazonka { name = "amazonka-elasticache"; };
+  amazonka-elasticbeanstalk = buildAmazonka { name = "amazonka-elasticbeanstalk"; };
+  amazonka-elasticsearch = buildAmazonka { name = "amazonka-elasticsearch"; };
+  amazonka-elastictranscoder = buildAmazonka { name = "amazonka-elastictranscoder"; };
+  amazonka-elb = buildAmazonka { name = "amazonka-elb"; };
+  amazonka-elbv2 = buildAmazonka { name = "amazonka-elbv2"; };
+  amazonka-emr = buildAmazonka { name = "amazonka-emr"; };
+  amazonka-emr-containers = buildAmazonka { name = "amazonka-emr-containers"; };
+  amazonka-emr-serverless = buildAmazonka { name = "amazonka-emr-serverless"; };
+  amazonka-evidently = buildAmazonka { name = "amazonka-evidently"; };
+  amazonka-finspace = buildAmazonka { name = "amazonka-finspace"; };
+  amazonka-finspace-data = buildAmazonka { name = "amazonka-finspace-data"; };
+  amazonka-fis = buildAmazonka { name = "amazonka-fis"; };
+  amazonka-fms = buildAmazonka { name = "amazonka-fms"; };
+  amazonka-forecast = buildAmazonka { name = "amazonka-forecast"; };
+  amazonka-forecastquery = buildAmazonka { name = "amazonka-forecastquery"; };
+  amazonka-frauddetector = buildAmazonka { name = "amazonka-frauddetector"; };
+  amazonka-fsx = buildAmazonka { name = "amazonka-fsx"; };
+  amazonka-gamelift = buildAmazonka { name = "amazonka-gamelift"; };
+  amazonka-gamesparks = buildAmazonka { name = "amazonka-gamesparks"; };
+  amazonka-glacier = buildAmazonka { name = "amazonka-glacier"; };
+  amazonka-globalaccelerator = buildAmazonka { name = "amazonka-globalaccelerator"; };
+  amazonka-glue = buildAmazonka { name = "amazonka-glue"; };
+  amazonka-grafana = buildAmazonka { name = "amazonka-grafana"; };
+  amazonka-greengrass = buildAmazonka { name = "amazonka-greengrass"; };
+  amazonka-greengrassv2 = buildAmazonka { name = "amazonka-greengrassv2"; };
+  amazonka-groundstation = buildAmazonka { name = "amazonka-groundstation"; };
+  amazonka-guardduty = buildAmazonka { name = "amazonka-guardduty"; };
+  amazonka-health = buildAmazonka { name = "amazonka-health"; };
+  amazonka-healthlake = buildAmazonka { name = "amazonka-healthlake"; };
+  amazonka-honeycode = buildAmazonka { name = "amazonka-honeycode"; };
+  amazonka-iam = buildAmazonka { name = "amazonka-iam"; };
+  amazonka-identitystore = buildAmazonka { name = "amazonka-identitystore"; };
+  amazonka-imagebuilder = buildAmazonka { name = "amazonka-imagebuilder"; };
+  amazonka-importexport = buildAmazonka { name = "amazonka-importexport"; };
+  amazonka-inspector = buildAmazonka { name = "amazonka-inspector"; };
+  amazonka-inspector2 = buildAmazonka { name = "amazonka-inspector2"; };
+  amazonka-iot = buildAmazonka { name = "amazonka-iot"; };
+  amazonka-iot-analytics = buildAmazonka { name = "amazonka-iot-analytics"; };
+  amazonka-iot-dataplane = buildAmazonka { name = "amazonka-iot-dataplane"; };
+  amazonka-iot-jobs-dataplane = buildAmazonka { name = "amazonka-iot-jobs-dataplane"; };
+  amazonka-iot-roborunner = buildAmazonka { name = "amazonka-iot-roborunner"; };
+  amazonka-iot1click-devices = buildAmazonka { name = "amazonka-iot1click-devices"; };
+  amazonka-iot1click-projects = buildAmazonka { name = "amazonka-iot1click-projects"; };
+  amazonka-iotdeviceadvisor = buildAmazonka { name = "amazonka-iotdeviceadvisor"; };
+  amazonka-iotevents = buildAmazonka { name = "amazonka-iotevents"; };
+  amazonka-iotevents-data = buildAmazonka { name = "amazonka-iotevents-data"; };
+  amazonka-iotfleethub = buildAmazonka { name = "amazonka-iotfleethub"; };
+  amazonka-iotfleetwise = buildAmazonka { name = "amazonka-iotfleetwise"; };
+  amazonka-iotsecuretunneling = buildAmazonka { name = "amazonka-iotsecuretunneling"; };
+  amazonka-iotsitewise = buildAmazonka { name = "amazonka-iotsitewise"; };
+  amazonka-iotthingsgraph = buildAmazonka { name = "amazonka-iotthingsgraph"; };
+  amazonka-iottwinmaker = buildAmazonka { name = "amazonka-iottwinmaker"; };
+  amazonka-iotwireless = buildAmazonka { name = "amazonka-iotwireless"; };
+  amazonka-ivs = buildAmazonka { name = "amazonka-ivs"; };
+  amazonka-ivschat = buildAmazonka { name = "amazonka-ivschat"; };
+  amazonka-kafka = buildAmazonka { name = "amazonka-kafka"; };
+  amazonka-kafkaconnect = buildAmazonka { name = "amazonka-kafkaconnect"; };
+  amazonka-kendra = buildAmazonka { name = "amazonka-kendra"; };
+  amazonka-keyspaces = buildAmazonka { name = "amazonka-keyspaces"; };
+  amazonka-kinesis = buildAmazonka { name = "amazonka-kinesis"; };
+  amazonka-kinesis-analytics = buildAmazonka { name = "amazonka-kinesis-analytics"; };
+  amazonka-kinesis-firehose = buildAmazonka { name = "amazonka-kinesis-firehose"; };
+  amazonka-kinesis-video = buildAmazonka { name = "amazonka-kinesis-video"; };
+  amazonka-kinesis-video-archived-media = buildAmazonka { name = "amazonka-kinesis-video-archived-media"; };
+  amazonka-kinesis-video-media = buildAmazonka { name = "amazonka-kinesis-video-media"; };
+  amazonka-kinesis-video-signaling = buildAmazonka { name = "amazonka-kinesis-video-signaling"; };
+  amazonka-kinesis-video-webrtc-storage = buildAmazonka { name = "amazonka-kinesis-video-webrtc-storage"; };
+  amazonka-kinesisanalyticsv2 = buildAmazonka { name = "amazonka-kinesisanalyticsv2"; };
+  amazonka-kms = buildAmazonka { name = "amazonka-kms"; };
+  amazonka-lakeformation = buildAmazonka { name = "amazonka-lakeformation"; };
+  amazonka-lambda = buildAmazonka { name = "amazonka-lambda"; };
+  amazonka-lex-models = buildAmazonka { name = "amazonka-lex-models"; };
+  amazonka-lex-runtime = buildAmazonka { name = "amazonka-lex-runtime"; };
+  amazonka-lexv2-models = buildAmazonka { name = "amazonka-lexv2-models"; };
+  amazonka-license-manager = buildAmazonka { name = "amazonka-license-manager"; };
+  amazonka-license-manager-linux-subscriptions = buildAmazonka { name = "amazonka-license-manager-linux-subscriptions"; };
+  amazonka-license-manager-user-subscriptions = buildAmazonka { name = "amazonka-license-manager-user-subscriptions"; };
+  amazonka-lightsail = buildAmazonka { name = "amazonka-lightsail"; };
+  amazonka-location = buildAmazonka { name = "amazonka-location"; };
+  amazonka-lookoutequipment = buildAmazonka { name = "amazonka-lookoutequipment"; };
+  amazonka-lookoutmetrics = buildAmazonka { name = "amazonka-lookoutmetrics"; };
+  amazonka-lookoutvision = buildAmazonka { name = "amazonka-lookoutvision"; };
+  amazonka-m2 = buildAmazonka { name = "amazonka-m2"; };
+  amazonka-macie = buildAmazonka { name = "amazonka-macie"; };
+  amazonka-maciev2 = buildAmazonka { name = "amazonka-maciev2"; };
+  amazonka-managedblockchain = buildAmazonka { name = "amazonka-managedblockchain"; };
+  amazonka-marketplace-analytics = buildAmazonka { name = "amazonka-marketplace-analytics"; };
+  amazonka-marketplace-catalog = buildAmazonka { name = "amazonka-marketplace-catalog"; };
+  amazonka-marketplace-entitlement = buildAmazonka { name = "amazonka-marketplace-entitlement"; };
+  amazonka-marketplace-metering = buildAmazonka { name = "amazonka-marketplace-metering"; };
+  amazonka-mechanicalturk = buildAmazonka { name = "amazonka-mechanicalturk"; };
+  amazonka-mediaconnect = buildAmazonka { name = "amazonka-mediaconnect"; };
+  amazonka-mediaconvert = buildAmazonka { name = "amazonka-mediaconvert"; };
+  amazonka-medialive = buildAmazonka { name = "amazonka-medialive"; };
+  amazonka-mediapackage = buildAmazonka { name = "amazonka-mediapackage"; };
+  amazonka-mediapackage-vod = buildAmazonka { name = "amazonka-mediapackage-vod"; };
+  amazonka-mediastore = buildAmazonka { name = "amazonka-mediastore"; };
+  amazonka-mediastore-dataplane = buildAmazonka { name = "amazonka-mediastore-dataplane"; };
+  amazonka-mediatailor = buildAmazonka { name = "amazonka-mediatailor"; };
+  amazonka-memorydb = buildAmazonka { name = "amazonka-memorydb"; };
+  amazonka-mgn = buildAmazonka { name = "amazonka-mgn"; };
+  amazonka-migration-hub-refactor-spaces = buildAmazonka { name = "amazonka-migration-hub-refactor-spaces"; };
+  amazonka-migrationhub = buildAmazonka { name = "amazonka-migrationhub"; };
+  amazonka-migrationhub-config = buildAmazonka { name = "amazonka-migrationhub-config"; };
+  amazonka-migrationhuborchestrator = buildAmazonka { name = "amazonka-migrationhuborchestrator"; };
+  amazonka-migrationhubstrategy = buildAmazonka { name = "amazonka-migrationhubstrategy"; };
+  amazonka-ml = buildAmazonka { name = "amazonka-ml"; };
+  amazonka-mobile = buildAmazonka { name = "amazonka-mobile"; };
+  amazonka-mq = buildAmazonka { name = "amazonka-mq"; };
+  amazonka-mwaa = buildAmazonka { name = "amazonka-mwaa"; };
+  amazonka-neptune = buildAmazonka { name = "amazonka-neptune"; };
+  amazonka-network-firewall = buildAmazonka { name = "amazonka-network-firewall"; };
+  amazonka-networkmanager = buildAmazonka { name = "amazonka-networkmanager"; };
+  amazonka-nimble = buildAmazonka { name = "amazonka-nimble"; };
+  amazonka-oam = buildAmazonka { name = "amazonka-oam"; };
+  amazonka-omics = buildAmazonka { name = "amazonka-omics"; };
+  amazonka-opensearch = buildAmazonka { name = "amazonka-opensearch"; };
+  amazonka-opensearchserverless = buildAmazonka { name = "amazonka-opensearchserverless"; };
+  amazonka-opsworks = buildAmazonka { name = "amazonka-opsworks"; };
+  amazonka-opsworks-cm = buildAmazonka { name = "amazonka-opsworks-cm"; };
+  amazonka-organizations = buildAmazonka { name = "amazonka-organizations"; };
+  amazonka-outposts = buildAmazonka { name = "amazonka-outposts"; };
+  amazonka-panorama = buildAmazonka { name = "amazonka-panorama"; };
+  amazonka-personalize = buildAmazonka { name = "amazonka-personalize"; };
+  amazonka-personalize-events = buildAmazonka { name = "amazonka-personalize-events"; };
+  amazonka-personalize-runtime = buildAmazonka { name = "amazonka-personalize-runtime"; };
+  amazonka-pi = buildAmazonka { name = "amazonka-pi"; };
+  amazonka-pinpoint = buildAmazonka { name = "amazonka-pinpoint"; };
+  amazonka-pinpoint-email = buildAmazonka { name = "amazonka-pinpoint-email"; };
+  amazonka-pinpoint-sms-voice = buildAmazonka { name = "amazonka-pinpoint-sms-voice"; };
+  amazonka-pinpoint-sms-voice-v2 = buildAmazonka { name = "amazonka-pinpoint-sms-voice-v2"; };
+  amazonka-pipes = buildAmazonka { name = "amazonka-pipes"; };
+  amazonka-polly = buildAmazonka { name = "amazonka-polly"; };
+  amazonka-pricing = buildAmazonka { name = "amazonka-pricing"; };
+  amazonka-privatenetworks = buildAmazonka { name = "amazonka-privatenetworks"; };
+  amazonka-proton = buildAmazonka { name = "amazonka-proton"; };
+  amazonka-qldb = buildAmazonka { name = "amazonka-qldb"; };
+  amazonka-qldb-session = buildAmazonka { name = "amazonka-qldb-session"; };
+  amazonka-quicksight = buildAmazonka { name = "amazonka-quicksight"; };
+  amazonka-ram = buildAmazonka { name = "amazonka-ram"; };
+  amazonka-rbin = buildAmazonka { name = "amazonka-rbin"; };
+  amazonka-rds = buildAmazonka { name = "amazonka-rds"; };
+  amazonka-rds-data = buildAmazonka { name = "amazonka-rds-data"; };
+  amazonka-redshift = buildAmazonka { name = "amazonka-redshift"; };
+  amazonka-redshift-data = buildAmazonka { name = "amazonka-redshift-data"; };
+  amazonka-redshift-serverless = buildAmazonka { name = "amazonka-redshift-serverless"; };
+  amazonka-rekognition = buildAmazonka { name = "amazonka-rekognition"; };
+  amazonka-resiliencehub = buildAmazonka { name = "amazonka-resiliencehub"; };
+  amazonka-resource-explorer-v2 = buildAmazonka { name = "amazonka-resource-explorer-v2"; };
+  amazonka-resourcegroups = buildAmazonka { name = "amazonka-resourcegroups"; };
+  amazonka-resourcegroupstagging = buildAmazonka { name = "amazonka-resourcegroupstagging"; };
+  amazonka-robomaker = buildAmazonka { name = "amazonka-robomaker"; };
+  amazonka-rolesanywhere = buildAmazonka { name = "amazonka-rolesanywhere"; };
+  amazonka-route53 = buildAmazonka { name = "amazonka-route53"; };
+  amazonka-route53-autonaming = buildAmazonka { name = "amazonka-route53-autonaming"; };
+  amazonka-route53-domains = buildAmazonka { name = "amazonka-route53-domains"; };
+  amazonka-route53-recovery-cluster = buildAmazonka { name = "amazonka-route53-recovery-cluster"; };
+  amazonka-route53-recovery-control-config = buildAmazonka { name = "amazonka-route53-recovery-control-config"; };
+  amazonka-route53-recovery-readiness = buildAmazonka { name = "amazonka-route53-recovery-readiness"; };
+  amazonka-route53resolver = buildAmazonka { name = "amazonka-route53resolver"; };
+  amazonka-rum = buildAmazonka { name = "amazonka-rum"; };
+  amazonka-s3 = buildAmazonka { name = "amazonka-s3"; };
+  amazonka-s3outposts = buildAmazonka { name = "amazonka-s3outposts"; };
+  amazonka-sagemaker = buildAmazonka { name = "amazonka-sagemaker"; };
+  amazonka-sagemaker-a2i-runtime = buildAmazonka { name = "amazonka-sagemaker-a2i-runtime"; };
+  amazonka-sagemaker-edge = buildAmazonka { name = "amazonka-sagemaker-edge"; };
+  amazonka-sagemaker-featurestore-runtime = buildAmazonka { name = "amazonka-sagemaker-featurestore-runtime"; };
+  amazonka-sagemaker-geospatial = buildAmazonka { name = "amazonka-sagemaker-geospatial"; };
+  amazonka-sagemaker-metrics = buildAmazonka { name = "amazonka-sagemaker-metrics"; };
+  amazonka-sagemaker-runtime = buildAmazonka { name = "amazonka-sagemaker-runtime"; };
+  amazonka-savingsplans = buildAmazonka { name = "amazonka-savingsplans"; };
+  amazonka-scheduler = buildAmazonka { name = "amazonka-scheduler"; };
+  amazonka-schemas = buildAmazonka { name = "amazonka-schemas"; };
+  amazonka-sdb = buildAmazonka { name = "amazonka-sdb"; };
+  amazonka-secretsmanager = buildAmazonka { name = "amazonka-secretsmanager"; };
+  amazonka-securityhub = buildAmazonka { name = "amazonka-securityhub"; };
+  amazonka-securitylake = buildAmazonka { name = "amazonka-securitylake"; };
+  amazonka-serverlessrepo = buildAmazonka { name = "amazonka-serverlessrepo"; };
+  amazonka-service-quotas = buildAmazonka { name = "amazonka-service-quotas"; };
+  amazonka-servicecatalog = buildAmazonka { name = "amazonka-servicecatalog"; };
+  amazonka-servicecatalog-appregistry = buildAmazonka { name = "amazonka-servicecatalog-appregistry"; };
+  amazonka-ses = buildAmazonka { name = "amazonka-ses"; };
+  amazonka-sesv2 = buildAmazonka { name = "amazonka-sesv2"; };
+  amazonka-shield = buildAmazonka { name = "amazonka-shield"; };
+  amazonka-signer = buildAmazonka { name = "amazonka-signer"; };
+  amazonka-simspaceweaver = buildAmazonka { name = "amazonka-simspaceweaver"; };
+  amazonka-sms = buildAmazonka { name = "amazonka-sms"; };
+  amazonka-sms-voice = buildAmazonka { name = "amazonka-sms-voice"; };
+  amazonka-snow-device-management = buildAmazonka { name = "amazonka-snow-device-management"; };
+  amazonka-snowball = buildAmazonka { name = "amazonka-snowball"; };
+  amazonka-sns = buildAmazonka { name = "amazonka-sns"; };
+  amazonka-sqs = buildAmazonka { name = "amazonka-sqs"; };
+  amazonka-ssm = buildAmazonka { name = "amazonka-ssm"; };
+  amazonka-ssm-contacts = buildAmazonka { name = "amazonka-ssm-contacts"; };
+  amazonka-ssm-incidents = buildAmazonka { name = "amazonka-ssm-incidents"; };
+  amazonka-ssm-sap = buildAmazonka { name = "amazonka-ssm-sap"; };
+  amazonka-sso = buildAmazonka { name = "amazonka-sso"; };
+  amazonka-sso-admin = buildAmazonka { name = "amazonka-sso-admin"; };
+  amazonka-sso-oidc = buildAmazonka { name = "amazonka-sso-oidc"; };
+  amazonka-stepfunctions = buildAmazonka { name = "amazonka-stepfunctions"; };
+  amazonka-storagegateway = buildAmazonka { name = "amazonka-storagegateway"; };
+  amazonka-sts = buildAmazonka { name = "amazonka-sts"; };
+  amazonka-support = buildAmazonka { name = "amazonka-support"; };
+  amazonka-support-app = buildAmazonka { name = "amazonka-support-app"; };
+  amazonka-swf = buildAmazonka { name = "amazonka-swf"; };
+  amazonka-synthetics = buildAmazonka { name = "amazonka-synthetics"; };
+  amazonka-textract = buildAmazonka { name = "amazonka-textract"; };
+  amazonka-timestream-query = buildAmazonka { name = "amazonka-timestream-query"; };
+  amazonka-timestream-write = buildAmazonka { name = "amazonka-timestream-write"; };
+  amazonka-transcribe = buildAmazonka { name = "amazonka-transcribe"; };
+  amazonka-transfer = buildAmazonka { name = "amazonka-transfer"; };
+  amazonka-translate = buildAmazonka { name = "amazonka-translate"; };
+  amazonka-voice-id = buildAmazonka { name = "amazonka-voice-id"; };
+  amazonka-waf = buildAmazonka { name = "amazonka-waf"; };
+  amazonka-waf-regional = buildAmazonka { name = "amazonka-waf-regional"; };
+  amazonka-wafv2 = buildAmazonka { name = "amazonka-wafv2"; };
+  amazonka-wellarchitected = buildAmazonka { name = "amazonka-wellarchitected"; };
+  amazonka-wisdom = buildAmazonka { name = "amazonka-wisdom"; };
+  amazonka-workdocs = buildAmazonka { name = "amazonka-workdocs"; };
+  amazonka-worklink = buildAmazonka { name = "amazonka-worklink"; };
+  amazonka-workmail = buildAmazonka { name = "amazonka-workmail"; };
+  amazonka-workmailmessageflow = buildAmazonka { name = "amazonka-workmailmessageflow"; };
+  amazonka-workspaces = buildAmazonka { name = "amazonka-workspaces"; };
+  amazonka-workspaces-web = buildAmazonka { name = "amazonka-workspaces-web"; };
+  amazonka-xray = buildAmazonka { name = "amazonka-xray"; };
 
   # Make sure that Cabal 3.8.* can be built as-is
   Cabal_3_8_1_0 = doDistribute (super.Cabal_3_8_1_0.override ({
@@ -1796,15 +2159,6 @@ self: super: {
   # Test suite fails, upstream not reachable for simple fix (not responsive on github)
   vivid-osc = dontCheck super.vivid-osc;
   vivid-supercollider = dontCheck super.vivid-supercollider;
-
-  # while waiting for a new release: https://github.com/brendanhay/amazonka/pull/572
-  amazonka = appendPatches [
-    (fetchpatch {
-      relative = "amazonka";
-      url = "https://github.com/brendanhay/amazonka/commit/43ddd87b1ebd6af755b166e16336259ec025b337.patch";
-      sha256 = "sha256-9Ed3qrLGRaNCdvqWMyg8ydAnqDkFqWKLLoObv/5jG54=";
-    })
-  ] (doJailbreak super.amazonka);
 
   # Test suite does not compile.
   feed = dontCheck super.feed;
