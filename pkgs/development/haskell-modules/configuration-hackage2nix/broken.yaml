@@ -135,8 +135,6 @@ broken-packages:
   - altfloat
   - alure
   - amazon-emailer
-  - amazonka-core
-  - amazonka-iam-policy
   - amazon-products
   - AMI
   - amqp-conduit
