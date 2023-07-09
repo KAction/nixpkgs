@@ -1,4 +1,20 @@
-{ lib, stdenv, fetchurl, libX11, libXinerama, libXft, writeText, patches ? [ ], conf ? null}:
+{ lib
+, stdenv
+, fetchurl
+, writeText
+
+, expat
+, libX11
+, libXau
+, libXdmcp
+, libXext
+, libXft
+, libXinerama
+, libXrender
+
+, patches ? [ ]
+, conf ? null
+}:
 
 stdenv.mkDerivation rec {
   pname = "dwm";
@@ -9,7 +25,17 @@ stdenv.mkDerivation rec {
     sha256 = "sha256-+pwNaaWESFB2z8GICf1wXlwggNr7E9XnKaNkbKdwOm4=";
   };
 
-  buildInputs = [ libX11 libXinerama libXft ];
+  buildInputs = [
+    expat
+
+    libX11
+    libXau
+    libXdmcp
+    libXext
+    libXft
+    libXinerama
+    libXrender
+  ];
 
   prePatch = ''
     sed -i "s@/usr/local@$out@" config.mk
@@ -27,7 +53,29 @@ stdenv.mkDerivation rec {
     in
     lib.optionalString (conf != null) "cp ${configFile} config.def.h";
 
-  makeFlags = [ "CC=${stdenv.cc.targetPrefix}cc" ];
+  preBuild = ''
+    FREETYPELIBS='
+      -lfontconfig
+      -lXft
+      -lXext
+      -lXrender
+      -lX11
+      -lfreetype
+      -lbz2
+      -lxcb
+      -lpng
+      -lz
+      -lXau
+      -lXdmcp
+      -lXft
+      -lfontconfig
+      -lbrotlidec
+      -lbrotlicommon
+      -lexpat
+    '
+    FREETYPELIBS=$(echo $FREETYPELIBS | tr '\n' ' ')
+    makeFlagsArray=("CC=${stdenv.cc.targetPrefix}cc" FREETYPELIBS="$FREETYPELIBS")
+  '';
 
   meta = with lib; {
     homepage = "https://dwm.suckless.org/";
