@@ -50,6 +50,10 @@ stdenv.mkDerivation (finalAttrs: {
 
   enableParallelBuilding = true;
 
+  patchPhase = lib.optionalString (x11Support && stdenv.hostPlatform.isStatic) ''
+    sed -i 's/-lX11/-lxcb -lXdmcp -lXau -lX11 -lxcb -lXau -lXdmcp/g' configure
+  '';
+
   # Do not build amd64 assembly code on Darwin, because it fails to compile
   # with unknow directive errors
   configureFlags = optional stdenv.isDarwin "--enable-amd64=no"
