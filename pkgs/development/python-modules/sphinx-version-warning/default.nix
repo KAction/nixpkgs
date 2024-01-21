@@ -18,7 +18,7 @@
 buildPythonPackage {
   pname = "sphinx-version-warning";
   version = "unstable-2019-08-10";
-  format = "pyproject";
+  format = "setuptools";
 
   outputs = [ "out" "doc" ];
 
