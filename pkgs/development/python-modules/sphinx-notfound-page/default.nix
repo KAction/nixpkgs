@@ -3,6 +3,7 @@
 , fetchFromGitHub
 , flit-core
 , pythonImportsCheckHook
+, setuptools
 # documentation build dependencies
 , sphinxHook
 , sphinx-prompt
@@ -36,6 +37,7 @@ buildPythonPackage rec {
     sphinx-tabs
     sphinx-autoapi
     sphinxemoji
+    setuptools
   ];
 
   propagatedBuildInputs = [ sphinx ];
