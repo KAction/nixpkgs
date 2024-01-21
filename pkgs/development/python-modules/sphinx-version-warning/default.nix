@@ -10,6 +10,7 @@
 , sphinx-tabs
 , sphinx-prompt
 , sphinxemoji
+, setuptools
 }:
 
 # Latest tagged release release "1.1.2" (Nov 2018) does not contain
@@ -18,7 +19,7 @@
 buildPythonPackage {
   pname = "sphinx-version-warning";
   version = "unstable-2019-08-10";
-  format = "pyproject";
+  pyproject = true;
 
   outputs = [ "out" "doc" ];
 
@@ -46,6 +47,7 @@ buildPythonPackage {
     sphinx-tabs
     sphinx-prompt
     sphinxemoji
+    setuptools
   ];
 
   propagatedBuildInputs = [ sphinx ];
