@@ -50,6 +50,9 @@ buildPythonPackage {
     setuptools
   ];
 
+  # upstream has no tests
+  doCheck = false;
+
   propagatedBuildInputs = [ sphinx ];
 
   pythonImportsCheck = [ "versionwarning" ];
