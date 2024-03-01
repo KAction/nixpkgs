@@ -68,6 +68,7 @@
 , withAlsaLib ? false
 , withAthena ? false
 , withCsrc ? true
+, withDbus ? stdenv.isLinux
 , withGTK2 ? false
 , withGTK3 ? withPgtk && !noGui
 , withGconf ? false
@@ -77,6 +78,7 @@
 , withMotif ? false
 , withNS ? stdenv.isDarwin && !(variant == "macport" || noGui)
 , withPgtk ? false
+, withSelinux ? stdenv.isLinux
 , withSQLite3 ? lib.versionAtLeast version "29"
 , withSystemd ? lib.meta.availableOn stdenv.hostPlatform systemd
 , withToolkitScrollBars ? true
@@ -227,8 +229,9 @@ mkDerivation (finalAttrs: {
     alsa-lib
   ] ++ lib.optionals withGpm [
     gpm
-  ] ++ lib.optionals stdenv.isLinux [
+  ] ++ lib.optionals withDbus [
     dbus
+  ] ++ lib.optionals withSelinux [
     libselinux
   ] ++ lib.optionals (!stdenv.isDarwin && withGTK3) [
     gsettings-desktop-schemas
