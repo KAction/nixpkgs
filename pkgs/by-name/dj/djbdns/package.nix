@@ -33,9 +33,9 @@ stdenv.mkDerivation {
     # To fix https://github.com/NixOS/nixpkgs/issues/119066.
     # Note that the NixOS test <nixpkgs/nixos/tests/tinydns.nix> tests for this.
     ./softlimit.patch
-
     # Fix warnings introduced due to implicit type conversions and implicit function declarations
     ./fix-warnings.patch
+    ./djbdns-hosts.patch
   ];
 
   postPatch = ''
@@ -46,9 +46,14 @@ stdenv.mkDerivation {
     sed -i "s|/etc/dnsroots.global|$out/etc/dnsroots.global|" dnscache-conf.c
   '';
 
+  postBuild = ''
+    gcc -I. ${./djbdns-hosts.c} cdb.a unix.a buffer.a alloc.a byte.a -o djbdns-hosts
+  '';
+
   installPhase = ''
     mkdir -pv $out/etc;
     make setup
+    install -m 755 ./djbdns-hosts $out/bin
     cd $out;
     tar xzvf ${manSrc};
     for n in 1 5 8; do
