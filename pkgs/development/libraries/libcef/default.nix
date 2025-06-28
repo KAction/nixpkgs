@@ -1,35 +1,42 @@
-{ lib
-, stdenv
-, fetchurl
-, cmake
-, glib
-, nss
-, nspr
-, atk
-, at-spi2-atk
-, libdrm
-, expat
-, libxcb
-, libxkbcommon
-, libX11
-, libXcomposite
-, libXdamage
-, libXext
-, libXfixes
-, libXrandr
-, mesa
-, gtk3
-, pango
-, cairo
-, alsa-lib
-, dbus
-, at-spi2-core
-, cups
-, libxshmfence
-, obs-studio
+{
+  lib,
+  stdenv,
+  fetchurl,
+  cmake,
+  glib,
+  nss,
+  nspr,
+  atk,
+  at-spi2-atk,
+  libdrm,
+  expat,
+  libxcb,
+  libxkbcommon,
+  libX11,
+  libXcomposite,
+  libXdamage,
+  libXext,
+  libXfixes,
+  libXrandr,
+  libgbm,
+  gtk3,
+  pango,
+  cairo,
+  alsa-lib,
+  dbus,
+  at-spi2-core,
+  cups,
+  libxshmfence,
+  libGL,
+  udev,
+  systemd,
+  obs-studio,
+  xorg,
 }:
 
 let
+  gl_rpath = lib.makeLibraryPath [ stdenv.cc.cc ];
+
   rpath = lib.makeLibraryPath [
     glib
     nss
@@ -46,7 +53,7 @@ let
     libXext
     libXfixes
     libXrandr
-    mesa
+    libgbm
     gtk3
     pango
     cairo
@@ -55,68 +62,107 @@ let
     at-spi2-core
     cups
     libxshmfence
+    libGL
+    udev
+    systemd
+    xorg.libxcb
+    xorg.libX11
+    xorg.libXcomposite
+    xorg.libXdamage
+    xorg.libXext
+    xorg.libXfixes
+    xorg.libXrandr
+    xorg.libxshmfence
   ];
-  platforms = {
-    "aarch64-linux" = {
+
+  selectSystem =
+    attrs:
+    attrs.${stdenv.hostPlatform.system} or (throw "Unsupported system ${stdenv.hostPlatform.system}");
+
+  platformInfo = selectSystem {
+    aarch64-linux = {
       platformStr = "linuxarm64";
       projectArch = "arm64";
     };
-    "i686-linux" = {
-      platformStr = "linux32";
-      projectArch = "x86";
-    };
-    "x86_64-linux" = {
+    x86_64-linux = {
       platformStr = "linux64";
       projectArch = "x86_64";
     };
   };
-  platforms."aarch64-linux".sha256 = "0gmnmr0zn2ffn7xbhmfh6rhmwmxy5zzlj0s3lyp99knjn47lg2fg";
-  platforms."i686-linux".sha256 = "1lp2z9db89qk2wh900c2dzlhflwmcbmp4m7xnlj04pq4q2kgfm9p";
-  platforms."x86_64-linux".sha256 = "1ljrp0iky7rrj04sbqicrg1jr938xnid6jlirbf7gwlmzliz3wfs";
-
-  platformInfo = builtins.getAttr stdenv.targetPlatform.system platforms;
 in
-stdenv.mkDerivation rec {
-  pname = "cef-binary";
-  version = "100.0.24";
-  gitRevision = "0783cf8";
-  chromiumVersion = "100.0.4896.127";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "libcef";
+  version = "137.0.17";
+  gitRevision = "f354b0e";
+  chromiumVersion = "137.0.7151.104";
+  buildType = "Release";
+
+  srcHash = selectSystem {
+    aarch64-linux = "sha256-C9P4+TpzjyMD5z2qLbzubbrIr66usFjRx7QqiAxI2D8=";
+    x86_64-linux = "sha256-iDC3a/YN0NqjX/b2waKvUAZCaR0lkLmUPqBJphE037Q=";
+  };
 
   src = fetchurl {
-    url = "https://cef-builds.spotifycdn.com/cef_binary_${version}+g${gitRevision}+chromium-${chromiumVersion}_${platformInfo.platformStr}_minimal.tar.bz2";
-    inherit (platformInfo) sha256;
+    url = "https://cef-builds.spotifycdn.com/cef_binary_${finalAttrs.version}+g${finalAttrs.gitRevision}+chromium-${finalAttrs.chromiumVersion}_${platformInfo.platformStr}_minimal.tar.bz2";
+    hash = finalAttrs.srcHash;
   };
 
   nativeBuildInputs = [ cmake ];
+
   cmakeFlags = [ "-DPROJECT_ARCH=${platformInfo.projectArch}" ];
+
   makeFlags = [ "libcef_dll_wrapper" ];
+
   dontStrip = true;
+
   dontPatchELF = true;
 
-  installPhase = ''
-    mkdir -p $out/lib/ $out/share/cef/
-    cp libcef_dll_wrapper/libcef_dll_wrapper.a $out/lib/
-    cp ../Release/libcef.so $out/lib/
-    patchelf --set-rpath "${rpath}" $out/lib/libcef.so
-    cp ../Release/*.bin $out/share/cef/
-    cp -r ../Resources/* $out/share/cef/
-    cp -r ../include $out/
+  preInstall = ''
+    patchelf --set-rpath "${rpath}" --set-interpreter "${stdenv.cc.bintools.dynamicLinker}" ../${finalAttrs.buildType}/chrome-sandbox
+    patchelf --add-needed libudev.so --set-rpath "${rpath}" ../${finalAttrs.buildType}/libcef.so
+    patchelf --set-rpath "${gl_rpath}" ../${finalAttrs.buildType}/libEGL.so
+    patchelf --add-needed libGL.so.1 --set-rpath "${gl_rpath}" ../${finalAttrs.buildType}/libGLESv2.so
+    patchelf --set-rpath "${gl_rpath}" ../${finalAttrs.buildType}/libvk_swiftshader.so
+    patchelf --set-rpath "${gl_rpath}" ../${finalAttrs.buildType}/libvulkan.so.1
   '';
 
-  passthru.tests = {
-    inherit obs-studio; # frequently breaks on CEF updates
-  };
-  passthru.updateScript = ./update.sh;
+  installPhase = ''
+    runHook preInstall
 
-  meta = with lib; {
+    mkdir -p $out/lib/ $out/share/cef/ $out/libexec/cef/
+    cp libcef_dll_wrapper/libcef_dll_wrapper.a $out/lib/
+    cp ../${finalAttrs.buildType}/libcef.so $out/lib/
+    cp ../${finalAttrs.buildType}/libEGL.so $out/lib/
+    cp ../${finalAttrs.buildType}/libGLESv2.so $out/lib/
+    cp ../${finalAttrs.buildType}/libvk_swiftshader.so $out/lib/
+    cp ../${finalAttrs.buildType}/libvulkan.so.1 $out/lib/
+    cp ../${finalAttrs.buildType}/chrome-sandbox $out/libexec/cef/
+    cp ../${finalAttrs.buildType}/*.bin ../${finalAttrs.buildType}/*.json $out/share/cef/
+    cp -r ../Resources/* $out/share/cef/
+    cp -r ../include $out/
+
+    runHook postInstall
+  '';
+
+  passthru = {
+    updateScript = ./update.sh;
+    tests = {
+      inherit obs-studio; # frequently breaks on CEF updates
+    };
+  };
+
+  meta = {
     description = "Simple framework for embedding Chromium-based browsers in other applications";
     homepage = "https://cef-builds.spotifycdn.com/index.html";
-    maintainers = with maintainers; [ puffnfresh ];
-    sourceProvenance = with sourceTypes; [
+    maintainers = with lib.maintainers; [ puffnfresh ];
+    sourceProvenance = with lib.sourceTypes; [
       fromSource
       binaryNativeCode
     ];
-    license = licenses.bsd3;
-    platforms = [ "i686-linux" "x86_64-linux" "aarch64-linux" ];
+    license = lib.licenses.bsd3;
+    platforms = [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
   };
-}
+})

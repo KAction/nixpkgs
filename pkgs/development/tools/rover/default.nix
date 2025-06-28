@@ -1,35 +1,43 @@
-{ lib
-, callPackage
-, fetchFromGitHub
-, perl
-, rustPlatform
+{
+  lib,
+  fetchFromGitHub,
+  pkg-config,
+  rustPlatform,
+  openssl,
 }:
 
 rustPlatform.buildRustPackage rec {
   pname = "rover";
-  version = "0.5.1";
+  version = "0.24.0";
 
   src = fetchFromGitHub {
     owner = "apollographql";
     repo = pname;
     rev = "v${version}";
-    sha256 = "sha256-wBHMND/xpm9o7pkWMUj9lEtEkzy3mX+E4Dt7qDn6auY=";
+    sha256 = "sha256-uyeePAHBDCzXzwIWrKcc9LHClwSI7DMBYod/o4LfK+Y=";
   };
 
-  cargoSha256 = "sha256-n0R2MdAYGsOsYt4x1N1KdGvBZYTALyhSzCGW29bnFU4=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-uR5XvkHUmZzCHZITKgScmzqjLOIvbPyrih/0B1OpsAc=";
 
-  nativeBuildInputs = [
-    perl
+  buildInputs = [
+    openssl
   ];
 
-  # The rover-client's build script (crates/rover-client/build.rs) will try to
-  # download the API's graphql schema at build time to our read-only filesystem.
-  # To avoid this we pre-download it to a location the build script checks.
-  preBuild = ''
-    mkdir crates/rover-client/.schema
-    cp ${./schema}/etag.id        crates/rover-client/.schema/
-    cp ${./schema}/schema.graphql crates/rover-client/.schema/
-  '';
+  nativeBuildInputs = [
+    pkg-config
+  ];
+
+  env = {
+    OPENSSL_NO_VENDOR = true;
+  };
+
+  # This test checks whether the plugins specified in the plugins json file are
+  # valid by making a network call to the repo that houses their binaries; but, the
+  # build env can't make network calls (impurity)
+  cargoTestFlags = [
+    "-- --skip=latest_plugins_are_valid_versions"
+  ];
 
   passthru.updateScript = ./update.sh;
 
@@ -41,10 +49,13 @@ rustPlatform.buildRustPackage rec {
   '';
 
   meta = with lib; {
-    description = "A CLI for managing and maintaining graphs with Apollo Studio";
+    description = "CLI for interacting with ApolloGraphQL's developer tooling, including managing self-hosted and GraphOS graphs";
+    mainProgram = "rover";
     homepage = "https://www.apollographql.com/docs/rover";
     license = licenses.mit;
-    maintainers = [ maintainers.ivanbrennan ];
-    platforms = ["x86_64-linux"];
+    maintainers = [
+      maintainers.ivanbrennan
+      maintainers.aaronarinder
+    ];
   };
 }

@@ -1,70 +1,109 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchFromGitHub
-, GitPython
-, isort
-, jupyter-client
-, jupyter-packaging
-, jupyterlab
-, markdown-it-py
-, mdit-py-plugins
-, nbformat
-, notebook
-, pytestCheckHook
-, pythonOlder
-, pyyaml
-, toml
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  nodejs,
+  yarn-berry_3,
+
+  # build-system
+  hatch-jupyter-builder,
+  hatchling,
+  jupyterlab,
+
+  # dependencies
+  markdown-it-py,
+  mdit-py-plugins,
+  nbformat,
+  packaging,
+  pyyaml,
+  pythonOlder,
+  tomli,
+
+  # tests
+  jupyter-client,
+  notebook,
+  pytest-asyncio,
+  pytest-xdist,
+  pytestCheckHook,
+  versionCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "jupytext";
-  version = "1.14.1";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.6";
+  version = "1.17.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "mwouts";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-DDF4aTLkhEl4xViYh/E0/y6swcwZ9KbeS0qKm+HdFz8=";
+    repo = "jupytext";
+    tag = "v${version}";
+    hash = "sha256-xMmtppXect+PRlEp2g0kJurALVvcfza+FBbZbK2SbHc=";
   };
 
-  buildInputs = [
-    jupyter-packaging
+  nativeBuildInputs = [
+    nodejs
+    yarn-berry_3.yarnBerryConfigHook
+  ];
+
+  missingHashes = ./missing-hashes.json;
+
+  offlineCache = yarn-berry_3.fetchYarnBerryDeps {
+    inherit src missingHashes;
+    sourceRoot = "${src.name}/jupyterlab";
+    hash = "sha256-UOsQsvnPpwpiKilaS0Rs/j1YReDljpLbEWZaeoRVK9g=";
+  };
+
+  env.HATCH_BUILD_HOOKS_ENABLE = true;
+
+  preConfigure = ''
+    pushd jupyterlab
+  '';
+
+  preBuild = ''
+    popd
+  '';
+
+  build-system = [
+    hatch-jupyter-builder
+    hatchling
     jupyterlab
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     markdown-it-py
     mdit-py-plugins
     nbformat
+    packaging
     pyyaml
-    toml
-  ];
+  ] ++ lib.optionals (pythonOlder "3.11") [ tomli ];
 
-  checkInputs = [
-    GitPython
-    isort
+  nativeCheckInputs = [
     jupyter-client
     notebook
+    pytest-asyncio
+    pytest-xdist
     pytestCheckHook
+    versionCheckHook
   ];
+  versionCheckProgramArg = "--version";
 
   preCheck = ''
     # Tests that use a Jupyter notebook require $HOME to be writable
     export HOME=$(mktemp -d);
+    export PATH=$out/bin:$PATH;
+
+    substituteInPlace tests/functional/contents_manager/test_async_and_sync_contents_manager_are_in_sync.py \
+      --replace-fail "from black import FileMode, format_str" "" \
+      --replace-fail "format_str(sync_code, mode=FileMode())" "sync_code"
   '';
 
-  pytestFlagsArray = [
-    # Pre-commit tests expect the source directory to be a Git repository
-    "--ignore-glob='tests/test_pre_commit_*.py'"
+  disabledTestPaths = [
+    # Requires the `git` python module
+    "tests/external"
   ];
 
-  disabledTests = [
-    "test_apply_black_through_jupytext" # we can't do anything about ill-formatted notebooks
-  ] ++ lib.optionals stdenv.isDarwin [
+  disabledTests = lib.optionals stdenv.hostPlatform.isDarwin [
     # requires access to trash
     "test_load_save_rename"
   ];
@@ -74,10 +113,12 @@ buildPythonPackage rec {
     "jupytext.cli"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Jupyter notebooks as Markdown documents, Julia, Python or R scripts";
     homepage = "https://github.com/mwouts/jupytext";
-    license = licenses.mit;
-    maintainers = with maintainers; [ timokau ];
+    changelog = "https://github.com/mwouts/jupytext/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    teams = [ lib.teams.jupyter ];
+    mainProgram = "jupytext";
   };
 }

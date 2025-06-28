@@ -1,74 +1,94 @@
-{ lib
-, python3
-, fetchFromGitHub
-, withE2BE ? true
-, withHQthumbnails ? false
+{
+  lib,
+  python3,
+  fetchPypi,
+  fetchFromGitHub,
+  withE2BE ? true,
 }:
 
 let
   python = python3.override {
+    self = python;
     packageOverrides = self: super: {
       tulir-telethon = self.telethon.overridePythonAttrs (oldAttrs: rec {
-        version = "1.26.0a5";
+        version = "1.37.0a1";
         pname = "tulir-telethon";
-        src = super.fetchPypi {
+        src = fetchPypi {
           inherit pname version;
-          sha256 = "sha256-s6pj9kHqcl6XU1KQ/aOw1XWQ3CyDotaDl0m7aj9SbW4=";
+          hash = "sha256-FckMHqGaBsqvFbrEnDWqJAQG8j/euY2NooesnxV6Kcc=";
         };
         doCheck = false;
       });
     };
   };
-in python.pkgs.buildPythonPackage rec {
+in
+python.pkgs.buildPythonPackage rec {
   pname = "mautrix-telegram";
-  version = "0.12.1";
+  version = "0.15.2";
   disabled = python.pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "mautrix";
     repo = "telegram";
-    rev = "v${version}";
-    sha256 = "sha256-ecNcoNz++HtuDZnDLsXfPL0MRF+XMQ1BU/NFkKPbD5U=";
+    tag = "v${version}";
+    hash = "sha256-uR0vhp7ONyjwMKbgM1iObpFRoQzyQzJLbw4i9P58jTs=";
   };
+
+  format = "setuptools";
 
   patches = [ ./0001-Re-add-entrypoint.patch ];
 
-  propagatedBuildInputs = with python.pkgs; ([
-    ruamel-yaml
-    python-magic
-    CommonMark
-    aiohttp
-    yarl
-    mautrix
-    tulir-telethon
-    asyncpg
-    Mako
-    # optional
-    cryptg
-    cchardet
-    aiodns
-    brotli
-    pillow
-    qrcode
-    phonenumbers
-    prometheus-client
-    aiosqlite
-  ] ++ lib.optionals withHQthumbnails [
-    moviepy
-  ] ++ lib.optionals withE2BE [
-    python-olm
-    pycryptodome
-    unpaddedbase64
-  ]);
+  propagatedBuildInputs =
+    with python.pkgs;
+    (
+      [
+        ruamel-yaml
+        python-magic
+        commonmark
+        aiohttp
+        yarl
+        (mautrix.override { withOlm = withE2BE; })
+        tulir-telethon
+        asyncpg
+        mako
+        setuptools
+        # speedups
+        cryptg
+        aiodns
+        brotli
+        # qr_login
+        pillow
+        qrcode
+        # formattednumbers
+        phonenumbers
+        # metrics
+        prometheus-client
+        # sqlite
+        aiosqlite
+        # proxy support
+        pysocks
+      ]
+      ++ lib.optionals withE2BE [
+        # e2be
+        python-olm
+        pycryptodome
+        unpaddedbase64
+      ]
+    );
 
   # has no tests
   doCheck = false;
 
   meta = with lib; {
     homepage = "https://github.com/mautrix/telegram";
-    description = "A Matrix-Telegram hybrid puppeting/relaybot bridge";
+    description = "Matrix-Telegram hybrid puppeting/relaybot bridge";
     license = licenses.agpl3Plus;
     platforms = platforms.linux;
-    maintainers = with maintainers; [ nyanloutre ma27 nickcao ];
+    maintainers = with maintainers; [
+      nyanloutre
+      ma27
+      nickcao
+    ];
+    mainProgram = "mautrix-telegram";
   };
 }

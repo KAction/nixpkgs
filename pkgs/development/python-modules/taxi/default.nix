@@ -1,36 +1,44 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, appdirs
-, requests
-, click
-, setuptools
-, backends ? [ ]
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  appdirs,
+  click,
+  flit-core,
+  pytestCheckHook,
+  freezegun,
 }:
 
 buildPythonPackage rec {
   pname = "taxi";
-  version = "6.1.1";
+  version = "6.3.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit version;
-    pname = "taxi";
-    sha256 = "b2562ed58bd6eae7896f4f8e48dbee9845cd2d452b26dd15c26f839b4864cb02";
+  src = fetchFromGitHub {
+    owner = "sephii";
+    repo = "taxi";
+    rev = version;
+    hash = "sha256-QB88RpgzrQy7DGeRdMHC2SV5Esp/r5LZtlaY5C8vJxw=";
   };
 
-  # No tests in pypy package
-  doCheck = false;
+  build-system = [ flit-core ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     appdirs
-    requests
     click
-    setuptools
-  ] ++ backends;
+  ];
+
+  nativeCheckInputs = [
+    freezegun
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "taxi" ];
 
   meta = with lib; {
     homepage = "https://github.com/sephii/taxi/";
     description = "Timesheeting made easy";
+    mainProgram = "taxi";
     license = licenses.wtfpl;
     maintainers = with maintainers; [ jocelynthode ];
   };

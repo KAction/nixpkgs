@@ -1,14 +1,15 @@
-{ mkDerivation
-, extra-cmake-modules
-, kwayland
-, ki18n
-, kcoreaddons
-, plasma-wayland-protocols
-, libepoxy
-, ffmpeg
-, mesa
-, pipewire
-, wayland
+{
+  mkDerivation,
+  extra-cmake-modules,
+  kwayland,
+  ki18n,
+  kcoreaddons,
+  plasma-wayland-protocols,
+  libepoxy,
+  ffmpeg,
+  libgbm,
+  pipewire,
+  wayland,
 }:
 
 mkDerivation {
@@ -19,10 +20,10 @@ mkDerivation {
     ki18n
     kcoreaddons
     plasma-wayland-protocols
-    libepoxy
     ffmpeg
-    mesa
+    libgbm
     pipewire
     wayland
   ];
+  propagatedBuildInputs = [ libepoxy ];
 }

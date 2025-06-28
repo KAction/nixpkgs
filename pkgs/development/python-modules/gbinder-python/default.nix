@@ -1,38 +1,48 @@
-{ lib
-, fetchFromGitHub
-, buildPythonPackage
-, cython
-, pkg-config
-, libgbinder
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  cython,
+  pkg-config,
+  libgbinder,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "gbinder-python";
-  version = "1.0.0";
+  version = "1.1.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "erfanoabdi";
-    repo = pname;
-    rev = version;
-    sha256 = "0jgblzakjgsy0cj93bmh5gr7qnl2xgsrm0wzc6xjvzry9lrbs360";
+    repo = "gbinder-python";
+    tag = version;
+    hash = "sha256-up1EDuR05a7TlCErd2BXkp01oqi6hEskt7xVxsJqquM=";
   };
 
-  buildInputs = [
-    libgbinder
+  build-system = [
+    cython
+    setuptools
   ];
 
+  buildInputs = [ libgbinder ];
+
   nativeBuildInputs = [
-    cython
     pkg-config
   ];
 
-  setupPyGlobalFlags = [ "--cython" ];
+  postPatch = ''
+    # Fix pkg-config name for cross-compilation
+    substituteInPlace setup.py \
+      --replace-fail "pkg-config" "$PKG_CONFIG" \
+      --replace-fail "USE_CYTHON = False" "USE_CYTHON = True"
+  '';
 
-  meta = with lib; {
+  meta = {
     description = "Python bindings for libgbinder";
     homepage = "https://github.com/erfanoabdi/gbinder-python";
-    license = licenses.gpl3;
-    maintainers = with maintainers; [ mcaju ];
-    platforms = platforms.linux;
+    license = lib.licenses.gpl3;
+    platforms = lib.platforms.linux;
+    maintainers = with lib.maintainers; [ ];
   };
 }

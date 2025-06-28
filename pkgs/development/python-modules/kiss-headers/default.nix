@@ -1,25 +1,33 @@
-{ lib, buildPythonPackage, fetchFromGitHub, requests, pytestCheckHook }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  requests,
+  pytestCheckHook,
+  pytest-cov-stub,
+}:
 
 buildPythonPackage rec {
   pname = "kiss-headers";
-  version = "2.3.1";
-  format = "setuptools";
+  version = "2.4.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Ousret";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    sha256 = "sha256-xPjw/uJTmvmQZDrI3i1KTUeAZuDF1mc13hvFBl8Erh0=";
+    repo = "kiss-headers";
+    tag = version;
+    hash = "sha256-WeAzlC1yT+0nPSuB278z8T0XvPjbre051f/Rva5ujAk=";
   };
+
+  nativeBuildInputs = [ hatchling ];
 
   propagatedBuildInputs = [ requests ];
 
-  checkInputs = [ pytestCheckHook ];
-
-  postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "--cov=kiss_headers --doctest-modules --cov-report=term-missing -rxXs" "--doctest-modules -rxXs"
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-cov-stub
+  ];
 
   disabledTestPaths = [
     # Tests require internet access
@@ -34,6 +42,6 @@ buildPythonPackage rec {
     description = "Python package for HTTP/1.1 style headers";
     homepage = "https://github.com/Ousret/kiss-headers";
     license = licenses.mit;
-    maintainers = with maintainers; [ wolfangaukang ];
+    maintainers = [ ];
   };
 }

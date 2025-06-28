@@ -1,53 +1,61 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, six
-, requests
-, django
-, boto3
-, python
-, mock
-, pytestCheckHook
-, pytest-django
+{
+  lib,
+  boto3,
+  buildPythonPackage,
+  django,
+  fetchFromGitHub,
+  hatchling,
+  mock,
+  python,
+  pythonOlder,
+  requests,
+  responses,
+  urllib3,
 }:
 
 buildPythonPackage rec {
   pname = "django-anymail";
-  version = "8.6";
+  version = "13.0";
+  pyproject = true;
+
+  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "anymail";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-hLNILUV7qzqHfh7l3SJAoFveUIRSCHTjEQ3ZC3PhZUY=";
+    repo = "django-anymail";
+    tag = "v${version}";
+    hash = "sha256-0KqpgS71QwTfLp4I8p1An6sCnGcvxTNB4xy4LaFFl8E=";
   };
 
-  propagatedBuildInputs = [
-    six
-    requests
+  build-system = [ hatchling ];
+
+  dependencies = [
     django
-    boto3
+    requests
+    urllib3
   ];
 
-  checkInputs = [
-    pytestCheckHook
-    pytest-django
+  nativeCheckInputs = [
     mock
-  ];
+    responses
+  ] ++ optional-dependencies.amazon-ses;
 
-  disabledTests = [
-    # Require networking
-    "test_debug_logging"
-    "test_no_debug_logging"
-  ];
+  optional-dependencies = {
+    amazon-ses = [ boto3 ];
+  };
+
+  checkPhase = ''
+    runHook preCheck
+    CONTINUOUS_INTEGRATION=1 ${python.interpreter} runtests.py
+    runHook postCheck
+  '';
 
   pythonImportsCheck = [ "anymail" ];
-
-  DJANGO_SETTINGS_MODULE = "tests.test_settings.settings_3_2";
 
   meta = with lib; {
     description = "Django email backends and webhooks for Mailgun";
     homepage = "https://github.com/anymail/django-anymail";
+    changelog = "https://github.com/anymail/django-anymail/blob/${src.tag}/CHANGELOG.rst";
     license = licenses.bsd3;
     maintainers = with maintainers; [ onny ];
   };

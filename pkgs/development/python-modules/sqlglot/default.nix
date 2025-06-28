@@ -1,34 +1,54 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
-, python-dateutil
-, duckdb
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  python-dateutil,
+
+  # tests
+  pytestCheckHook,
+  duckdb,
 }:
+
 buildPythonPackage rec {
   pname = "sqlglot";
-  version = "6.0.7";
-
-  disabled = pythonOlder "3.8";
+  version = "26.16.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     repo = "sqlglot";
     owner = "tobymao";
-    rev = "v${version}";
-    hash = "sha256-7PBhf9NN/mCi92xSkB9ygfmfxTyOYaEyrNvL309sG5Y=";
+    tag = "v${version}";
+    hash = "sha256-uX72AHr4IC+u5AYkW/3myruVPs5NZ1V3THVg+9GWxpg=";
   };
 
-  propagatedBuildInputs = [ python-dateutil ];
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  checkInputs = [ pytestCheckHook duckdb ];
+  dependencies = [
+    # Optional dependency used in the sqlglot optimizer
+    python-dateutil
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    duckdb
+  ];
 
   pythonImportsCheck = [ "sqlglot" ];
 
-  meta = with lib; {
-    description = "A no dependency Python SQL parser, transpiler, and optimizer";
+  meta = {
+    description = "No dependency Python SQL parser, transpiler, and optimizer";
     homepage = "https://github.com/tobymao/sqlglot";
-    license = licenses.mit;
-    maintainers = with maintainers; [ cpcloud ];
+    changelog = "https://github.com/tobymao/sqlglot/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ cpcloud ];
   };
 }

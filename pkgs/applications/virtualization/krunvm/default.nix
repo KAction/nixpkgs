@@ -1,43 +1,48 @@
-{ lib
-, stdenv
-, rustPlatform
-, fetchFromGitHub
-, asciidoctor
-, buildah
-, buildah-unwrapped
-, libiconv
-, libkrun
-, makeWrapper
-, sigtool
+{
+  lib,
+  stdenv,
+  rustPlatform,
+  fetchFromGitHub,
+  asciidoctor,
+  buildah,
+  buildah-unwrapped,
+  cargo,
+  libiconv,
+  libkrun,
+  makeWrapper,
+  rustc,
+  sigtool,
 }:
 
 stdenv.mkDerivation rec {
   pname = "krunvm";
-  version = "0.2.1";
+  version = "0.2.3";
 
   src = fetchFromGitHub {
     owner = "containers";
     repo = pname;
     rev = "v${version}";
-    sha256 = "sha256-rR762L8P+7ebE0u4MVCJoXc5mmqXlDFfSas+lFBMVFQ=";
+    hash = "sha256-IXofYsOmbrjq8Zq9+a6pvBYsvZFcKzN5IvCuHaxwazI=";
   };
 
-  cargoDeps = rustPlatform.fetchCargoTarball {
+  cargoDeps = rustPlatform.fetchCargoVendor {
     inherit src;
-    hash = "sha256-3WiXm90XiQHpCbhlkigg/ZATQeDdUKTstN7hwcsKm4o=";
+    hash = "sha256-Vmb5IgGyKGekuL018/Xiz9QroWIwTIUxVB57fb0X7Kw=";
   };
 
-  nativeBuildInputs = with rustPlatform; [
-    cargoSetupHook
-    rust.cargo
-    rust.rustc
+  nativeBuildInputs = [
+    rustPlatform.cargoSetupHook
+    cargo
+    rustc
     asciidoctor
     makeWrapper
-  ] ++ lib.optionals stdenv.isDarwin [ sigtool ];
+  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ sigtool ];
 
-  buildInputs = [ libkrun ] ++ lib.optionals stdenv.isDarwin [
-    libiconv
-  ];
+  buildInputs =
+    [ libkrun ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      libiconv
+    ];
 
   makeFlags = [ "PREFIX=${placeholder "out"}" ];
 
@@ -55,7 +60,7 @@ stdenv.mkDerivation rec {
 
   # It attaches entitlements with codesign and strip removes those,
   # voiding the entitlements and making it non-operational.
-  dontStrip = stdenv.isDarwin;
+  dontStrip = stdenv.hostPlatform.isDarwin;
 
   postFixup = ''
     wrapProgram $out/bin/krunvm \
@@ -63,9 +68,11 @@ stdenv.mkDerivation rec {
   '';
 
   meta = with lib; {
-    description = "A CLI-based utility for creating microVMs from OCI images";
+    description = "CLI-based utility for creating microVMs from OCI images";
     homepage = "https://github.com/containers/krunvm";
     license = licenses.asl20;
     maintainers = with maintainers; [ nickcao ];
+    platforms = libkrun.meta.platforms;
+    mainProgram = "krunvm";
   };
 }

@@ -1,51 +1,65 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, google-auth
-, google-auth-oauthlib
-, google-cloud-storage
-, requests
-, decorator
-, fsspec
-, ujson
-, aiohttp
-, crcmod
-, pytest-vcr
-, vcrpy
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
+  google-auth,
+  google-auth-oauthlib,
+  google-cloud-storage,
+  requests,
+  decorator,
+  fsspec,
+  fusepy,
+  aiohttp,
+  crcmod,
+  pytest-timeout,
+  pytest-asyncio,
 }:
 
 buildPythonPackage rec {
   pname = "gcsfs";
-  version = "2022.8.2";
-  format = "setuptools";
+  version = "2025.3.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "fsspec";
-    repo = pname;
-    rev = version;
-    hash = "sha256-BnnKFrWz47izKc7nS8NR1Vze1x9kJdYBsQT2KEY9ghM=";
+    repo = "gcsfs";
+    tag = version;
+    hash = "sha256-aXBlj9ej3Ya7h4x/akl/iX6dDS/SgkkEsOQ2E9KmCDU=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [
+    setuptools
+  ];
+
+  dependencies = [
     aiohttp
-    crcmod
     decorator
     fsspec
     google-auth
     google-auth-oauthlib
     google-cloud-storage
     requests
-    ujson
   ];
 
-  checkInputs = [
-    pytest-vcr
+  optional-dependencies = {
+    gcsfuse = [ fusepy ];
+    crc = [ crcmod ];
+  };
+
+  nativeCheckInputs = [
+    pytest-timeout
+    pytest-asyncio
     pytestCheckHook
-    vcrpy
+  ];
+
+  disabledTests = [
+    # Cannot connect to host storage.googleapis.com:443
+    "test_credentials_from_raw_token"
   ];
 
   disabledTestPaths = [
@@ -53,20 +67,17 @@ buildPythonPackage rec {
     "gcsfs/tests/test_core.py"
     "gcsfs/tests/test_mapping.py"
     "gcsfs/tests/test_retry.py"
+    "gcsfs/tests/derived/gcsfs_test.py"
+    "gcsfs/tests/test_inventory_report_listing.py"
   ];
 
-  pytestFlagsArray = [
-    "-x"
-  ];
+  pythonImportsCheck = [ "gcsfs" ];
 
-  pythonImportsCheck = [
-    "gcsfs"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Convenient Filesystem interface over GCS";
     homepage = "https://github.com/fsspec/gcsfs";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ nbren12 ];
+    changelog = "https://github.com/fsspec/gcsfs/raw/${version}/docs/source/changelog.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ nbren12 ];
   };
 }

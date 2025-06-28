@@ -31,7 +31,7 @@ if [[ -z "${__nix_wrapQtAppsHook-}" ]]; then
 
         local qmlDir="$1/${qtQmlPrefix:?}"
         if [ -d "$qmlDir" ]; then
-            qtWrapperArgs+=(--prefix QML2_IMPORT_PATH : "$qmlDir")
+            qtWrapperArgs+=(--prefix NIXPKGS_QT6_QML_IMPORT_PATH : "$qmlDir")
         fi
     }
     addEnvHooks "$targetOffset" qtHostPathHook
@@ -63,7 +63,7 @@ if [[ -z "${__nix_wrapQtAppsHook-}" ]]; then
         qtHostPathHook "${!outputBin}"
     }
 
-    preFixupPhases+=" qtOwnPathsHook"
+    appendToVar preFixupPhases qtOwnPathsHook
 
     # Note: $qtWrapperArgs still gets defined even if ${dontWrapQtApps-} is set.
     wrapQtAppsHook() {
@@ -81,14 +81,17 @@ if [[ -z "${__nix_wrapQtAppsHook-}" ]]; then
             [ -d "$targetDir" ] || continue
 
             find "$targetDir" ! -type d -executable -print0 | while IFS= read -r -d '' file; do
-                if [ -f "$file" ]; then
-                    echo "wrapping $file"
-                    wrapQtApp "$file"
-                elif [ -h "$file" ]; then
+                # Skip the file if it is not a binary (ELF or Mach-O)
+                isELF "$file" || isMachO "$file" || continue
+
+                if [ -h "$file" ]; then
                     target="$(readlink -e "$file")"
                     echo "wrapping $file -> $target"
                     rm "$file"
                     makeQtWrapper "$target" "$file"
+                elif [ -f "$file" ]; then
+                    echo "wrapping $file"
+                    wrapQtApp "$file"
                 fi
             done
         done

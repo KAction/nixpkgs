@@ -1,12 +1,11 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pkginfo
-, sphinxHook
-, sphinx-rtd-theme
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pkginfo,
+  pytestCheckHook,
+  pytest-cov-stub,
 }:
-
 
 buildPythonPackage rec {
   pname = "colorzero";
@@ -15,33 +14,18 @@ buildPythonPackage rec {
 
   src = fetchFromGitHub {
     owner = "waveform80";
-    repo = pname;
-    rev = "refs/tags/release-${version}";
+    repo = "colorzero";
+    tag = "release-${version}";
     hash = "sha256-0NoQsy86OHQNLZsTEuF5s2MlRUoacF28jNeHgFKAH14=";
   };
 
-  postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "--cov" ""
-  '';
+  nativeBuildInputs = [ pkginfo ];
 
-  outputs = [
-    "out"
-    "doc"
-  ];
+  pythonImportsCheck = [ "colorzero" ];
 
-  nativeBuildInputs = [
-    pkginfo
-    sphinx-rtd-theme
-    sphinxHook
-  ];
-
-  pythonImportsCheck = [
-    "colorzero"
-  ];
-
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
+    pytest-cov-stub
   ];
 
   meta = with lib; {

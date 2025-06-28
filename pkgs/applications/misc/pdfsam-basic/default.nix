@@ -1,12 +1,21 @@
-{ lib, stdenv, makeDesktopItem, fetchurl, jdk11, wrapGAppsHook, glib }:
+{
+  lib,
+  stdenv,
+  makeDesktopItem,
+  fetchurl,
+  jdk21,
+  wrapGAppsHook3,
+  glib,
+  nix-update-script,
+}:
 
 stdenv.mkDerivation rec {
   pname = "pdfsam-basic";
-  version = "4.3.4";
+  version = "5.3.1";
 
   src = fetchurl {
-    url = "https://github.com/torakiki/pdfsam/releases/download/v${version}/pdfsam_${version}-1_amd64.deb";
-    sha256 = "sha256-DYCiK5DgWTu1cm4TRsGDCB3LzVCGVkVzSlG3Jeo2WVI=";
+    url = "https://github.com/torakiki/pdfsam/releases/download/v${version}/pdfsam-basic_${version}-1_amd64.deb";
+    hash = "sha256-Fhj/MJnnm8nsuJmSb6PigJT6Qm+CkGg8lV0NaUMfur0=";
   };
 
   unpackPhase = ''
@@ -14,11 +23,11 @@ stdenv.mkDerivation rec {
     tar xvf data.tar.gz
   '';
 
-  nativeBuildInputs = [ wrapGAppsHook ];
+  nativeBuildInputs = [ wrapGAppsHook3 ];
   buildInputs = [ glib ];
 
   preFixup = ''
-    gappsWrapperArgs+=(--set JAVA_HOME "${jdk11}" --set PDFSAM_JAVA_PATH "${jdk11}")
+    gappsWrapperArgs+=(--set JAVA_HOME "${jdk21}" --set PDFSAM_JAVA_PATH "${jdk21}")
   '';
 
   installPhase = ''
@@ -39,15 +48,18 @@ stdenv.mkDerivation rec {
     categories = [ "Office" ];
   };
 
+  passthru.updateScript = nix-update-script { };
+
   meta = with lib; {
-      homepage = "https://github.com/torakiki/pdfsam";
-      description = "Multi-platform software designed to extract pages, split, merge, mix and rotate PDF files";
-      sourceProvenance = with sourceTypes; [
-        binaryBytecode
-        binaryNativeCode
-      ];
-      license = licenses.agpl3;
-      platforms = platforms.all;
-      maintainers = with maintainers; [ _1000101 ];
+    homepage = "https://github.com/torakiki/pdfsam";
+    description = "Multi-platform software designed to extract pages, split, merge, mix and rotate PDF files";
+    mainProgram = "pdfsam-basic";
+    sourceProvenance = with sourceTypes; [
+      binaryBytecode
+      binaryNativeCode
+    ];
+    license = licenses.agpl3Plus;
+    platforms = [ "x86_64-linux" ];
+    maintainers = with maintainers; [ _1000101 ];
   };
 }

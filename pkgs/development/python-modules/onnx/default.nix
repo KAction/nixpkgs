@@ -1,68 +1,95 @@
-{ lib
-, buildPythonPackage
-, bash
-, cmake
-, fetchPypi
-, isPy27
-, nbval
-, numpy
-, protobuf
-, pytestCheckHook
-, six
-, tabulate
-, typing-extensions
-, pythonRelaxDepsHook
-, pytest-runner
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cmake,
+  pybind11,
+  setuptools,
+
+  # buildInputs
+  abseil-cpp,
+  protobuf,
+  gtest,
+
+  # dependencies
+  numpy,
+  typing-extensions,
+
+  # tests
+  google-re2,
+  ml-dtypes,
+  nbval,
+  parameterized,
+  pillow,
+  pytestCheckHook,
+  tabulate,
+  writableTmpDirAsHomeHook,
 }:
 
+let
+  gtestStatic = gtest.override { static = true; };
+in
 buildPythonPackage rec {
   pname = "onnx";
-  version = "1.12.0";
-  format = "setuptools";
+  version = "1.18.0";
+  pyproject = true;
 
-  disabled = isPy27;
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-E7PnfSdSO52/TzDfyclZRVhZ1eNOkhxE9xLWm4Np7/k=";
+  src = fetchFromGitHub {
+    owner = "onnx";
+    repo = "onnx";
+    tag = "v${version}";
+    hash = "sha256-UhtF+CWuyv5/Pq/5agLL4Y95YNP63W2BraprhRqJOag=";
   };
 
-  nativeBuildInputs = [
+  build-system = [
     cmake
-    pythonRelaxDepsHook
+    protobuf
+    setuptools
   ];
 
-  pythonRelaxDeps = [ "protobuf" ];
+  buildInputs = [
+    abseil-cpp
+    gtestStatic
+    pybind11
+  ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     protobuf
     numpy
-    six
     typing-extensions
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    google-re2
+    ml-dtypes
     nbval
+    parameterized
+    pillow
     pytestCheckHook
-    pytest-runner
     tabulate
+    writableTmpDirAsHomeHook
   ];
 
   postPatch = ''
+    rm -r third_party
+
     chmod +x tools/protoc-gen-mypy.sh.in
-    patchShebangs tools/protoc-gen-mypy.py
-    substituteInPlace tools/protoc-gen-mypy.sh.in \
-      --replace "/bin/bash" "${bash}/bin/bash"
+    patchShebangs tools/protoc-gen-mypy.sh.in
+  '';
+
+  preConfigure = ''
+    # Set CMAKE_INSTALL_LIBDIR to lib explicitly, because otherwise it gets set
+    # to lib64 and cmake incorrectly looks for the protobuf library in lib64
+    export CMAKE_ARGS="-DCMAKE_INSTALL_LIBDIR=lib -DONNX_USE_PROTOBUF_SHARED_LIBS=ON"
+    export CMAKE_ARGS+=" -Dgoogletest_STATIC_LIBRARIES=${gtestStatic}/lib/libgtest.a"
+    export ONNX_BUILD_TESTS=1
   '';
 
   preBuild = ''
     export MAX_JOBS=$NIX_BUILD_CORES
   '';
-
-  disabledTestPaths = [
-    # Unexpected output fields from running code: {'stderr'}
-    "onnx/examples/np_array_tensorproto.ipynb"
-  ];
 
   # The executables are just utility scripts that aren't too important
   postInstall = ''
@@ -72,14 +99,30 @@ buildPythonPackage rec {
   # The setup.py does all the configuration
   dontUseCmakeConfigure = true;
 
-  pythonImportsCheck = [
-    "onnx"
+  # detecting source dir as a python package confuses pytest
+  preCheck = ''
+    rm onnx/__init__.py
+  '';
+
+  pytestFlagsArray = [
+    "onnx/test"
+    "examples"
   ];
 
-  meta = with lib; {
+  __darwinAllowLocalNetworking = true;
+
+  postCheck = ''
+    # run "cpp" tests
+    .setuptools-cmake-build/onnx_gtests
+  '';
+
+  pythonImportsCheck = [ "onnx" ];
+
+  meta = {
     description = "Open Neural Network Exchange";
     homepage = "https://onnx.ai";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ acairncross ];
+    changelog = "https://github.com/onnx/onnx/releases/tag/v${version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ acairncross ];
   };
 }

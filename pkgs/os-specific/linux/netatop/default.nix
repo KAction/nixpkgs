@@ -1,4 +1,12 @@
-{ lib, stdenv, fetchurl, kernel, kmod, zlib }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  kernel,
+  kernelModuleMakeFlags,
+  kmod,
+  zlib,
+}:
 
 let
   version = "3.1";
@@ -13,10 +21,13 @@ stdenv.mkDerivation {
   };
 
   nativeBuildInputs = kernel.moduleBuildDependencies;
-  buildInputs = [ kmod zlib ];
+  buildInputs = [
+    kmod
+    zlib
+  ];
 
   hardeningDisable = [ "pic" ];
-  NIX_CFLAGS_COMPILE = [ "-Wno-error=implicit-fallthrough" ];
+  env.NIX_CFLAGS_COMPILE = toString [ "-Wno-error=implicit-fallthrough" ];
 
   patches = [
     # fix paths in netatop.service
@@ -38,7 +49,7 @@ stdenv.mkDerivation {
     kmod=${kmod} substituteAllInPlace netatop.service
   '';
 
-  makeFlags = kernel.makeFlags;
+  makeFlags = kernelModuleMakeFlags;
 
   preInstall = ''
     mkdir -p $out/lib/systemd/system $out/bin $out/sbin $out/share/man/man{4,8}
@@ -47,9 +58,10 @@ stdenv.mkDerivation {
 
   meta = {
     description = "Network monitoring module for atop";
+    mainProgram = "netatopd";
     homepage = "https://www.atoptool.nl/downloadnetatop.php";
-    license = lib.licenses.gpl2;
+    license = lib.licenses.gpl2Only;
     platforms = lib.platforms.linux;
-    maintainers = with lib.maintainers; [ viric ];
+    maintainers = [ ];
   };
 }

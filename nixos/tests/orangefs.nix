@@ -1,45 +1,52 @@
-import ./make-test-python.nix ({ ... } :
+{ ... }:
 
 let
-  server = { pkgs, ... } : {
-    networking.firewall.allowedTCPPorts = [ 3334 ];
-    boot.initrd.postDeviceCommands = ''
-      ${pkgs.e2fsprogs}/bin/mkfs.ext4 -L data /dev/vdb
-    '';
+  server =
+    { pkgs, ... }:
+    {
+      networking.firewall.allowedTCPPorts = [ 3334 ];
+      boot.initrd.postDeviceCommands = ''
+        ${pkgs.e2fsprogs}/bin/mkfs.ext4 -L data /dev/vdb
+      '';
 
-    virtualisation.emptyDiskImages = [ 4096 ];
+      virtualisation.emptyDiskImages = [ 4096 ];
 
-    virtualisation.fileSystems =
-      { "/data" =
-          { device = "/dev/disk/by-label/data";
-            fsType = "ext4";
-          };
+      virtualisation.fileSystems = {
+        "/data" = {
+          device = "/dev/disk/by-label/data";
+          fsType = "ext4";
+        };
       };
 
-    services.orangefs.server = {
-      enable = true;
-      dataStorageSpace = "/data/storage";
-      metadataStorageSpace = "/data/meta";
-      servers = {
-        server1 = "tcp://server1:3334";
-        server2 = "tcp://server2:3334";
+      services.orangefs.server = {
+        enable = true;
+        dataStorageSpace = "/data/storage";
+        metadataStorageSpace = "/data/meta";
+        servers = {
+          server1 = "tcp://server1:3334";
+          server2 = "tcp://server2:3334";
+        };
       };
     };
-  };
 
-  client = { lib, ... } : {
-    networking.firewall.enable = true;
+  client =
+    { lib, ... }:
+    {
+      networking.firewall.enable = true;
 
-    services.orangefs.client = {
-      enable = true;
-      fileSystems = [{
-        target = "tcp://server1:3334/orangefs";
-        mountPoint = "/orangefs";
-      }];
+      services.orangefs.client = {
+        enable = true;
+        fileSystems = [
+          {
+            target = "tcp://server1:3334/orangefs";
+            mountPoint = "/orangefs";
+          }
+        ];
+      };
     };
-  };
 
-in {
+in
+{
   name = "orangefs";
 
   nodes = {
@@ -62,7 +69,7 @@ in {
             "sudo -g orangefs -u orangefs pvfs2-server -f /etc/orangefs/server.conf"
         )
 
-    # start services after storage is formated on all machines
+    # start services after storage is formatted on all machines
     for server in server1, server2:
         server.succeed("systemctl start orangefs-server.service")
 
@@ -79,4 +86,4 @@ in {
         client1.succeed("echo test > /orangefs/file1")
         client2.succeed("grep test /orangefs/file1")
   '';
-})
+}

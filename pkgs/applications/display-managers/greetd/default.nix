@@ -1,23 +1,25 @@
-{ rustPlatform
-, lib
-, fetchFromSourcehut
-, pam
-, scdoc
-, installShellFiles
+{
+  rustPlatform,
+  lib,
+  fetchFromSourcehut,
+  pam,
+  scdoc,
+  installShellFiles,
 }:
 
 rustPlatform.buildRustPackage rec {
   pname = "greetd";
-  version = "0.8.0";
+  version = "0.10.3";
 
   src = fetchFromSourcehut {
     owner = "~kennylevinsen";
     repo = pname;
     rev = version;
-    sha256 = "sha256-20D6HanUeAc0S9czkNJFmhsrfEqodpafkHsmwKccrHQ=";
+    sha256 = "sha256-jgvYnjt7j4uubpBxrYM3YiUfF1PWuHAN1kwnv6Y+bMg=";
   };
 
-  cargoHash = "sha256-8nMQ81Y0DnPs9WmxNASlcjTEVw5lh+nZtZ7vmmBCu2g=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-JwTLZawY9+M09IDbMPoNUcNrnW1C2OVlEVn1n7ol6dY=";
 
   nativeBuildInputs = [
     scdoc
@@ -45,7 +47,7 @@ rustPlatform.buildRustPackage rec {
     '';
     homepage = "https://sr.ht/~kennylevinsen/greetd/";
     license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ luc65r ];
+    maintainers = with maintainers; [ ];
     platforms = platforms.linux;
   };
 }

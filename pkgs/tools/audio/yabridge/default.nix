@@ -1,15 +1,16 @@
-{ lib
-, multiStdenv
-, fetchFromGitHub
-, substituteAll
-, pkgsi686Linux
-, libnotify
-, meson
-, ninja
-, pkg-config
-, wine
-, libxcb
-, nix-update-script
+{
+  lib,
+  multiStdenv,
+  fetchFromGitHub,
+  replaceVars,
+  pkgsi686Linux,
+  dbus,
+  meson,
+  ninja,
+  pkg-config,
+  wine,
+  libxcb,
+  nix-update-script,
 }:
 
 let
@@ -17,79 +18,93 @@ let
   asio = fetchFromGitHub {
     owner = "chriskohlhoff";
     repo = "asio";
-    rev = "asio-1-22-1";
-    sha256 = "sha256-UDLhx2yI6Txg0wP5H4oNIhgKIB2eMxUGCyT2x/7GgVg=";
+    rev = "refs/tags/asio-1-28-2";
+    hash = "sha256-8Sw0LuAqZFw+dxlsTstlwz5oaz3+ZnKBuvSdLW6/DKQ=";
   };
 
   # Derived from subprojects/bitsery.wrap
   bitsery = fetchFromGitHub {
     owner = "fraillt";
     repo = "bitsery";
-    rev = "v5.2.2";
-    sha256 = "sha256-VwzVtxt+E/SVcxqIJw8BKPO2q7bu/hkhY+nB7FHrZpY=";
+    rev = "refs/tags/v5.2.3";
+    hash = "sha256-rmfcIYCrANycFuLtibQ5wOPwpMVhpTMpdGsUfpR3YsM=";
+  };
+
+  # Derived from subprojects/clap.wrap
+  clap = fetchFromGitHub {
+    owner = "free-audio";
+    repo = "clap";
+    rev = "refs/tags/1.1.9";
+    hash = "sha256-z2P0U2NkDK1/5oDV35jn/pTXCcspuM1y2RgZyYVVO3w=";
   };
 
   # Derived from subprojects/function2.wrap
   function2 = fetchFromGitHub {
     owner = "Naios";
     repo = "function2";
-    rev = "4.2.0";
-    sha256 = "sha256-wrt+fCcM6YD4ZRZYvqqB+fNakCNmltdPZKlNkPLtgMs=";
+    rev = "refs/tags/4.2.3";
+    hash = "sha256-+fzntJn1fRifOgJhh5yiv+sWR9pyaeeEi2c1+lqX3X8=";
   };
 
   # Derived from subprojects/ghc_filesystem.wrap
   ghc_filesystem = fetchFromGitHub {
     owner = "gulrak";
     repo = "filesystem";
-    rev = "v1.5.12";
-    sha256 = "sha256-j4RE5Ach7C7Kef4+H9AHSXa2L8OVyJljDwBduKcC4eE=";
+    rev = "refs/tags/v1.5.14";
+    hash = "sha256-XZ0IxyNIAs2tegktOGQevkLPbWHam/AOFT+M6wAWPFg=";
   };
 
   # Derived from subprojects/tomlplusplus.wrap
   tomlplusplus = fetchFromGitHub {
     owner = "marzer";
     repo = "tomlplusplus";
-    rev = "v3.0.1";
-    sha256 = "sha256-l8ckbCqjz3GUfwStcl3H2C+un5dZfT2uLtayvdu93D4=";
+    rev = "refs/tags/v3.4.0";
+    hash = "sha256-h5tbO0Rv2tZezY58yUbyRVpsfRjY3i+5TPkkxr6La8M=";
   };
 
   # Derived from vst3.wrap
   vst3 = fetchFromGitHub {
     owner = "robbert-vdh";
     repo = "vst3sdk";
-    rev = "v3.7.5_build_44-patched";
+    rev = "refs/tags/v3.7.7_build_19-patched";
     fetchSubmodules = true;
-    sha256 = "sha256-6cuEUa+BXa6MnAYIBq873n0NRLadcPfMX+kpf4ysE6M=";
+    hash = "sha256-LsPHPoAL21XOKmF1Wl/tvLJGzjaCLjaDAcUtDvXdXSU=";
   };
-in multiStdenv.mkDerivation rec {
+in
+multiStdenv.mkDerivation (finalAttrs: {
   pname = "yabridge";
-  version = "4.0.2";
+  version = "5.1.1";
 
   # NOTE: Also update yabridgectl's cargoHash when this is updated
   src = fetchFromGitHub {
     owner = "robbert-vdh";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-rce6gxnB+RpG84Xakw0h4vZ8lyEQ41swWQGuwpomV2I=";
+    repo = "yabridge";
+    rev = "refs/tags/${finalAttrs.version}";
+    hash = "sha256-4eA3vQFklIWkhtbd3Nw39bnJT6gPcni79ZyQVqU4+GQ=";
   };
 
   # Unpack subproject sources
-  postUnpack = ''(
-    cd "$sourceRoot/subprojects"
-    cp -R --no-preserve=mode,ownership ${asio} asio
-    cp -R --no-preserve=mode,ownership ${bitsery} bitsery
-    cp -R --no-preserve=mode,ownership ${function2} function2
-    cp -R --no-preserve=mode,ownership ${ghc_filesystem} ghc_filesystem
-    cp -R --no-preserve=mode,ownership ${tomlplusplus} tomlplusplus
-    cp -R --no-preserve=mode,ownership ${vst3} vst3
-  )'';
+  postUnpack = ''
+    (
+      cd "$sourceRoot/subprojects"
+      cp -R --no-preserve=mode,ownership ${asio} asio
+      cp -R --no-preserve=mode,ownership ${bitsery} bitsery
+      cp -R --no-preserve=mode,ownership ${clap} clap
+      cp -R --no-preserve=mode,ownership ${function2} function2
+      cp -R --no-preserve=mode,ownership ${ghc_filesystem} ghc_filesystem
+      cp -R --no-preserve=mode,ownership ${tomlplusplus} tomlplusplus
+      cp -R --no-preserve=mode,ownership ${vst3} vst3
+    )
+  '';
 
   patches = [
+    ./libyabridge-drop-32-bit-support.patch
+
     # Hard code bitbridge & runtime dependencies
-    (substituteAll {
-      src = ./hardcode-dependencies.patch;
+    (replaceVars ./hardcode-dependencies.patch {
+      libdbus = dbus.lib;
       libxcb32 = pkgsi686Linux.xorg.libxcb;
-      inherit libnotify wine;
+      inherit wine;
     })
 
     # Patch the chainloader to search for libyabridge through NIX_PROFILES
@@ -102,6 +117,7 @@ in multiStdenv.mkDerivation rec {
       cd subprojects
       cp packagefiles/asio/* asio
       cp packagefiles/bitsery/* bitsery
+      cp packagefiles/clap/* clap
       cp packagefiles/function2/* function2
       cp packagefiles/ghc_filesystem/* ghc_filesystem
     )
@@ -116,10 +132,12 @@ in multiStdenv.mkDerivation rec {
 
   buildInputs = [
     libxcb
+    dbus
   ];
 
   mesonFlags = [
-    "--cross-file" "cross-wine.conf"
+    "--cross-file"
+    "cross-wine.conf"
     "-Dbitbridge=true"
 
     # Requires CMake and is unnecessary
@@ -130,7 +148,7 @@ in multiStdenv.mkDerivation rec {
     runHook preInstall
     mkdir -p "$out/bin" "$out/lib"
     cp yabridge-host{,-32}.exe{,.so} "$out/bin"
-    cp libyabridge{,-chainloader}-{vst2,vst3}.so "$out/lib"
+    cp libyabridge{,-chainloader}-{vst2,vst3,clap}.so "$out/lib"
     runHook postInstall
   '';
 
@@ -138,19 +156,18 @@ in multiStdenv.mkDerivation rec {
   postFixup = ''
     for exe in "$out"/bin/*.exe; do
       substituteInPlace "$exe" \
-        --replace 'WINELOADER="wine"' 'WINELOADER="${wine}/bin/wine"'
+        --replace-fail 'WINELOADER="wine"' 'WINELOADER="${wine}/bin/wine"'
     done
   '';
 
-  passthru.updateScript = nix-update-script {
-    attrPath = pname;
-  };
+  passthru.updateScript = nix-update-script { };
 
   meta = with lib; {
-    description = "A modern and transparent way to use Windows VST2 and VST3 plugins on Linux";
-    homepage = src.meta.homepage;
+    description = "Modern and transparent way to use Windows VST2 and VST3 plugins on Linux";
+    homepage = "https://github.com/robbert-vdh/yabridge";
+    changelog = "https://github.com/robbert-vdh/yabridge/blob/${finalAttrs.version}/CHANGELOG.md";
     license = licenses.gpl3Plus;
     maintainers = with maintainers; [ kira-bruneau ];
     platforms = [ "x86_64-linux" ];
   };
-}
+})

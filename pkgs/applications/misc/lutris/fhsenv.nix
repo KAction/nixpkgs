@@ -1,123 +1,296 @@
-{ lib, buildFHSUserEnv, lutris-unwrapped
-, extraPkgs ? pkgs: [ ]
-, extraLibraries ? pkgs: [ ]
-, steamSupport ? true
+{
+  lib,
+  buildFHSEnv,
+  lutris-unwrapped,
+  extraPkgs ? pkgs: [ ],
+  extraLibraries ? pkgs: [ ],
+  steamSupport ? true,
 }:
 
 let
 
-  qt5Deps = pkgs: with pkgs.qt5; [ qtbase qtmultimedia ];
-  gnomeDeps = pkgs: with pkgs; [ gnome.zenity gtksourceview gnome-desktop gnome.libgnome-keyring webkitgtk ];
-  xorgDeps = pkgs: with pkgs.xorg; [
-    libX11 libXrender libXrandr libxcb libXmu libpthreadstubs libXext libXdmcp
-    libXxf86vm libXinerama libSM libXv libXaw libXi libXcursor libXcomposite
-  ];
+  qt5Deps =
+    pkgs: with pkgs.qt5; [
+      qtbase
+      qtmultimedia
+    ];
+  qt6Deps = pkgs: with pkgs.qt6; [ qtbase ];
+  gnomeDeps =
+    pkgs: with pkgs; [
+      zenity
+      gtksourceview
+      gnome-desktop
+      libgnome-keyring
+      webkitgtk_4_1
+    ];
+  xorgDeps =
+    pkgs: with pkgs.xorg; [
+      libX11
+      libXrender
+      libXrandr
+      libxcb
+      libXmu
+      libpthreadstubs
+      libXext
+      libXdmcp
+      libXxf86vm
+      libXinerama
+      libSM
+      libXv
+      libXaw
+      libXi
+      libXcursor
+      libXcomposite
+      libXfixes
+      libXtst
+      libXScrnSaver
+      libICE
+      libXt
+    ];
+  gstreamerDeps =
+    pkgs: with pkgs.gst_all_1; [
+      gstreamer
+      gst-plugins-base
+      gst-plugins-good
+      gst-plugins-ugly
+      gst-plugins-bad
+      gst-libav
+    ];
 
-in buildFHSUserEnv {
-  name = "lutris";
+in
+buildFHSEnv {
+  pname = "lutris";
+  inherit (lutris-unwrapped) version;
 
   runScript = "lutris";
 
-  targetPkgs = pkgs: with pkgs; [
-    lutris-unwrapped
+  # Many native and WINE games need 32bit
+  multiArch = true;
 
-    # Adventure Game Studio
-    allegro dumb
+  targetPkgs =
+    pkgs:
+    with pkgs;
+    [
+      lutris-unwrapped
 
-    # Desmume
-    lua agg soundtouch openal desktop-file-utils atk
+      # Appimages
+      fuse
 
-    # DGen // TODO: libarchive is broken
+      # Adventure Game Studio
+      allegro
+      dumb
 
-    # Dolphin
-    bluez ffmpeg gettext portaudio wxGTK30 miniupnpc mbedtls lzo sfml gsm
-    wavpack orc nettle gmp pcre vulkan-loader
+      # Battle.net
+      jansson
 
-    # DOSBox
-    SDL_net SDL_sound
+      # Curl
+      libnghttp2
 
-    # GOG
-    glib-networking
+      # Desmume
+      lua
+      agg
+      soundtouch
+      openal
+      desktop-file-utils
+      atk
 
-    # Higan // TODO: "higan is not available for the x86_64 architecture"
+      # DGen // TODO: libarchive is broken
 
-    # Libretro
-    fluidsynth hidapi mesa libdrm
+      # Dolphin
+      bluez
+      ffmpeg_6
+      gettext
+      portaudio
+      miniupnpc
+      mbedtls_2
+      lzo
+      sfml
+      gsm
+      wavpack
+      orc
+      nettle
+      gmp
+      pcre
+      vulkan-loader
+      zstd
 
-    # MAME
-    qt48 fontconfig SDL2_ttf
+      # DOSBox
+      SDL_net
+      SDL_sound
 
-    # Mednafen
-    freeglut mesa_glu
+      # GOG
+      glib-networking
 
-    # MESS
-    expat
+      # Higan // TODO: "higan is not available for the x86_64 architecture"
 
-    # Minecraft
-    nss
+      # Libretro
+      fluidsynth
+      hidapi
+      libgbm
+      libdrm
 
-    # Mupen64Plus
-    boost dash
+      # MAME
+      fontconfig
+      SDL2_ttf
 
-    # Osmose
-    qt4
+      # Mednafen
+      libglut
+      mesa_glu
 
-    # Overwatch 2
-    libunwind
+      # MESS
+      expat
 
-    # PPSSPP
-    glew snappy
+      # Minecraft
+      nss
 
-    # Redream // "redream is not available for the x86_64 architecture"
+      # Mupen64Plus
+      boost
+      dash
 
+      # Overwatch 2
+      libunwind
 
-    # rpcs3 // TODO: "error while loading shared libraries: libz.so.1..."
-    llvm
+      # PPSSPP
+      glew
+      snappy
 
-    # ScummVM
-    nasm sndio
+      # Redream // "redream is not available for the x86_64 architecture"
 
-    # ResidualVM is now merged with ScummVM and therefore does not exist anymore
-    flac
+      # RPCS3
+      llvm
+      e2fsprogs
+      libgpg-error
 
-    # Snes9x
-    libepoxy minizip
+      # ScummVM
+      nasm
+      sndio
 
-    # Vice
-    bison flex
+      # ResidualVM is now merged with ScummVM and therefore does not exist anymore
+      flac
 
-    # WINE
-    xorg.xrandr perl which p7zip gnused gnugrep psmisc opencl-headers
+      # Snes9x
+      libepoxy
+      minizip
 
-    # ZDOOM
-    soundfont-fluid bzip2 game-music-emu
-  ] ++ qt5Deps pkgs
+      # Vice
+      bison
+      flex
+
+      # WINE
+      xorg.xrandr
+      perl
+      which
+      p7zip
+      gnused
+      gnugrep
+      psmisc
+      opencl-headers
+
+      # ZDOOM
+      soundfont-fluid
+      bzip2
+      game-music-emu
+    ]
+    ++ qt5Deps pkgs
+    ++ qt6Deps pkgs
     ++ gnomeDeps pkgs
     ++ lib.optional steamSupport pkgs.steam
     ++ extraPkgs pkgs;
 
-  multiPkgs = pkgs: with pkgs; [
-    # Common
-    libsndfile libtheora libogg libvorbis libopus libGLU libpcap libpulseaudio
-    libao libevdev udev libgcrypt libxml2 libusb-compat-0_1 libpng libmpeg2 libv4l
-    libjpeg libxkbcommon libass libcdio libjack2 libsamplerate libzip libmad libaio
-    libcap libtiff libva libgphoto2 libxslt libsndfile giflib zlib glib
-    alsa-lib zziplib bash dbus keyutils zip cabextract freetype unzip coreutils
-    readline gcc SDL SDL2 curl graphite2 gtk2 gtk3 udev ncurses wayland libglvnd
-    vulkan-loader xdg-utils sqlite gnutls p11-kit libbsd harfbuzz
+  multiPkgs =
+    pkgs:
+    with pkgs;
+    [
+      # Common
+      libsndfile
+      libtheora
+      libogg
+      libvorbis
+      libopus
+      libGLU
+      libpcap
+      libpulseaudio
+      libao
+      libevdev
+      udev
+      libgcrypt
+      libxml2
+      libusb1
+      libpng
+      libmpeg2
+      libv4l
+      libjpeg
+      libxkbcommon
+      libass
+      libcdio
+      libjack2
+      libsamplerate
+      libzip
+      libmad
+      libaio
+      libcap
+      libtiff
+      libva
+      libgphoto2
+      libxslt
+      libsndfile
+      giflib
+      zlib
+      glib
+      alsa-lib
+      zziplib
+      bash
+      dbus
+      keyutils
+      zip
+      cabextract
+      freetype
+      unzip
+      coreutils
+      readline
+      gcc
+      SDL
+      SDL2
+      curl
+      graphite2
+      gtk2
+      gtk3
+      udev
+      ncurses
+      wayland
+      libglvnd
+      vulkan-loader
+      xdg-utils
+      sqlite
+      gnutls
+      p11-kit
+      libbsd
+      harfbuzz
 
-    # PCSX2 // TODO: "libgobject-2.0.so.0: wrong ELF class: ELFCLASS64"
+      # PCSX2 // TODO: "libgobject-2.0.so.0: wrong ELF class: ELFCLASS64"
 
-    # WINE
-    cups lcms2 mpg123 cairo unixODBC samba4 sane-backends openldap
-    ocl-icd util-linux libkrb5
+      # WINE
+      cups
+      lcms2
+      mpg123
+      cairo
+      unixODBC
+      samba4
+      sane-backends
+      openldap
+      ocl-icd
+      util-linux
+      libkrb5
 
-    # Proton
-    libselinux
+      # Proton
+      libselinux
 
-    # Winetricks
-    fribidi
-  ] ++ xorgDeps pkgs
+      # Winetricks
+      fribidi
+      pango
+    ]
+    ++ xorgDeps pkgs
+    ++ gstreamerDeps pkgs
     ++ extraLibraries pkgs;
 
   extraInstallCommands = ''
@@ -142,7 +315,8 @@ in buildFHSUserEnv {
       platforms
       license
       maintainers
-      broken;
+      broken
+      ;
 
     mainProgram = "lutris";
   };

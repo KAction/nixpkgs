@@ -1,56 +1,64 @@
-{ lib
-, buildPythonPackage
-, cryptography
-, fetchFromGitHub
-, pytest-asyncio
-, pytest-sugar
-, pytest-timeout
-, pytestCheckHook
-, pythonOlder
-, setuptools
+{
+  lib,
+  async-timeout,
+  buildPythonPackage,
+  click,
+  cryptography,
+  fetchFromGitHub,
+  hatchling,
+  orjson,
+  pytest-asyncio,
+  pytest-timeout,
+  pytestCheckHook,
+  pythonOlder,
+  xdg,
+  zeroconf,
 }:
 
 buildPythonPackage rec {
   pname = "pylutron-caseta";
-  version = "0.17.0";
-  format = "pyproject";
+  version = "0.24.0";
+  pyproject = true;
 
   disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "gurumitts";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-8keKhwbvqIMxbfmd9GGF7uacOyvqb8G/ifq+pr4Z700=";
+    repo = "pylutron-caseta";
+    tag = "v${version}";
+    hash = "sha256-67y/YaXWHklSppUxsJ44CDMsvBXLzKBGl00LXBWi4+g=";
   };
 
-  nativeBuildInputs = [
-    setuptools
-  ];
+  build-system = [ hatchling ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     cryptography
-  ];
+    orjson
+  ] ++ lib.optionals (pythonOlder "3.11") [ async-timeout ];
 
-  checkInputs = [
+  optional-dependencies = {
+    cli = [
+      click
+      xdg
+      zeroconf
+    ];
+  };
+
+  nativeCheckInputs = [
     pytest-asyncio
-    pytest-sugar
     pytest-timeout
     pytestCheckHook
-  ];
+  ] ++ lib.optionals (pythonOlder "3.11") [ async-timeout ];
 
-  pytestFlagsArray = [
-    "--asyncio-mode=legacy"
-  ];
+  pytestFlagsArray = [ "--asyncio-mode=auto" ];
 
-  pythonImportsCheck = [
-    "pylutron_caseta"
-  ];
+  pythonImportsCheck = [ "pylutron_caseta" ];
 
   meta = with lib; {
-    description = "Python module o control Lutron Caseta devices";
+    description = "Python module to control Lutron Caseta devices";
     homepage = "https://github.com/gurumitts/pylutron-caseta";
-    license = with licenses; [ asl20 ];
+    changelog = "https://github.com/gurumitts/pylutron-caseta/blob/v${version}/CHANGELOG.md";
+    license = licenses.asl20;
     maintainers = with maintainers; [ fab ];
   };
 }

@@ -1,41 +1,51 @@
-{ lib
-, aiofiles
-, aioftp
-, aiohttp
-, buildPythonPackage
-, fetchPypi
-, pytest-asyncio
-, pytest-localserver
-, pytest-socket
-, pytestCheckHook
-, pythonOlder
-, setuptools-scm
-, tqdm
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools-scm,
+
+  # dependencies
+  aiofiles,
+  aiohttp,
+
+  # optional dependencies
+  aioftp,
+
+  # tests
+  pytest-asyncio,
+  pytest-localserver,
+  pytest-socket,
+  pytestCheckHook,
+  tqdm,
 }:
 
 buildPythonPackage rec {
   pname = "parfive";
-  version = "2.0.1";
-  format = "setuptools";
+  version = "2.2.0";
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-/b4KrYg0mXoQJ/L+9ol7gD2myB0aLgDj0IWa8sxarKU=";
+  src = fetchFromGitHub {
+    owner = "Cadair";
+    repo = "parfive";
+    tag = "v${version}";
+    hash = "sha256-DIjS2q/SOrnLspomLHk8ZJ+krdzMyQfbIpXxad30s1k=";
   };
 
-  buildInputs = [
-    setuptools-scm
-  ];
+  pyproject = true;
 
-  propagatedBuildInputs = [
-    aioftp
+  build-system = [ setuptools-scm ];
+
+  dependencies = [
     aiohttp
     tqdm
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    ftp = [ aioftp ];
+  };
+
+  nativeCheckInputs = [
     aiofiles
     pytest-asyncio
     pytest-localserver
@@ -48,16 +58,22 @@ buildPythonPackage rec {
     "test_ftp"
     "test_ftp_pasv_command"
     "test_ftp_http"
+
+    # flaky comparison between runtime types
+    "test_http_callback_fail"
   ];
 
-  pythonImportsCheck = [
-    "parfive"
-  ];
+  # Tests require local network access
+  __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
-    description = "A HTTP and FTP parallel file downloader";
+  pythonImportsCheck = [ "parfive" ];
+
+  meta = {
+    description = "HTTP and FTP parallel file downloader";
+    mainProgram = "parfive";
     homepage = "https://parfive.readthedocs.io/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ costrouc ];
+    changelog = "https://github.com/Cadair/parfive/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.sarahec ];
   };
 }

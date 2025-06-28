@@ -1,36 +1,55 @@
-{ lib
-, mkDerivation
-, wrapQtAppsHook
-, fetchFromGitHub
-, cmake
-, ninja
-, pkg-config
-, eigen
-, zlib
-, libpng
-, boost
-, guile_3_0
-, stdenv
+{
+  lib,
+  stdenv,
+  wrapQtAppsHook,
+  fetchFromGitHub,
+  unstableGitUpdater,
+  cmake,
+  ninja,
+  pkg-config,
+  eigen_3_4_0,
+  zlib,
+  libpng,
+  boost,
+  guile,
+  python3,
+  qtbase,
 }:
 
-mkDerivation {
-  pname = "libfive-unstable";
-  version = "2022-05-19";
+stdenv.mkDerivation {
+  pname = "libfive";
+  version = "0-unstable-2025-05-22";
 
   src = fetchFromGitHub {
     owner = "libfive";
     repo = "libfive";
-    rev = "d83cc22709ff1f7c478be07ff2419e30e024834e";
-    sha256 = "lNJg2LCpFcTewSA00s7omUtzhVxycAXvo6wEM/JjrN0=";
+    rev = "daa458279121a95b51482508bcfa906d6227442e";
+    hash = "sha256-YPP3ZSMDCQgeOPugRPmZCDI9iesIMwnU7Xu8yGwV9JM=";
   };
 
-  nativeBuildInputs = [ wrapQtAppsHook cmake ninja pkg-config ];
-  buildInputs = [ eigen zlib libpng boost guile_3_0 ];
+  nativeBuildInputs = [
+    wrapQtAppsHook
+    cmake
+    ninja
+    pkg-config
+    python3.pkgs.pythonImportsCheckHook
+  ];
+  buildInputs = [
+    eigen_3_4_0
+    zlib
+    libpng
+    boost
+    guile
+    python3
+    qtbase
+  ];
 
   preConfigure = ''
     substituteInPlace studio/src/guile/interpreter.cpp \
-      --replace "qputenv(\"GUILE_LOAD_COMPILED_PATH\", \"libfive/bind/guile\");" \
-                "qputenv(\"GUILE_LOAD_COMPILED_PATH\", \"libfive/bind/guile:$out/lib/guile/3.0/ccache\");"
+      --replace '"libfive/bind/guile"' \
+                '"libfive/bind/guile:${placeholder "out"}/${guile.siteCcacheDir}"' \
+      --replace '(app_resource_dir + ":" + finder_build_dir).toLocal8Bit()' \
+                '"libfive/bind/guile:${placeholder "out"}/${guile.siteCcacheDir}"'
 
     substituteInPlace libfive/bind/guile/CMakeLists.txt \
       --replace "LIBFIVE_FRAMEWORK_DIR=$<TARGET_FILE_DIR:libfive>" \
@@ -38,32 +57,73 @@ mkDerivation {
       --replace "LIBFIVE_STDLIB_DIR=$<TARGET_FILE_DIR:libfive-stdlib>" \
                 "LIBFIVE_STDLIB_DIR=$out/lib"
 
+    substituteInPlace libfive/bind/python/CMakeLists.txt \
+      --replace ' ''${PYTHON_SITE_PACKAGES_DIR}' \
+                " $out/${python3.sitePackages}" \
+
+    substituteInPlace libfive/bind/python/libfive/ffi.py \
+      --replace "os.path.join('libfive', folder)" \
+                "os.path.join('$out/${python3.sitePackages}/libfive', folder)" \
+
     export XDG_CACHE_HOME=$(mktemp -d)/.cache
   '';
 
   cmakeFlags = [
-    "-DGUILE_CCACHE_DIR=${placeholder "out"}/lib/guile/3.0/ccache"
+    "-DGUILE_CCACHE_DIR=${placeholder "out"}/${guile.siteCcacheDir}"
   ];
 
-  postInstall = if stdenv.isDarwin then ''
-    # No rules to install the mac app, so do it manually.
-    mkdir -p $out/Applications
-    cp -r studio/Studio.app $out/Applications/Studio.app
+  env = lib.optionalAttrs stdenv.cc.isClang {
+    NIX_CFLAGS_COMPILE = "-Wno-error=enum-constexpr-conversion";
+  };
 
-    install_name_tool \
-      -change libfive.dylib $out/lib/libfive.dylib \
-      -change libfive-guile.dylib $out/lib/libfive-guile.dylib \
-      $out/Applications/Studio.app/Contents/MacOS/Studio
-  '' else ''
-    # Link "Studio" binary to "libfive-studio" to be more obvious:
-    ln -s "$out/bin/Studio" "$out/bin/libfive-studio"
-  '';
+  postInstall =
+    lib.optionalString stdenv.hostPlatform.isDarwin ''
+      # No rules to install the mac app, so do it manually.
+      mkdir -p $out/Applications
+      cp -r studio/Studio.app $out/Applications/Studio.app
+
+      install_name_tool -add_rpath $out/lib $out/Applications/Studio.app/Contents/MacOS/Studio
+
+      makeWrapper $out/Applications/Studio.app/Contents/MacOS/Studio $out/bin/Studio
+    ''
+    + ''
+      # Link "Studio" binary to "libfive-studio" to be more obvious:
+      ln -s "$out/bin/Studio" "$out/bin/libfive-studio"
+
+      # Create links since libfive looks for the library in a specific path.
+      mkdir -p "$out/${python3.sitePackages}/libfive/src"
+      ln -s "$out"/lib/libfive.* "$out/${python3.sitePackages}/libfive/src/"
+      mkdir -p "$out/${python3.sitePackages}/libfive/stdlib"
+      ln -s "$out"/lib/libfive-stdlib.* "$out/${python3.sitePackages}/libfive/stdlib/"
+
+      # Create links so Studio can find the bindings.
+      mkdir -p "$out/libfive/bind"
+      ln -s "$out/${python3.sitePackages}" "$out/libfive/bind/python"
+    '';
+
+  pythonImportsCheck = [
+    "libfive"
+    "libfive.runner"
+    "libfive.shape"
+    "libfive.stdlib"
+  ];
+
+  passthru.updateScript = unstableGitUpdater {
+    tagFormat = "";
+  };
 
   meta = with lib; {
     description = "Infrastructure for solid modeling with F-Reps in C, C++, and Guile";
     homepage = "https://libfive.com/";
-    maintainers = with maintainers; [ hodapp kovirobi ];
-    license = with licenses; [ mpl20 gpl2Plus ];
-    platforms = with platforms; linux ++ darwin;
+    maintainers = with maintainers; [
+      hodapp
+      kovirobi
+      wulfsta
+    ];
+    license = with licenses; [
+      mpl20
+      gpl2Plus
+    ];
+    platforms = with platforms; all;
   };
 }

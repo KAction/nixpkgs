@@ -1,38 +1,52 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, importlib-metadata
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchFromGitHub,
+  importlib-metadata,
+  pytestCheckHook,
 
-# large-rebuild downstream dependencies and applications
-, flask
-, black
-, magic-wormhole
-, mitmproxy
-, typer
+  # large-rebuild downstream dependencies and applications
+  flask,
+  black,
+  magic-wormhole,
+  mitmproxy,
+  typer,
+  flit-core,
 }:
 
 buildPythonPackage rec {
   pname = "click";
-  version = "8.1.3";
+  version = "8.1.8";
+  pyproject = true;
+
   disabled = pythonOlder "3.7";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-doLcivswKXABZ0V16gDRgU2AjWo2r0Fagr1IHTe6e44=";
+  src = fetchFromGitHub {
+    owner = "pallets";
+    repo = "click";
+    tag = version;
+    hash = "sha256-pAAqf8jZbDfVZUoltwIFpov/1ys6HSYMyw3WV2qcE/M=";
   };
 
-  propagatedBuildInputs = lib.optionals (pythonOlder "3.8") [
-    importlib-metadata
-  ];
+  build-system = [ flit-core ];
+  dependencies = lib.optionals (pythonOlder "3.8") [ importlib-metadata ];
 
-  checkInputs = [
-    pytestCheckHook
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTests = [
+    # test fails with filename normalization on zfs
+    "test_file_surrogates"
   ];
 
   passthru.tests = {
-    inherit black flask magic-wormhole mitmproxy typer;
+    inherit
+      black
+      flask
+      magic-wormhole
+      mitmproxy
+      typer
+      ;
   };
 
   meta = with lib; {
@@ -43,6 +57,6 @@ buildPythonPackage rec {
       composable way, with as little code as necessary.
     '';
     license = licenses.bsd3;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    maintainers = with maintainers; [ nickcao ];
   };
 }

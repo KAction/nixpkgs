@@ -24,7 +24,7 @@ The list of overlays is determined as follows.
 
 2.  Otherwise, if the Nix path entry `<nixpkgs-overlays>` exists, we look for overlays at that path, as described below.
 
-    See the section on `NIX_PATH` in the Nix manual for more details on how to set a value for `<nixpkgs-overlays>.`
+    See the [section on `NIX_PATH`](https://nixos.org/manual/nix/stable/command-ref/env-common.html#env-NIX_PATH) in the Nix manual for more details on how to set a value for `<nixpkgs-overlays>.`
 
 3.  If one of `~/.config/nixpkgs/overlays.nix` and `~/.config/nixpkgs/overlays/` exists, then we look for overlays at that path, as described below. It is an error if both exist.
 
@@ -77,7 +77,7 @@ In Nixpkgs, we have multiple implementations of the BLAS/LAPACK numerical linear
 
     The Nixpkgs attribute is `openblas` for ILP64 (integer width = 64 bits) and `openblasCompat` for LP64 (integer width = 32 bits).  `openblasCompat` is the default.
 
--   [LAPACK reference](http://www.netlib.org/lapack/) (also provides BLAS and CBLAS)
+-   [LAPACK reference](https://www.netlib.org/lapack/) (also provides BLAS and CBLAS)
 
     The Nixpkgs attribute is `lapack-reference`.
 
@@ -136,12 +136,17 @@ self: super:
 For BLAS/LAPACK switching to work correctly, all packages must depend on `blas` or `lapack`. This ensures that only one BLAS/LAPACK library is used at one time. There are two versions of BLAS/LAPACK currently in the wild, `LP64` (integer size = 32 bits) and `ILP64` (integer size = 64 bits). The attributes `blas` and `lapack` are `LP64` by default. Their `ILP64` version are provided through the attributes `blas-ilp64` and `lapack-ilp64`. Some software needs special flags or patches to work with `ILP64`. You can check if `ILP64` is used in Nixpkgs with `blas.isILP64` and `lapack.isILP64`. Some software does NOT work with `ILP64`, and derivations need to specify an assertion to prevent this. You can prevent `ILP64` from being used with the following:
 
 ```nix
-{ stdenv, blas, lapack, ... }:
+{
+  stdenv,
+  blas,
+  lapack,
+  ...
+}:
 
 assert (!blas.isILP64) && (!lapack.isILP64);
 
 stdenv.mkDerivation {
-  ...
+  # ...
 }
 ```
 
@@ -156,7 +161,7 @@ All programs that are built with [MPI](https://en.wikipedia.org/wiki/Message_Pas
 
 -   [MVAPICH](https://mvapich.cse.ohio-state.edu/), attribute name `mvapich`
 
-To provide MPI enabled applications that use `MPICH`, instead of the default `Open MPI`, simply use the following overlay:
+To provide MPI enabled applications that use `MPICH`, instead of the default `Open MPI`, use the following overlay:
 
 ```nix
 self: super:

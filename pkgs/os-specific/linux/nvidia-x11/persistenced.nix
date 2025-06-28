@@ -1,13 +1,14 @@
 nvidia_x11: sha256:
 
-{ stdenv
-, lib
-, fetchFromGitHub
-, m4
-, libtirpc
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  m4,
+  libtirpc,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "nvidia-persistenced";
   version = nvidia_x11.persistencedVersion;
 
@@ -21,7 +22,7 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [ m4 ];
   buildInputs = [ libtirpc ];
 
-  inherit (nvidia_x11) makeFlags;
+  makeFlags = nvidia_x11.makeFlags ++ [ "DATE=true" ];
 
   installFlags = [ "PREFIX=$(out)" ];
 
@@ -35,7 +36,7 @@ stdenv.mkDerivation rec {
       $out/bin/nvidia-persistenced
   '';
 
-  NIX_CFLAGS_COMPILE = [ "-I${libtirpc.dev}/include/tirpc" ];
+  env.NIX_CFLAGS_COMPILE = toString [ "-I${libtirpc.dev}/include/tirpc" ];
   NIX_LDFLAGS = [ "-ltirpc" ];
 
   meta = with lib; {
@@ -44,5 +45,6 @@ stdenv.mkDerivation rec {
     license = licenses.unfreeRedistributable;
     platforms = nvidia_x11.meta.platforms;
     maintainers = with maintainers; [ abbradar ];
+    mainProgram = "nvidia-persistenced";
   };
 }

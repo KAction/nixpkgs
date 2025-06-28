@@ -1,12 +1,13 @@
-{ buildPythonPackage
-, cryptography
-, django
-, django-appconf
-, fetchFromGitHub
-, lib
-, python
-, pythonOlder
-, setuptools
+{
+  buildPythonPackage,
+  cryptography,
+  django,
+  django-appconf,
+  fetchFromGitHub,
+  lib,
+  python,
+  pythonOlder,
+  setuptools,
 }:
 
 buildPythonPackage rec {
@@ -18,18 +19,21 @@ buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "georgemarshall";
     repo = "django-cryptography";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-C3E2iT9JdLvF+1g+xhZ8dPDjjh25JUxLAtTMnalIxPk=";
   };
 
-  nativeBuildInputs = [
-    setuptools
-  ];
+  nativeBuildInputs = [ setuptools ];
 
   propagatedBuildInputs = [
     cryptography
     django
     django-appconf
+  ];
+
+  patches = [
+    # See: https://github.com/georgemarshall/django-cryptography/pull/88
+    ./fix-setup-cfg.patch
   ];
 
   pythonImportsCheck = [ "django_cryptography" ];
@@ -42,7 +46,7 @@ buildPythonPackage rec {
 
   meta = with lib; {
     homepage = "https://github.com/georgemarshall/django-cryptography";
-    description = "A set of primitives for performing cryptography in Django";
+    description = "Set of primitives for performing cryptography in Django";
     license = licenses.bsd3;
     maintainers = with maintainers; [ centromere ];
   };

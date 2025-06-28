@@ -1,42 +1,51 @@
-{ lib
-, fetchFromGitHub
-, buildPythonPackage
-, pythonOlder
-, cryptography
-, jinja2
-, Mako
-, passlib
-, pytest
-, pyyaml
-, requests
-, rtoml
-, setuptools
-, tomlkit
-, librouteros
-, pytestCheckHook
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  pythonOlder,
+  cryptography,
+  jinja2,
+  mako,
+  passlib,
+  pyyaml,
+  requests,
+  rtoml,
+  setuptools,
+  tomlkit,
+  librouteros,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "bundlewrap";
-  version = "4.15.0";
+  version = "4.22.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "bundlewrap";
     repo = "bundlewrap";
-    rev = version;
-    sha256 = "sha256-O31lh43VyaFnd/IUkx44wsgxkWubZKzjsKXzHwcGox0";
+    tag = version;
+    hash = "sha256-F3Ipoep9ZmAqkh8mFLXpaEcYb4dpV9Dt/VgMa9X24Hw=";
   };
 
-  nativeBuildInputs = [ setuptools ];
-  propagatedBuildInputs = [
-    cryptography jinja2 Mako passlib pyyaml requests tomlkit librouteros
-  ] ++ lib.optional (pythonOlder "3.11") [ rtoml ];
+  build-system = [ setuptools ];
+  dependencies = [
+    setuptools
+    cryptography
+    jinja2
+    mako
+    passlib
+    pyyaml
+    requests
+    tomlkit
+    librouteros
+  ] ++ lib.optionals (pythonOlder "3.11") [ rtoml ];
 
   pythonImportsCheck = [ "bundlewrap" ];
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pytestFlagsArray = [
     # only unit tests as integration tests need a OpenSSH client/server setup
@@ -46,7 +55,8 @@ buildPythonPackage rec {
   meta = with lib; {
     homepage = "https://bundlewrap.org/";
     description = "Easy, Concise and Decentralized Config management with Python";
-    license = [ licenses.gpl3 ] ;
+    mainProgram = "bw";
+    license = [ licenses.gpl3 ];
     maintainers = with maintainers; [ wamserma ];
   };
 }

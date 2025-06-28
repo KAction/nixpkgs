@@ -1,43 +1,45 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, sphinx
-, pydata-sphinx-theme
-, pyyaml
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchPypi,
+  sphinx,
+  pydata-sphinx-theme,
+  jupyter-book,
 }:
 
 buildPythonPackage rec {
   pname = "sphinx-book-theme";
-  version = "0.3.3";
+  version = "1.1.4";
 
   format = "wheel";
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.9";
 
   src = fetchPypi {
     inherit version format;
     dist = "py3";
     python = "py3";
     pname = "sphinx_book_theme";
-    sha256 = "9685959dbbb492af005165ef1b9229fdd5d5431580ac181578beae3b4d012d91";
+    hash = "sha256-hDs/XIaEZA9KLQGr0pi+tmRS0bI5TNnvW+Xr1WQOoOE=";
   };
 
   propagatedBuildInputs = [
-    sphinx
     pydata-sphinx-theme
-    pyyaml
+    sphinx
   ];
 
   pythonImportsCheck = [ "sphinx_book_theme" ];
 
+  passthru.tests = {
+    inherit jupyter-book;
+  };
+
   meta = with lib; {
-    description = "A clean book theme for scientific explanations and documentation with Sphinx";
+    description = "Clean book theme for scientific explanations and documentation with Sphinx";
     homepage = "https://github.com/executablebooks/sphinx-book-theme";
+    changelog = "https://github.com/executablebooks/sphinx-book-theme/raw/v${version}/CHANGELOG.md";
     license = licenses.bsd3;
-    maintainers = with maintainers; [ marsam ];
-    # Missing sphinx 5.X support
-    # https://github.com/executablebooks/sphinx-book-theme/issues/592
-    broken = true;
+    maintainers = [ ];
   };
 }

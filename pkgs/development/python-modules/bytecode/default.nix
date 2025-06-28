@@ -1,25 +1,28 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  pytestCheckHook,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "bytecode";
-  version = "0.13.0";
+  version = "0.16.2";
+  format = "pyproject";
   disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "vstinner";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-aY19qMYW7KziiXVY3lxdnHk7OCAJaNh+aTvlQyJWmDw=";
+    repo = "bytecode";
+    tag = version;
+    hash = "sha256-74qEwAYHXV4HakJQ05A9K7LuO0xP28Hub6no09KO4r4=";
   };
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeBuildInputs = [ setuptools-scm ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "bytecode" ];
 

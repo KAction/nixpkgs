@@ -1,42 +1,152 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, mupdf
-, swig
-, freetype
-, harfbuzz
-, openjpeg
-, jbig2dec
-, libjpeg_turbo
-, gumbo
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  pythonOlder,
+  fetchFromGitHub,
+  fetchpatch,
+  python,
+  toPythonModule,
+
+  # build-system
+  libclang,
+  psutil,
+  setuptools,
+  swig,
+
+  # native dependencies
+  freetype,
+  harfbuzz,
+  openjpeg,
+  jbig2dec,
+  libjpeg_turbo,
+  gumbo,
+
+  # dependencies
+  mupdf,
+
+  # tests
+  pytestCheckHook,
+  fonttools,
+  pillow,
+  pymupdf-fonts,
 }:
 
+let
+  # PyMuPDF needs the C++ bindings generated
+  mupdf-cxx = mupdf.override {
+    enableOcr = true;
+    enableCxx = true;
+    enablePython = true;
+    enableBarcode = true;
+    python3 = python;
+  };
+  mupdf-cxx-lib = toPythonModule (lib.getLib mupdf-cxx);
+  mupdf-cxx-dev = lib.getDev mupdf-cxx;
+in
 buildPythonPackage rec {
   pname = "pymupdf";
-  version = "1.20.2";
+  version = "1.26.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    pname = "PyMuPDF";
-    inherit version;
-    sha256 = "sha256-Au7fAfV8a6+16GZ86gCIotJSJkPEcQDxkIvsOmioSIg=";
+  disabled = pythonOlder "3.9";
+
+  src = fetchFromGitHub {
+    owner = "pymupdf";
+    repo = "PyMuPDF";
+    tag = version;
+    hash = "sha256-juBjlS9/ykpji9RbDcyOjAu+cVSDaFc3HAmxYHTylt8=";
   };
 
+  # swig is not wrapped as Python package
   postPatch = ''
     substituteInPlace setup.py \
-        --replace '/usr/include/mupdf' ${mupdf.dev}/include/mupdf
+      --replace-fail "ret.append( 'swig')" "pass" \
   '';
-  nativeBuildInputs = [ swig ];
-  buildInputs = [ mupdf freetype harfbuzz openjpeg jbig2dec libjpeg_turbo gumbo ];
 
-  doCheck = false;
+  nativeBuildInputs = [
+    libclang
+    swig
+    psutil
+    setuptools
+  ];
 
-  pythonImportsCheck = [ "fitz" ];
+  buildInputs = [
+    freetype
+    harfbuzz
+    openjpeg
+    jbig2dec
+    libjpeg_turbo
+    gumbo
+  ];
 
-  meta = with lib; {
-    description = "Python bindings for MuPDF's rendering library.";
+  propagatedBuildInputs = [ mupdf-cxx-lib ];
+
+  env = {
+    # force using system MuPDF (must be defined in environment and empty)
+    PYMUPDF_SETUP_MUPDF_BUILD = "";
+    # Setup the name of the package away from the default 'libclang'
+    PYMUPDF_SETUP_LIBCLANG = "clang";
+    # provide MuPDF paths
+    PYMUPDF_MUPDF_LIB = "${mupdf-cxx-lib}/lib";
+    PYMUPDF_MUPDF_INCLUDE = "${mupdf-cxx-dev}/include";
+  };
+
+  # TODO: manually add mupdf rpath until upstream fixes it
+  postInstall = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    for lib in */*.so $out/${python.sitePackages}/*/*.so; do
+      install_name_tool -add_rpath ${mupdf-cxx-lib}/lib "$lib"
+    done
+  '';
+
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
+
+  checkInputs = [
+    fonttools
+    pillow
+    pymupdf-fonts
+  ];
+
+  disabledTests = [
+    # Do not lint code
+    "test_codespell"
+    "test_pylint"
+    "test_flake8"
+    # Upstream recommends disabling these when not using bundled MuPDF build
+    "test_color_count"
+    "test_3050"
+    "test_textbox3"
+    "test_3493"
+    "test_4180"
+    # Requires downloads
+    "test_4457"
+    "test_4445"
+    # Not a git repository, so git ls-files fails
+    "test_open2"
+  ];
+
+  pythonImportsCheck = [
+    "pymupdf"
+    "fitz"
+  ];
+
+  preCheck = ''
+    export PATH="$out/bin:$PATH";
+
+    # Fixes at least one test; see:
+    # * <https://github.com/pymupdf/PyMuPDF/blob/refs/tags/1.25.1/scripts/sysinstall.py#L390>
+    # * <https://github.com/pymupdf/PyMuPDF/blob/refs/tags/1.25.1/tests/test_pixmap.py#L425-L428>
+    export PYMUPDF_SYSINSTALL_TEST=1
+  '';
+
+  meta = {
+    description = "Python bindings for MuPDF's rendering library";
     homepage = "https://github.com/pymupdf/PyMuPDF";
-    maintainers = with maintainers; [ teto ];
-    license = licenses.agpl3Only;
-    platforms = platforms.linux;
+    changelog = "https://github.com/pymupdf/PyMuPDF/releases/tag/${src.tag}";
+    license = lib.licenses.agpl3Only;
+    maintainers = [ ];
+    platforms = lib.platforms.unix;
   };
 }

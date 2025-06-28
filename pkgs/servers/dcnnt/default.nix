@@ -1,12 +1,17 @@
-{ buildPythonApplication, fetchPypi, lib, pycryptodome }:
+{
+  buildPythonApplication,
+  fetchPypi,
+  lib,
+  pycryptodome,
+}:
 
 buildPythonApplication rec {
   pname = "dcnnt";
-  version = "0.7.1";
+  version = "0.10.0";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-vKCQgg0m58hoN79WcZ4mM6bjCJOPxhAT4ifZ3b/5bkA=";
+    hash = "sha256-73ZLgb5YcXlAOjbKLVv8oqgS6pstBdJxa7LFUgIHpUE=";
   };
 
   propagatedBuildInputs = [
@@ -22,5 +27,6 @@ buildPythonApplication rec {
     '';
     license = licenses.mit;
     maintainers = with maintainers; [ arnoutkroeze ];
+    mainProgram = "dcnnt";
   };
 }

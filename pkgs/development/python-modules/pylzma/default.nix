@@ -1,8 +1,14 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  fetchpatch,
+}:
 
 buildPythonPackage rec {
   pname = "pylzma";
   version = "0.5.0";
+  format = "setuptools";
 
   # This vendors an old LZMA SDK
   # After some discussion, it seemed most reasonable to keep it that way
@@ -11,6 +17,14 @@ buildPythonPackage rec {
     inherit pname version;
     sha256 = "074anvhyjgsv2iby2ql1ixfvjgmhnvcwjbdz8gk70xzkzcm1fx5q";
   };
+
+  patches = [
+    # https://github.com/fancycode/pylzma/pull/82/
+    (fetchpatch {
+      url = "https://github.com/fancycode/pylzma/commit/2fe0a4ed0588fd572931da4be10ad955636afde4.patch";
+      hash = "sha256-sWdMAmOPVTDnxNTjzPlqQYxqnjmRpK+OqwWF6jpXvIw=";
+    })
+  ];
 
   pythonImportsCheck = [ "pylzma" ];
 

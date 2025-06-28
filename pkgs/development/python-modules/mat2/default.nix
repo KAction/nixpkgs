@@ -1,70 +1,66 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, unittestCheckHook
-, pythonOlder
-, fetchFromGitLab
-, fetchpatch
-, substituteAll
-, bubblewrap
-, exiftool
-, ffmpeg
-, mailcap
-, wrapGAppsHook
-, gdk-pixbuf
-, gobject-introspection
-, librsvg
-, poppler_gi
-, mutagen
-, pygobject3
-, pycairo
-, dolphinIntegration ? false
-, plasma5Packages
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  pytestCheckHook,
+  fetchFromGitLab,
+  fetchpatch,
+  replaceVars,
+  bubblewrap,
+  exiftool,
+  ffmpeg,
+  setuptools,
+  wrapGAppsHook3,
+  gdk-pixbuf,
+  gobject-introspection,
+  librsvg,
+  poppler_gi,
+  mutagen,
+  pygobject3,
+  pycairo,
+  dolphinIntegration ? false,
+  kdePackages,
 }:
 
 buildPythonPackage rec {
   pname = "mat2";
-  version = "0.13.0";
-
-  disabled = pythonOlder "3.5";
+  version = "0.13.5";
+  pyproject = true;
 
   src = fetchFromGitLab {
     domain = "0xacab.org";
     owner = "jvoisin";
     repo = "mat2";
-    rev = version;
-    hash = "sha256-H3l8w2F+ZcJ1P/Dg0ZVBJPUK0itLocL7a0jeSrG3Ws8=";
+    tag = version;
+    hash = "sha256-ivFgH/88DBucZRaO/OMsLlwJCjv/VQXb6AiKWhZ8XH0=";
   };
 
-  patches = [
-    # hardcode paths to some binaries
-    (substituteAll ({
-      src = ./paths.patch;
-      exiftool = "${exiftool}/bin/exiftool";
-      ffmpeg = "${ffmpeg}/bin/ffmpeg";
-    } // lib.optionalAttrs dolphinIntegration {
-      kdialog = "${plasma5Packages.kdialog}/bin/kdialog";
-    }))
-    # the executable shouldn't be called .mat2-wrapped
-    ./executable-name.patch
-    # hardcode path to mat2 executable
-    ./tests.patch
-    # fix gobject-introspection typelib path for Nautilus extension
-    (substituteAll {
-      src = ./fix_poppler.patch;
-      poppler_path = "${poppler_gi}/lib/girepository-1.0";
-    })
-    # https://0xacab.org/jvoisin/mat2/-/issues/178
-    (fetchpatch {
-      url = "https://0xacab.org/jvoisin/mat2/-/commit/618e0a8e3984fd534b95ef3dbdcb8a76502c90b5.patch";
-      hash = "sha256-l9UFim3hGj+d2uKITiDG1OnqGeo2McBIiRSmK0Vidg8=";
-    })
-  ] ++ lib.optionals (stdenv.hostPlatform.isLinux) [
-    (substituteAll {
-      src = ./bubblewrap-path.patch;
-      bwrap = "${bubblewrap}/bin/bwrap";
-    })
-  ];
+  patches =
+    [
+      (fetchpatch {
+        name = "exiftool-13.25-compat.patch";
+        url = "https://0xacab.org/jvoisin/mat2/-/commit/473903b70e1b269a6110242a9c098a10c18554e2.patch";
+        hash = "sha256-vxxjAFwiTDlcTT3ZlfhOG4rlzBJS+LhLoA++8y2hEok=";
+      })
+      # hardcode paths to some binaries
+      (replaceVars ./paths.patch {
+        exiftool = lib.getExe exiftool;
+        ffmpeg = lib.getExe ffmpeg;
+        kdialog = if dolphinIntegration then lib.getExe kdePackages.kdialog else null;
+        # replaced in postPatch
+        mat2 = null;
+        mat2svg = null;
+      })
+      # the executable shouldn't be called .mat2-wrapped
+      ./executable-name.patch
+      # hardcode path to mat2 executable
+      ./tests.patch
+    ]
+    ++ lib.optionals (stdenv.hostPlatform.isLinux) [
+      (replaceVars ./bubblewrap-path.patch {
+        bwrap = lib.getExe bubblewrap;
+      })
+    ];
 
   postPatch = ''
     substituteInPlace dolphin/mat2.desktop \
@@ -72,9 +68,11 @@ buildPythonPackage rec {
       --replace "@mat2svg@" "$out/share/icons/hicolor/scalable/apps/mat2.svg"
   '';
 
+  build-system = [ setuptools ];
+
   nativeBuildInputs = [
     gobject-introspection
-    wrapGAppsHook
+    wrapGAppsHook3
   ];
 
   buildInputs = [
@@ -83,31 +81,29 @@ buildPythonPackage rec {
     poppler_gi
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     mutagen
     pygobject3
     pycairo
   ];
 
-  postInstall = ''
-    install -Dm 444 data/mat2.svg -t "$out/share/icons/hicolor/scalable/apps"
-    install -Dm 444 doc/mat2.1 -t "$out/share/man/man1"
-    install -Dm 444 nautilus/mat2.py -t "$out/share/nautilus-python/extensions"
-    buildPythonPath "$out $pythonPath $propagatedBuildInputs"
-    patchPythonScript "$out/share/nautilus-python/extensions/mat2.py"
-  '' + lib.optionalString dolphinIntegration ''
-    install -Dm 444 dolphin/mat2.desktop -t "$out/share/kservices5/ServiceMenus"
-  '';
+  postInstall =
+    ''
+      install -Dm 444 data/mat2.svg -t "$out/share/icons/hicolor/scalable/apps"
+      install -Dm 444 doc/mat2.1 -t "$out/share/man/man1"
+    ''
+    + lib.optionalString dolphinIntegration ''
+      install -Dm 444 dolphin/mat2.desktop -t "$out/share/kservices5/ServiceMenus"
+    '';
 
-  checkInputs = [ unittestCheckHook ];
-
-  unittestFlagsArray = [ "-v" ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   meta = with lib; {
-    description = "A handy tool to trash your metadata";
+    description = "Handy tool to trash your metadata";
     homepage = "https://0xacab.org/jvoisin/mat2";
     changelog = "https://0xacab.org/jvoisin/mat2/-/blob/${version}/CHANGELOG.md";
     license = licenses.lgpl3Plus;
+    mainProgram = "mat2";
     maintainers = with maintainers; [ dotlambda ];
   };
 }

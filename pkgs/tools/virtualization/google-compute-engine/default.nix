@@ -1,13 +1,13 @@
-{ lib
-, fetchFromGitHub
-, buildPythonPackage
-, bash
-, bashInteractive
-, systemd
-, util-linux
-, boto
-, setuptools
-, distro
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  bash,
+  bashInteractive,
+  util-linux,
+  setuptools,
+  distro,
+  udevCheckHook,
 }:
 
 buildPythonPackage rec {
@@ -22,7 +22,14 @@ buildPythonPackage rec {
   };
 
   buildInputs = [ bash ];
-  propagatedBuildInputs = [ boto setuptools distro ];
+  propagatedBuildInputs = [
+    setuptools
+    distro
+  ];
+
+  nativeBuildInputs = [
+    udevCheckHook
+  ];
 
   postPatch = ''
     for file in $(find google_compute_engine -type f); do
@@ -51,7 +58,6 @@ buildPythonPackage rec {
     patchShebangs $out/bin/*
   '';
 
-  doCheck = false;
   pythonImportsCheck = [ "google_compute_engine" ];
 
   meta = with lib; {

@@ -1,27 +1,50 @@
-{ stdenv, fetchzip, applyPatches, ... }:
-{ url
-, sha256
-, patches ? [ ]
-, name ? null
-, version ? null
+{
+  fetchurl,
+  fetchzip,
+  applyPatches,
+  lib,
+  ...
 }:
-if name != null || version != null then throw ''
-  `pkgs.fetchNextcloudApp` has been changed to use `fetchzip`.
-  To update, please
-  * remove `name`/`version`
-  * update the hash
-''
-else applyPatches {
-  inherit patches;
-  src = fetchzip {
-    inherit url sha256;
-    postFetch = ''
-      pushd $out &>/dev/null
+{
+  url,
+  hash ? "",
+  sha256 ? "",
+  appName ? null,
+  appVersion ? null,
+  license,
+  patches ? [ ],
+  description ? null,
+  homepage ? null,
+  maintainers ? [ ],
+  teams ? [ ],
+  unpack ? false, # whether to use fetchzip rather than fetchurl
+}:
+applyPatches (
+  {
+    inherit patches;
+    src = (if unpack then fetchzip else fetchurl) {
+      inherit url hash sha256;
+      meta =
+        {
+          license = lib.licenses.${license};
+          longDescription = description;
+          inherit homepage maintainers teams;
+        }
+        // lib.optionalAttrs (description != null) {
+          longDescription = description;
+        }
+        // lib.optionalAttrs (homepage != null) {
+          inherit homepage;
+        };
+    };
+    prePatch = ''
       if [ ! -f ./appinfo/info.xml ]; then
         echo "appinfo/info.xml doesn't exist in $out, aborting!"
         exit 1
       fi
-      popd &>/dev/null
     '';
-  };
-}
+  }
+  // lib.optionalAttrs (appName != null && appVersion != null) {
+    name = "nextcloud-app-${appName}-${appVersion}";
+  }
+)

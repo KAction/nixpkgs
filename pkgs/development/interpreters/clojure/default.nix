@@ -1,13 +1,23 @@
-{ lib, stdenv, fetchurl, installShellFiles, jdk, rlwrap, makeWrapper, writeScript }:
+{
+  lib,
+  stdenv,
+  bashNonInteractive,
+  fetchurl,
+  installShellFiles,
+  jdk,
+  rlwrap,
+  makeWrapper,
+  writeScript,
+}:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "clojure";
-  version = "1.11.1.1189";
+  version = "1.12.1.1550";
 
   src = fetchurl {
-    # https://clojure.org/releases/tools
-    url = "https://download.clojure.org/install/clojure-tools-${version}.tar.gz";
-    sha256 = "sha256-wg5iN5/UT6jb68vF98mgSl21fLG9BdEcXH0EEmvnEOs=";
+    # https://github.com/clojure/brew-install/releases
+    url = "https://github.com/clojure/brew-install/releases/download/${finalAttrs.version}/clojure-tools-${finalAttrs.version}.tar.gz";
+    hash = "sha256-kGxiVnnHLnA1h1mIpGOSodg9Fu4d9ZmlYaL9M0JLDT8=";
   };
 
   nativeBuildInputs = [
@@ -15,10 +25,19 @@ stdenv.mkDerivation rec {
     makeWrapper
   ];
 
+  buildInputs = [
+    bashNonInteractive
+  ];
+
+  strictDeps = true;
+
   # See https://github.com/clojure/brew-install/blob/1.10.3/src/main/resources/clojure/install/linux-install.sh
   installPhase =
     let
-      binPath = lib.makeBinPath [ rlwrap jdk ];
+      binPath = lib.makeBinPath [
+        rlwrap
+        jdk
+      ];
     in
     ''
       runHook preInstall
@@ -31,7 +50,7 @@ stdenv.mkDerivation rec {
       install -Dm644 example-deps.edn "$clojure_lib_dir/example-deps.edn"
       install -Dm644 tools.edn "$clojure_lib_dir/tools.edn"
       install -Dm644 exec.jar "$clojure_lib_dir/libexec/exec.jar"
-      install -Dm644 clojure-tools-${version}.jar "$clojure_lib_dir/libexec/clojure-tools-${version}.jar"
+      install -Dm644 clojure-tools-${finalAttrs.version}.jar "$clojure_lib_dir/libexec/clojure-tools-${finalAttrs.version}.jar"
 
       echo "Installing clojure and clj into $bin_dir"
       substituteInPlace clojure --replace PREFIX $out
@@ -53,7 +72,7 @@ stdenv.mkDerivation rec {
     CLJ_CONFIG=$TMPDIR CLJ_CACHE=$TMPDIR/.clj_cache $out/bin/clojure \
       -Spath \
       -Sverbose \
-      -Scp $out/libexec/clojure-tools-${version}.jar
+      -Scp $out/libexec/clojure-tools-${finalAttrs.version}.jar
   '';
 
   passthru.updateScript = writeScript "update-clojure" ''
@@ -61,18 +80,21 @@ stdenv.mkDerivation rec {
     #!nix-shell -i bash -p curl common-updater-scripts jq
 
     set -euo pipefail
+    shopt -s inherit_errexit
 
     # `jq -r '.[0].name'` results in `v0.0`
-    readonly latest_version="$(curl \
-      ''${GITHUB_TOKEN:+"-u \":$GITHUB_TOKEN\""} \
-      -s "https://api.github.com/repos/clojure/brew-install/tags" \
+    latest_version="$(curl \
+      ''${GITHUB_TOKEN:+-u ":$GITHUB_TOKEN"} \
+      -fsL "https://api.github.com/repos/clojure/brew-install/tags" \
       | jq -r '.[1].name')"
 
     update-source-version clojure "$latest_version"
   '';
 
+  passthru.jdk = jdk;
+
   meta = with lib; {
-    description = "A Lisp dialect for the JVM";
+    description = "Lisp dialect for the JVM";
     homepage = "https://clojure.org/";
     sourceProvenance = with sourceTypes; [ binaryBytecode ];
     license = licenses.epl10;
@@ -95,7 +117,7 @@ stdenv.mkDerivation rec {
       offers a software transactional memory system and reactive Agent
       system that ensure clean, correct, multithreaded designs.
     '';
-    maintainers = with maintainers; [ jlesquembre thiagokokada ];
+    maintainers = with maintainers; [ jlesquembre ];
     platforms = platforms.unix;
   };
-}
+})

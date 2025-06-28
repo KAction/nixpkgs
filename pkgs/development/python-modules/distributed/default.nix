@@ -1,42 +1,58 @@
-{ lib
-, buildPythonPackage
-, click
-, cloudpickle
-, dask
-, fetchPypi
-, jinja2
-, locket
-, msgpack
-, packaging
-, psutil
-, pythonOlder
-, pyyaml
-, sortedcontainers
-, tblib
-, toolz
-, tornado
-, urllib3
-, zict
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+  versioneer,
+
+  # dependencies
+  click,
+  cloudpickle,
+  dask,
+  jinja2,
+  locket,
+  msgpack,
+  packaging,
+  psutil,
+  pyyaml,
+  sortedcontainers,
+  tblib,
+  toolz,
+  tornado,
+  urllib3,
+  zict,
 }:
 
 buildPythonPackage rec {
   pname = "distributed";
-  version = "2022.9.1";
-  format = "setuptools";
+  version = "2025.3.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-upj1TipRhhvulyuhX4bfbQSWar9m7Xu3mIsi48G+ewE=";
+  src = fetchFromGitHub {
+    owner = "dask";
+    repo = "distributed";
+    tag = version;
+    hash = "sha256-+vegdEXhQi3ns5iMs6FavKnAlRNIWCUNyZENVBWZsuQ=";
   };
 
   postPatch = ''
-    substituteInPlace requirements.txt \
-      --replace "tornado >= 6.0.3, <6.2" "tornado >= 6.0.3"
+    substituteInPlace pyproject.toml \
+      --replace-fail "versioneer[toml]==" "versioneer[toml]>=" \
+      --replace-fail 'dynamic = ["version"]' 'version = "${version}"'
   '';
 
-  propagatedBuildInputs = [
+  build-system = [
+    setuptools
+    setuptools-scm
+    versioneer
+  ] ++ versioneer.optional-dependencies.toml;
+
+  pythonRelaxDeps = [ "dask" ];
+
+  dependencies = [
     click
     cloudpickle
     dask
@@ -57,15 +73,13 @@ buildPythonPackage rec {
   # When tested random tests would fail and not repeatably
   doCheck = false;
 
-  pythonImportsCheck = [
-    "distributed"
-  ];
+  pythonImportsCheck = [ "distributed" ];
 
-  meta = with lib; {
+  meta = {
     description = "Distributed computation in Python";
     homepage = "https://distributed.readthedocs.io/";
-    license = licenses.bsd3;
-    platforms = platforms.x86; # fails on aarch64
-    maintainers = with maintainers; [ teh costrouc ];
+    changelog = "https://github.com/dask/distributed/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ teh ];
   };
 }

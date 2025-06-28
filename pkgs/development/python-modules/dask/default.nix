@@ -1,134 +1,151 @@
-{ lib
-, stdenv
-, bokeh
-, buildPythonPackage
-, cloudpickle
-, distributed
-, fastparquet
-, fetchFromGitHub
-, fetchpatch
-, fsspec
-, jinja2
-, numpy
-, packaging
-, pandas
-, partd
-, pyarrow
-, pytest-rerunfailures
-, pytest-xdist
-, pytestCheckHook
-, pythonOlder
-, pyyaml
-, scipy
-, toolz
-, zarr
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  click,
+  cloudpickle,
+  fsspec,
+  importlib-metadata,
+  packaging,
+  partd,
+  pyyaml,
+  toolz,
+
+  # optional-dependencies
+  numpy,
+  pyarrow,
+  lz4,
+  pandas,
+  distributed,
+  bokeh,
+  jinja2,
+
+  # tests
+  hypothesis,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytest-mock,
+  pytest-rerunfailures,
+  pytest-xdist,
+  pytestCheckHook,
+  versionCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "dask";
-  version = "2022.9.1";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "2025.3.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "dask";
-    repo = pname;
-    rev = version;
-    hash = "sha256-4Tok9eYhi2FF+8bpKnwKT3KIRGHIMtxczTkZ6qD8x7g=";
+    repo = "dask";
+    tag = version;
+    hash = "sha256-j25+DfWReonXKqxkX9OVHjKo+Indh13rlBE5PyGe69c=";
   };
-
-  propagatedBuildInputs = [
-    cloudpickle
-    fsspec
-    packaging
-    partd
-    pyyaml
-    toolz
-  ];
-
-  passthru.optional-dependencies = {
-    array = [
-      numpy
-    ];
-    complete = [
-      distributed
-    ];
-    dataframe = [
-      numpy
-      pandas
-    ];
-    distributed = [
-      distributed
-    ];
-    diagnostics = [
-      bokeh
-      jinja2
-    ];
-  };
-
-  checkInputs = [
-    fastparquet
-    pyarrow
-    pytestCheckHook
-    pytest-rerunfailures
-    pytest-xdist
-    scipy
-    zarr
-  ];
-
-  dontUseSetuptoolsCheck = true;
 
   postPatch = ''
     # versioneer hack to set version of GitHub package
     echo "def get_versions(): return {'dirty': False, 'error': None, 'full-revisionid': None, 'version': '${version}'}" > dask/_version.py
 
     substituteInPlace setup.py \
-      --replace "version=versioneer.get_version()," "version='${version}'," \
-      --replace "cmdclass=versioneer.get_cmdclass()," ""
+      --replace-fail "import versioneer" "" \
+      --replace-fail "version=versioneer.get_version()," "version='${version}'," \
+      --replace-fail "cmdclass=versioneer.get_cmdclass()," ""
 
-    substituteInPlace setup.cfg \
-      --replace " --durations=10" "" \
-      --replace " -v" ""
+    substituteInPlace pyproject.toml \
+      --replace-fail ', "versioneer[toml]==0.29"' ""
   '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    click
+    cloudpickle
+    fsspec
+    importlib-metadata
+    packaging
+    partd
+    pyyaml
+    toolz
+  ];
+
+  optional-dependencies = lib.fix (self: {
+    array = [ numpy ];
+    complete =
+      [
+        pyarrow
+        lz4
+      ]
+      ++ self.array
+      ++ self.dataframe
+      ++ self.distributed
+      ++ self.diagnostics;
+    dataframe = [
+      pandas
+      pyarrow
+    ] ++ self.array;
+    distributed = [ distributed ];
+    diagnostics = [
+      bokeh
+      jinja2
+    ];
+  });
+
+  nativeCheckInputs =
+    [
+      hypothesis
+      pyarrow
+      pytest-asyncio
+      pytest-cov-stub
+      pytest-mock
+      pytest-rerunfailures
+      pytest-xdist
+      pytestCheckHook
+      versionCheckHook
+    ]
+    ++ optional-dependencies.array
+    ++ optional-dependencies.dataframe;
+  versionCheckProgramArg = "--version";
 
   pytestFlagsArray = [
     # Rerun failed tests up to three times
     "--reruns 3"
     # Don't run tests that require network access
     "-m 'not network'"
-    # DeprecationWarning: The 'sym_pos' keyword is deprecated and should be replaced by using 'assume_a = "pos"'. 'sym_pos' will be removed in SciPy 1.11.0.
-    "-W" "ignore::DeprecationWarning"
   ];
 
-  disabledTests = lib.optionals stdenv.isDarwin [
-    # Test requires features of python3Packages.psutil that are
-    # blocked in sandboxed-builds
-    "test_auto_blocksize_csv"
-    # AttributeError: 'str' object has no attribute 'decode'
-    "test_read_dir_nometa"
-  ] ++ [
-    "test_chunksize_files"
+  disabledTests = [
+    # UserWarning: Insufficient elements for `head`. 10 elements requested, only 5 elements available. Try passing larger `npartitions` to `head`.
+    "test_set_index_head_nlargest_string"
   ];
 
   __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [
     "dask"
-    "dask.array"
     "dask.bag"
     "dask.bytes"
+    "dask.diagnostics"
+
+    # Requires the `dask.optional-dependencies.array` that are only in `nativeCheckInputs`
+    "dask.array"
+    # Requires the `dask.optional-dependencies.dataframe` that are only in `nativeCheckInputs`
     "dask.dataframe"
     "dask.dataframe.io"
     "dask.dataframe.tseries"
-    "dask.diagnostics"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Minimal task scheduling abstraction";
+    mainProgram = "dask";
     homepage = "https://dask.org/";
     changelog = "https://docs.dask.org/en/latest/changelog.html";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ fridh ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ GaetanLepage ];
   };
 }

@@ -1,12 +1,17 @@
-{ config, hostPkgs, lib, ... }:
+{
+  config,
+  hostPkgs,
+  lib,
+  ...
+}:
 let
-  inherit (lib) types mkOption mdDoc;
+  inherit (lib) types mkOption;
 in
 {
   options = {
     passthru = mkOption {
       type = types.lazyAttrsOf types.raw;
-      description = mdDoc ''
+      description = ''
         Attributes to add to the returned derivations,
         which are not necessarily part of the build.
 
@@ -16,10 +21,19 @@ in
       '';
     };
 
+    rawTestDerivation = mkOption {
+      type = types.package;
+      description = ''
+        Unfiltered version of `test`, for troubleshooting the test framework and `testBuildFailure` in the test framework's test suite.
+        This is not intended for general use. Use `test` instead.
+      '';
+      internal = true;
+    };
+
     test = mkOption {
       type = types.package;
       # TODO: can the interactive driver be configured to access the network?
-      description = mdDoc ''
+      description = ''
         Derivation that runs the test as its "build" process.
 
         This implies that NixOS tests run isolated from the network, making them
@@ -29,11 +43,16 @@ in
   };
 
   config = {
-    test = lib.lazyDerivation { # lazyDerivation improves performance when only passthru items and/or meta are used.
-      derivation = hostPkgs.stdenv.mkDerivation {
+    rawTestDerivation =
+      assert lib.assertMsg (!config.sshBackdoor.enable)
+        "The SSH backdoor is currently not supported for non-interactive testing! Please make sure to only set `interactive.sshBackdoor.enable = true;`!";
+      hostPkgs.stdenv.mkDerivation {
         name = "vm-test-run-${config.name}";
 
-        requiredSystemFeatures = [ "kvm" "nixos-test" ];
+        requiredSystemFeatures =
+          [ "nixos-test" ]
+          ++ lib.optionals hostPkgs.stdenv.hostPlatform.isLinux [ "kvm" ]
+          ++ lib.optionals hostPkgs.stdenv.hostPlatform.isDarwin [ "apple-virt" ];
 
         buildCommand = ''
           mkdir -p $out
@@ -48,6 +67,9 @@ in
 
         meta = config.meta;
       };
+    test = lib.lazyDerivation {
+      # lazyDerivation improves performance when only passthru items and/or meta are used.
+      derivation = config.rawTestDerivation;
       inherit (config) passthru meta;
     };
 

@@ -1,66 +1,66 @@
-{ lib
-, buildPythonPackage
-, decorator
-, entrypoints
-, fetchPypi
-, hatchling
-, ipykernel
-, ipython
-, ipython_genutils
-, jupyter-client
-, packaging
-, psutil
-, python-dateutil
-, pythonOlder
-, pyzmq
-, tornado
-, tqdm
-, traitlets
+{
+  lib,
+  buildPythonPackage,
+  decorator,
+  fetchPypi,
+  hatchling,
+  importlib-metadata,
+  ipykernel,
+  ipython,
+  jupyter-client,
+  psutil,
+  python-dateutil,
+  pythonOlder,
+  pyzmq,
+  tornado,
+  tqdm,
+  traitlets,
 }:
 
 buildPythonPackage rec {
   pname = "ipyparallel";
-  version = "8.4.1";
-  format = "pyproject";
+  version = "9.0.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-Zwu+BXVTgXQuHqARd9xCj/jz6Urx8NVkLJ0Z83yoKJs=";
+    hash = "sha256-LlksrSIAxalPu/9jm/825uyRIvNLNrL8a01njZ6Y8pw=";
   };
 
-  nativeBuildInputs = [
-    hatchling
-  ];
+  # We do not need the jupyterlab build dependency, because we do not need to
+  # build any JS components; these are present already in the PyPI artifact.
+  #
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace '"jupyterlab==4.*",' ""
+  '';
 
-  propagatedBuildInputs = [
+  build-system = [ hatchling ];
+
+  dependencies = [
     decorator
-    entrypoints
     ipykernel
     ipython
-    ipython_genutils
     jupyter-client
-    packaging
     psutil
     python-dateutil
     pyzmq
     tornado
     tqdm
     traitlets
-  ];
+  ] ++ lib.optional (pythonOlder "3.10") importlib-metadata;
 
   # Requires access to cluster
   doCheck = false;
 
-  pythonImportsCheck = [
-    "ipyparallel"
-  ];
+  pythonImportsCheck = [ "ipyparallel" ];
 
-  meta = with lib;{
+  meta = with lib; {
     description = "Interactive Parallel Computing with IPython";
     homepage = "https://ipyparallel.readthedocs.io/";
+    changelog = "https://github.com/ipython/ipyparallel/blob/${version}/docs/source/changelog.md";
     license = licenses.bsd3;
-    maintainers = with maintainers; [ fridh ];
   };
 }

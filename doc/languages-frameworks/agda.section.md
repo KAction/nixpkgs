@@ -48,11 +48,11 @@ You can also reference a GitHub repository
 agda.withPackages (p: [
   (p.standard-library.overrideAttrs (oldAttrs: {
     version = "1.5";
-    src =  fetchFromGitHub {
+    src = fetchFromGitHub {
       repo = "agda-stdlib";
       owner = "agda";
       rev = "v1.5";
-      sha256 = "16fcb7ssj6kj687a042afaa2gq48rc8abihpm14k684ncihb2k4w";
+      hash = "sha256-nEyxYGSWIDNJqBfGpRDLiOAnlHJKEKAOMnIaqfVZzJk=";
     };
   }))
 ])
@@ -83,7 +83,7 @@ agda.withPackages (p: [
       owner = "owner";
       version = "...";
       rev = "...";
-      sha256 = "...";
+      hash = "...";
     };
   })
 ])
@@ -114,10 +114,14 @@ This can be overridden by a different version of `ghc` as follows:
 
 ```nix
 agda.withPackages {
-  pkgs = [ ... ];
+  pkgs = [
+    # ...
+  ];
   ghc = haskell.compiler.ghcHEAD;
 }
 ```
+
+To install Agda without GHC, use `ghc = null;`.
 
 ## Writing Agda packages {#writing-agda-packages}
 
@@ -132,8 +136,10 @@ A derivation can then be written using `agdaPackages.mkDerivation`. This has sim
 Here is an example `default.nix`
 
 ```nix
-{ nixpkgs ?  <nixpkgs> }:
-with (import nixpkgs {});
+{
+  nixpkgs ? <nixpkgs>,
+}:
+with (import nixpkgs { });
 agdaPackages.mkDerivation {
   version = "1.0";
   pname = "my-agda-lib";
@@ -146,7 +152,7 @@ agdaPackages.mkDerivation {
 
 ### Building Agda packages {#building-agda-packages}
 
-The default build phase for `agdaPackages.mkDerivation` simply runs `agda` on the `Everything.agda` file.
+The default build phase for `agdaPackages.mkDerivation` runs `agda` on the `Everything.agda` file.
 If something else is needed to build the package (e.g. `make`) then the `buildPhase` should be overridden.
 Additionally, a `preBuild` or `configurePhase` can be used if there are steps that need to be done prior to checking the `Everything.agda` file.
 `agda` and the Agda libraries contained in `buildInputs` are made available during the build phase.
@@ -179,7 +185,12 @@ the Agda package set is small and can (still) be maintained by hand.
 To add an Agda package to `nixpkgs`, the derivation should be written to `pkgs/development/libraries/agda/${library-name}/` and an entry should be added to `pkgs/top-level/agda-packages.nix`. Here it is called in a scope with access to all other Agda libraries, so the top line of the `default.nix` can look like:
 
 ```nix
-{ mkDerivation, standard-library, fetchFromGitHub }:
+{
+  mkDerivation,
+  standard-library,
+  fetchFromGitHub,
+}:
+{ }
 ```
 
 Note that the derivation function is called with `mkDerivation` set to `agdaPackages.mkDerivation`, therefore you
@@ -193,14 +204,18 @@ mkDerivation {
   version = "1.5.0";
   pname = "iowa-stdlib";
 
-  src = ...
+  src = <...>;
 
   libraryFile = "";
   libraryName = "IAL-1.3";
 
   buildPhase = ''
+    runHook preBuild
+
     patchShebangs find-deps.sh
     make
+
+    runHook postBuild
   '';
 }
 ```
@@ -216,7 +231,7 @@ you can test whether it builds correctly by writing in a comment:
 @ofborg build agdaPackages.iowa-stdlib
 ```
 
-### Maintaining Agda packages
+### Maintaining Agda packages {#agda-maintaining-packages}
 
 As mentioned before, the aim is to have a compatible, and up-to-date package set.
 These two conditions sometimes exclude each other:
@@ -250,7 +265,7 @@ Usually, the maintainers will answer within a week or two with a new release.
 Bumping the version of that reverse dependency should be a further commit on your PR.
 
 In the rare case that a new release is not to be expected within an acceptable time,
-simply mark the broken package as broken by setting `meta.broken = true;`.
+mark the broken package as broken by setting `meta.broken = true;`.
 This will exclude it from the build test.
 It can be added later when it is fixed,
 and does not hinder the advancement of the whole package set in the meantime.

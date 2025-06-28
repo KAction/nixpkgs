@@ -1,37 +1,53 @@
-{ lib, stdenv
-, installShellFiles
-, tcl
-, libiconv
-, fetchurl
-, zlib
-, openssl
-, readline
-, withInternalSqlite ? true
-, sqlite
-, ed
-, which
-, tcllib
-, withJson ? true
+{
+  lib,
+  stdenv,
+  installShellFiles,
+  tcl,
+  libiconv,
+  fetchurl,
+  buildPackages,
+  zlib,
+  openssl,
+  readline,
+  withInternalSqlite ? true,
+  sqlite,
+  ed,
+  which,
+  tclPackages,
+  withJson ? true,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "fossil";
-  version = "2.19";
+  version = "2.26";
 
   src = fetchurl {
-    url = "https://www.fossil-scm.org/home/tarball/version-${version}/fossil-${version}.tar.gz";
-    sha256 = "sha256-RZ9/7b4lRJqFVyfXwzutO8C/Pa6XPyxtvpp7gmEGoj4=";
+    url = "https://www.fossil-scm.org/home/tarball/version-${finalAttrs.version}/fossil-${finalAttrs.version}.tar.gz";
+    hash = "sha256-uzT3iOGB1MRQXWmtQNZWazOYiGH4kdtt/KJ6uVQrcqo=";
   };
 
-  nativeBuildInputs = [ installShellFiles tcl tcllib ];
+  # required for build time tool `./tools/translate.c`
+  depsBuildBuild = [ buildPackages.stdenv.cc ];
 
-  buildInputs = [ zlib openssl readline which ed ]
-    ++ lib.optional stdenv.isDarwin libiconv
+  nativeBuildInputs = [
+    installShellFiles
+    tcl
+  ];
+
+  buildInputs =
+    [
+      zlib
+      openssl
+      readline
+      which
+      ed
+    ]
+    ++ lib.optional stdenv.hostPlatform.isDarwin libiconv
     ++ lib.optional (!withInternalSqlite) sqlite;
 
   enableParallelBuilding = true;
 
-  doCheck = stdenv.hostPlatform == stdenv.buildPlatform;
+  doCheck = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
 
   configureFlags =
     lib.optional (!withInternalSqlite) "--disable-internal-sqlite"
@@ -60,7 +76,8 @@ stdenv.mkDerivation rec {
     '';
     homepage = "https://www.fossil-scm.org/";
     license = licenses.bsd2;
-    maintainers = with maintainers; [ maggesi viric ];
+    maintainers = with maintainers; [ maggesi ];
     platforms = platforms.all;
+    mainProgram = "fossil";
   };
-}
+})

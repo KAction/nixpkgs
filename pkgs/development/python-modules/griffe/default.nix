@@ -1,62 +1,54 @@
-{ lib
-, aiofiles
-, buildPythonPackage
-, cached-property
-, fetchFromGitHub
-, git
-, pdm-pep517
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiofiles,
+  buildPythonPackage,
+  colorama,
+  fetchFromGitHub,
+  git,
+  jsonschema,
+  pdm-backend,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "griffe";
-  version = "0.23.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "1.7.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "mkdocstrings";
-    repo = pname;
-    rev = version;
-    hash = "sha256-eoWOkAwAd3ab9+uUfAdrYhkheibfGYkuoNQX/3nS57w=";
+    repo = "griffe";
+    tag = version;
+    hash = "sha256-H5bkS8NK96M2W+kH1KijmzVL5Y04KY9xc5Vw5l1lfws=";
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'dynamic = ["version"]' 'version = "${version}"' \
-      --replace 'license = "ISC"' 'license = {file = "LICENSE"}' \
-      --replace 'version = {source = "scm"}' 'license-expression = "ISC"'
-  '';
+  build-system = [ pdm-backend ];
 
-  nativeBuildInputs = [
-    pdm-pep517
-  ];
+  dependencies = [ colorama ];
 
-  propagatedBuildInputs = lib.optionals (pythonOlder "3.8") [
-    cached-property
-  ];
-
-  checkInputs = [
+  nativeCheckInputs = [
     git
+    jsonschema
     pytestCheckHook
   ];
 
-  passthru.optional-dependencies = {
-    async = [
-      aiofiles
-    ];
+  optional-dependencies = {
+    async = [ aiofiles ];
   };
 
-  pythonImportsCheck = [
-    "griffe"
+  pythonImportsCheck = [ "griffe" ];
+
+  disabledTestPaths = [
+    # Circular dependencies
+    "tests/test_api.py"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Signatures for entire Python programs";
     homepage = "https://github.com/mkdocstrings/griffe";
-    license = licenses.isc;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/mkdocstrings/griffe/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.isc;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "griffe";
   };
 }

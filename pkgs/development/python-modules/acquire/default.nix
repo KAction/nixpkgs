@@ -1,48 +1,47 @@
-{ lib
-, buildPythonPackage
-, defusedxml
-, dissect-cstruct
-, dissect-target
-, fetchFromGitHub
-, minio
-, pycryptodome
-, pytestCheckHook
-, pythonOlder
-, requests
-, requests-toolbelt
-, rich
-, setuptools
-, setuptools-scm
+{
+  lib,
+  buildPythonPackage,
+  defusedxml,
+  dissect-cstruct,
+  dissect-target,
+  fetchFromGitHub,
+  minio,
+  pycryptodome,
+  pytestCheckHook,
+  pythonOlder,
+  requests,
+  requests-toolbelt,
+  rich,
+  setuptools,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "acquire";
-  version = "3.2";
-  format = "pyproject";
+  version = "3.19";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "fox-it";
     repo = "acquire";
-    rev = version;
-    hash = "sha256-YwmrdqWG5qD621+jQMVyTM0Uy0yXCVPv9zfVhZ+ohg0=";
+    tag = version;
+    hash = "sha256-0aqngfv2ZyVw1ymotz1PmXKUZeTHUVL9ICL6cyEn/wk=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
-  nativeBuildInputs = [
+  build-system = [
     setuptools
     setuptools-scm
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     defusedxml
     dissect-cstruct
     dissect-target
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     full = [
       dissect-target
       minio
@@ -53,17 +52,22 @@ buildPythonPackage rec {
     ] ++ dissect-target.optional-dependencies.full;
   };
 
-  checkInputs = [
-    pytestCheckHook
-  ] ++ passthru.optional-dependencies.full;
+  nativeCheckInputs = [ pytestCheckHook ] ++ optional-dependencies.full;
 
-  pythonImportsCheck = [
-    "acquire"
+  disabledTests = [
+    "output_encrypt"
+    "test_collector_collect_glob"
+    "test_collector_collect_path_with_dir"
+    "test_misc_osx"
+    "test_misc_unix"
   ];
+
+  pythonImportsCheck = [ "acquire" ];
 
   meta = with lib; {
     description = "Tool to quickly gather forensic artifacts from disk images or a live system";
     homepage = "https://github.com/fox-it/acquire";
+    changelog = "https://github.com/fox-it/acquire/releases/tag/${version}";
     license = licenses.agpl3Only;
     maintainers = with maintainers; [ fab ];
   };

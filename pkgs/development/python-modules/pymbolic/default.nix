@@ -1,47 +1,56 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, matchpy
-, pytestCheckHook
-, pythonOlder
-, pytools
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+
+  # dependencies
+  immutabledict,
+  pytools,
+
+  # optional-dependencies
+  matchpy,
+  numpy,
+
+  # tests
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "pymbolic";
-  version = "2022.1";
-  format = "setuptools";
+  version = "2024.2.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-tS9FHdC5gD4D3jMgrzt85XIwcAYcbSMcACFvbaQlkBI=";
+  src = fetchFromGitHub {
+    owner = "inducer";
+    repo = "pymbolic";
+    tag = "v${version}";
+    hash = "sha256-07RWdEPhO+n9/FOvIWe4nm9fGekut9X6Tz4HlIkBSpo=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ hatchling ];
+
+  dependencies = [
+    immutabledict
     pytools
   ];
 
-  checkInputs = [
-    matchpy
-    pytestCheckHook
-  ];
+  optional-dependencies = {
+    matchpy = [ matchpy ];
+    numpy = [ numpy ];
+  };
 
-  postPatch = ''
-    # pytest is a test requirement not a run-time one
-      substituteInPlace setup.py \
-        --replace '"pytest>=2.3",' ""
-  '';
+  nativeCheckInputs = [ pytestCheckHook ] ++ lib.flatten (builtins.attrValues optional-dependencies);
 
-  pythonImportsCheck = [
-    "pymbolic"
-  ];
+  pythonImportsCheck = [ "pymbolic" ];
 
-  meta = with lib; {
-    description = "A package for symbolic computation";
+  meta = {
+    description = "Package for symbolic computation";
     homepage = "https://documen.tician.de/pymbolic/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ costrouc ];
+    changelog = "https://github.com/inducer/pymbolic/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

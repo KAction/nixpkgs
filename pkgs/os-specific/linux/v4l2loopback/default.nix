@@ -1,17 +1,31 @@
-{ lib, stdenv, fetchFromGitHub, kernel, kmod }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  kernel,
+  kmod,
+  kernelModuleMakeFlags,
+}:
 
-stdenv.mkDerivation rec {
+let
+  version = "0.15.0";
+
+in
+stdenv.mkDerivation {
   pname = "v4l2loopback";
-  version = "unstable-2022-08-05-${kernel.version}";
+  version = "${version}-${kernel.version}";
 
   src = fetchFromGitHub {
     owner = "umlaeute";
     repo = "v4l2loopback";
-    rev = "76434ab6f71d5ecbff8a218ff6bed91ea2bf73b8";
-    sha256 = "sha256-TdZacRkFAO2HAEbljzXeJ241VcDqSwBECq3bnn7yvBY=";
+    rev = "v${version}";
+    hash = "sha256-fa3f8GDoQTkPppAysrkA7kHuU5z2P2pqI8dKhuKYh04=";
   };
 
-  hardeningDisable = [ "format" "pic" ];
+  hardeningDisable = [
+    "format"
+    "pic"
+  ];
 
   preBuild = ''
     substituteInPlace Makefile --replace "modules_install" "INSTALL_MOD_PATH=$out modules_install"
@@ -24,18 +38,22 @@ stdenv.mkDerivation rec {
     make install-utils PREFIX=$bin
   '';
 
-  outputs = [ "out" "bin" ];
+  outputs = [
+    "out"
+    "bin"
+  ];
 
-  makeFlags = kernel.makeFlags ++ [
+  makeFlags = kernelModuleMakeFlags ++ [
     "KERNELRELEASE=${kernel.modDirVersion}"
     "KERNEL_DIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
   ];
 
   meta = with lib; {
-    description = "A kernel module to create V4L2 loopback devices";
+    description = "Kernel module to create V4L2 loopback devices";
+    mainProgram = "v4l2loopback-ctl";
     homepage = "https://github.com/umlaeute/v4l2loopback";
     license = licenses.gpl2Only;
-    maintainers = with maintainers; [ fortuneteller2k ];
+    maintainers = with maintainers; [ moni ];
     platforms = platforms.linux;
     outputsToInstall = [ "out" ];
   };

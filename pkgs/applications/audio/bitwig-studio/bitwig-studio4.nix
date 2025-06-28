@@ -1,30 +1,68 @@
-{ stdenv, fetchurl, alsa-lib, cairo, dpkg, freetype
-, gdk-pixbuf, glib, gtk3, lib, xorg
-, libglvnd, libjack2, ffmpeg
-, libxkbcommon, xdg-utils, zlib, pipewire, pulseaudio
-, wrapGAppsHook, makeWrapper }:
+{
+  stdenv,
+  fetchurl,
+  alsa-lib,
+  cairo,
+  dpkg,
+  ffmpeg,
+  freetype,
+  gdk-pixbuf,
+  glib,
+  gtk3,
+  lib,
+  libglvnd,
+  libjack2,
+  libjpeg,
+  libxkbcommon,
+  makeWrapper,
+  pipewire,
+  pulseaudio,
+  wrapGAppsHook3,
+  xdg-utils,
+  xorg,
+  zlib,
+}:
 
 stdenv.mkDerivation rec {
   pname = "bitwig-studio";
-  version = "4.4.1";
+  version = "4.4.10";
 
   src = fetchurl {
     url = "https://downloads.bitwig.com/stable/${version}/${pname}-${version}.deb";
-    sha256 = "sha256-+NvQ7TA8WLnZKbzsB+jLl/CIg7tayKd+W2svtXtDsT4=";
+    sha256 = "sha256-gtQ1mhXk0AqGidZk5TCzSR58pD1JJoELMBmELtqyb4U=";
   };
 
-  nativeBuildInputs = [ dpkg makeWrapper wrapGAppsHook ];
-
-  unpackCmd = ''
-    mkdir -p root
-    dpkg-deb -x $curSrc root
-  '';
+  nativeBuildInputs = [
+    dpkg
+    makeWrapper
+    wrapGAppsHook3
+  ];
 
   dontBuild = true;
   dontWrapGApps = true; # we only want $gappsWrapperArgs here
 
   buildInputs = with xorg; [
-    alsa-lib cairo freetype gdk-pixbuf glib gtk3 libxcb xcbutil xcbutilwm zlib libXtst libxkbcommon pipewire pulseaudio libjack2 libX11 libglvnd libXcursor stdenv.cc.cc.lib
+    alsa-lib
+    cairo
+    freetype
+    gdk-pixbuf
+    glib
+    gtk3
+    libglvnd
+    libjack2
+    # libjpeg8 is required for converting jpeg's to colour palettes
+    libjpeg
+    libxcb
+    libXcursor
+    libX11
+    libXtst
+    libxkbcommon
+    pipewire
+    pulseaudio
+    (lib.getLib stdenv.cc.cc)
+    xcbutil
+    xcbutilwm
+    zlib
   ];
 
   installPhase = ''
@@ -68,7 +106,7 @@ stdenv.mkDerivation rec {
   '';
 
   meta = with lib; {
-    description = "A digital audio workstation";
+    description = "Digital audio workstation";
     longDescription = ''
       Bitwig Studio is a multi-platform music-creation system for
       production, performance and DJing, with a focus on flexible
@@ -77,6 +115,11 @@ stdenv.mkDerivation rec {
     homepage = "https://www.bitwig.com/";
     license = licenses.unfree;
     platforms = [ "x86_64-linux" ];
-    maintainers = with maintainers; [ bfortz michalrus mrVanDalo ];
+    maintainers = with maintainers; [
+      bfortz
+      michalrus
+      mrVanDalo
+    ];
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
   };
 }

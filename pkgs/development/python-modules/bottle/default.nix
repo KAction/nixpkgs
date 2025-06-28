@@ -1,37 +1,53 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  pytestCheckHook,
+  pythonAtLeast,
 }:
 
 buildPythonPackage rec {
   pname = "bottle";
-  version = "0.12.23";
-
-  format = "setuptools";
+  version = "0.13.3";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-aD3jqjmfsm6HsnTbz3CxplE4XUWRMXFjh6vcN5LgQWc=";
+    hash = "sha256-HCOuswqooT85xgwNpJRTDd1d49ojW8QxuBilDZmd5J8=";
   };
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeBuildInputs = [ setuptools ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   preCheck = ''
     cd test
   '';
 
-  disabledTests = [
-    "test_delete_cookie"
-    "test_error"
-    "test_error_in_generator_callback"
-  ];
+  disabledTests =
+    [
+      "test_delete_cookie"
+      "test_error"
+      "test_error_in_generator_callback"
+      # timing sensitive
+      "test_ims"
+    ]
+    ++ lib.optionals (pythonAtLeast "3.12") [
+      # https://github.com/bottlepy/bottle/issues/1422
+      # ModuleNotFoundError: No module named 'bottle.ext'
+      "test_data_import"
+      "test_direkt_import"
+      "test_from_import"
+    ];
+
+  __darwinAllowLocalNetworking = true;
 
   meta = with lib; {
     homepage = "https://bottlepy.org/";
-    description = "A fast and simple micro-framework for small web-applications";
+    description = "Fast and simple micro-framework for small web-applications";
+    mainProgram = "bottle.py";
+    downloadPage = "https://github.com/bottlepy/bottle";
     license = licenses.mit;
     maintainers = with maintainers; [ koral ];
   };

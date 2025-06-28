@@ -1,53 +1,63 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, click
-, fetchFromGitHub
-, mock
-, prompt-toolkit
-, ptable
-, pygments
-, pytestCheckHook
-, pythonOlder
-, requests
-, sphinx
-, testtools
-, tkinter
-, urllib3
-, prettytable
-, rich
-, zeep
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  click,
+  prettytable,
+  prompt-toolkit,
+  pygments,
+  requests,
+  rich,
+  urllib3,
+
+  # tests
+  mock,
+  pytestCheckHook,
+  sphinx,
+  testtools,
+  tkinter,
+  zeep,
 }:
 
 buildPythonPackage rec {
   pname = "softlayer";
-  version = "6.1.0";
-  disabled = pythonOlder "3.5";
+  version = "6.2.6";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = pname;
+    owner = "softlayer";
     repo = "softlayer-python";
-    rev = "v${version}";
-    sha256 = "sha256-T49KVAsgcAZySkaJi47IrFcMHGZvEkGDjPWsdMarzwM=";
+    tag = "v${version}";
+    hash = "sha256-qBhnHFFlP4pqlN/SETXEqYyre/ap60wHe9eCfyiB+kA=";
   };
 
-  postPatch = ''
-    substituteInPlace setup.py \
-        --replace 'rich == 12.3.0' 'rich >= 12.3.0'
-  '';
-
-  propagatedBuildInputs = [
-    click
-    prompt-toolkit
-    ptable
-    pygments
-    requests
-    urllib3
-    prettytable
-    rich
+  build-system = [
+    setuptools
   ];
 
-  checkInputs = [
+  pythonRelaxDeps = [
+    "rich"
+  ];
+
+  dependencies = [
+    click
+    prettytable
+    prompt-toolkit
+    pygments
+    requests
+    rich
+    urllib3
+  ];
+
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
     mock
     pytestCheckHook
     sphinx
@@ -62,17 +72,23 @@ buildPythonPackage rec {
     export HOME=$(mktemp -d)
   '';
 
+  pytestFlagsArray = lib.optionals stdenv.hostPlatform.isDarwin [
+    # SoftLayer.exceptions.TransportError: TransportError(0): ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer'))
+    "--deselect=tests/CLI/modules/hardware/hardware_basic_tests.py::HardwareCLITests"
+  ];
+
   disabledTestPaths = [
     # Test fails with ConnectionError trying to connect to api.softlayer.com
-    "tests/transports/soap_tests.py"
+    "tests/transports/soap_tests.py.unstable"
   ];
 
   pythonImportsCheck = [ "SoftLayer" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python libraries that assist in calling the SoftLayer API";
     homepage = "https://github.com/softlayer/softlayer-python";
-    license = licenses.mit;
-    maintainers = with maintainers; [ onny ];
+    changelog = "https://github.com/softlayer/softlayer-python/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ onny ];
   };
 }

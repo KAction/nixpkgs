@@ -1,58 +1,80 @@
-{ stdenv
-, tree-sitter
-, lib
+{
+  stdenv,
+  nodejs,
+  tree-sitter,
+  lib,
 }:
 
 # Build a parser grammar and put the resulting shared object in `$out/parser`
 
 {
   # language name
-  language
-  # version of tree-sitter
-, version
-  # source for the language grammar
-, source
-, location ? null
-}:
+  language,
+  version,
+  src,
+  location ? null,
+  generate ? false,
+  ...
+}@args:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (
+  {
+    pname = "${language}-grammar";
 
-  pname = "${language}-grammar";
-  inherit version;
+    inherit src version;
 
-  src = if location == null then source else "${source}/${location}";
+    nativeBuildInputs = lib.optionals generate [
+      nodejs
+      tree-sitter
+    ];
 
-  buildInputs = [ tree-sitter ];
+    CFLAGS = [
+      "-Isrc"
+      "-O2"
+    ];
+    CXXFLAGS = [
+      "-Isrc"
+      "-O2"
+    ];
 
-  dontUnpack = true;
-  dontConfigure = true;
+    stripDebugList = [ "parser" ];
 
-  CFLAGS = [ "-I${src}/src" "-O2" ];
-  CXXFLAGS = [ "-I${src}/src" "-O2" ];
+    configurePhase =
+      lib.optionalString (location != null) ''
+        cd ${location}
+      ''
+      + lib.optionalString generate ''
+        tree-sitter generate
+      '';
 
-  stripDebugList = [ "parser" ];
+    # When both scanner.{c,cc} exist, we should not link both since they may be the same but in
+    # different languages. Just randomly prefer C++ if that happens.
+    buildPhase = ''
+      runHook preBuild
+      if [[ -e src/scanner.cc ]]; then
+        $CXX -fPIC -c src/scanner.cc -o scanner.o $CXXFLAGS
+      elif [[ -e src/scanner.c ]]; then
+        $CC -fPIC -c src/scanner.c -o scanner.o $CFLAGS
+      fi
+      $CC -fPIC -c src/parser.c -o parser.o $CFLAGS
+      rm -rf parser
+      $CXX -shared -o parser *.o
+      runHook postBuild
+    '';
 
-  # When both scanner.{c,cc} exist, we should not link both since they may be the same but in
-  # different languages. Just randomly prefer C++ if that happens.
-  buildPhase = ''
-    runHook preBuild
-    if [[ -e "$src/src/scanner.cc" ]]; then
-      $CXX -fPIC -c "$src/src/scanner.cc" -o scanner.o $CXXFLAGS
-    elif [[ -e "$src/src/scanner.c" ]]; then
-      $CC -fPIC -c "$src/src/scanner.c" -o scanner.o $CFLAGS
-    fi
-    $CC -fPIC -c "$src/src/parser.c" -o parser.o $CFLAGS
-    $CXX -shared -o parser *.o
-    runHook postBuild
-  '';
-
-  installPhase = ''
-    runHook preInstall
-    mkdir $out
-    mv parser $out/
-    if [[ -d "$src/queries" ]]; then
-      cp -r $src/queries $out/
-    fi
-    runHook postInstall
-  '';
-}
+    installPhase = ''
+      runHook preInstall
+      mkdir $out
+      mv parser $out/
+      if [[ -d queries ]]; then
+        cp -r queries $out
+      fi
+      runHook postInstall
+    '';
+  }
+  // removeAttrs args [
+    "language"
+    "location"
+    "generate"
+  ]
+)

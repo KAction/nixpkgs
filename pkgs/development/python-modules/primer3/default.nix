@@ -1,35 +1,54 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchFromGitHub
-, cython
-, gcc
-, click
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  cython,
+  gcc,
+  click,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "primer3";
-  version = "0.6.1";
+  version = "2.1.0";
+  pyproject = true;
+
+  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "libnano";
     repo = "primer3-py";
-    rev = version;
-    sha256 = "1glybwp9w2m1ydvaphr41gj31d8fvlh40s35galfbjqa563si72g";
+    tag = "v${version}";
+    hash = "sha256-Kp4JH57gEdj7SzY+7XGBzGloWuTSwUQRBK9QbgXQfUE=";
   };
 
-  nativeBuildInputs = [ cython ]
-    ++ lib.optionals stdenv.isDarwin [ gcc ];
+  build-system = [ setuptools ];
 
-  # pytestCheckHook leads to a circular import issue
-  checkInputs = [ click ];
+  nativeBuildInputs = [ cython ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ gcc ];
+
+  nativeCheckInputs = [
+    click
+    pytestCheckHook
+  ];
+  # We are not sure why exactly this is need. It seems `pytestCheckHook`
+  # doesn't find extension modules installed in $out/${python.sitePackages},
+  # and the tests rely upon them. This was initially reported upstream at
+  # https://github.com/libnano/primer3-py/issues/120 and we investigate this
+  # downstream at: https://github.com/NixOS/nixpkgs/issues/255262.
+  preCheck = ''
+    python setup.py build_ext --inplace
+  '';
 
   pythonImportsCheck = [ "primer3" ];
 
   meta = with lib; {
     description = "Oligo analysis and primer design";
     homepage = "https://github.com/libnano/primer3-py";
-    license = with licenses; [ gpl2Only ];
+    changelog = "https://github.com/libnano/primer3-py/blob/${src.tag}/CHANGES";
+    license = licenses.gpl2Only;
     maintainers = with maintainers; [ fab ];
   };
 }

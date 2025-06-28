@@ -1,64 +1,90 @@
-{ lib, stdenv
-, buildPythonPackage, fetchFromGitHub, fetchpatch
-, pkg-config, cython, docutils
-, kivy-garden
-, mesa, mtdev, SDL2, SDL2_image, SDL2_ttf, SDL2_mixer
-, ApplicationServices, AVFoundation, libcxx
-, withGstreamer ? true
-, gst_all_1
-, pillow, requests, pygments
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pkg-config,
+  cython,
+  docutils,
+  setuptools,
+  kivy-garden,
+  libGL,
+  libX11,
+  mtdev,
+  SDL2,
+  SDL2_image,
+  SDL2_ttf,
+  SDL2_mixer,
+  withGstreamer ? true,
+  gst_all_1,
+  pygments,
+  requests,
+  filetype,
 }:
 
 buildPythonPackage rec {
-  pname = "Kivy";
-  version = "2.0.0";
+  pname = "kivy";
+  version = "2.3.1";
+  pyproject = true;
 
-  # use github since pypi line endings are CRLF and patches do not apply
   src = fetchFromGitHub {
     owner = "kivy";
     repo = "kivy";
-    rev = version;
-    sha256 = "sha256-/7GSVQUkYSBEnLVBizMnZAZZxvXVN4r4lskyOgLEcew=";
+    tag = version;
+    hash = "sha256-q8BoF/pUTW2GMKBhNsqWDBto5+nASanWifS9AcNRc8Q=";
   };
 
-  patches = [
-    (fetchpatch {
-      url = "https://github.com/kivy/kivy/commit/1c0656c4472817677cf3b08be504de9ca6b1713f.patch";
-      sha256 = "sha256-phAjMaC3LQuvufwiD0qXzie5B+kezCf8FpKeQMhy/ms=";
-    })
+  postPatch =
+    ''
+      substituteInPlace pyproject.toml \
+        --replace-fail "setuptools~=69.2.0" "setuptools" \
+        --replace-fail "wheel~=0.44.0" "wheel" \
+        --replace-fail "cython>=0.29.1,<=3.0.11" "cython" \
+        --replace-fail "packaging~=24.0" packaging
+    ''
+    + lib.optionalString stdenv.hostPlatform.isLinux ''
+      substituteInPlace kivy/lib/mtdev.py \
+        --replace-fail "LoadLibrary('libmtdev.so.1')" "LoadLibrary('${mtdev}/lib/libmtdev.so.1')"
+    '';
+
+  build-system = [
+    setuptools
+    cython
   ];
 
   nativeBuildInputs = [
     pkg-config
-    cython
-    docutils
   ];
 
-  buildInputs = [
-    SDL2
-    SDL2_image
-    SDL2_ttf
-    SDL2_mixer
-  ] ++ lib.optionals stdenv.isLinux [
-    mesa
-    mtdev
-  ] ++ lib.optionals stdenv.isDarwin [
-    ApplicationServices
-    AVFoundation
-    libcxx
-  ] ++ lib.optionals withGstreamer (with gst_all_1; [
-    # NOTE: The degree to which gstreamer actually works is unclear
-    gstreamer
-    gst-plugins-base
-    gst-plugins-good
-    gst-plugins-bad
-  ]);
+  buildInputs =
+    [
+      SDL2
+      SDL2_image
+      SDL2_ttf
+      SDL2_mixer
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [
+      libGL
+      libX11
+      mtdev
+    ]
+    ++ lib.optionals withGstreamer (
+      with gst_all_1;
+      [
+        # NOTE: The degree to which gstreamer actually works is unclear
+        gstreamer
+        gst-plugins-base
+        gst-plugins-good
+        gst-plugins-bad
+      ]
+    );
 
-  propagatedBuildInputs = [
+  dependencies = [
     kivy-garden
-    pillow
+    docutils
     pygments
     requests
+    filetype
   ];
 
   KIVY_NO_CONFIG = 1;
@@ -67,12 +93,14 @@ buildPythonPackage rec {
   # prefer pkg-config over hardcoded framework paths
   USE_OSX_FRAMEWORKS = 0;
   # work around python distutils compiling C++ with $CC (see issue #26709)
-  NIX_CFLAGS_COMPILE = lib.optionalString stdenv.isDarwin "-I${lib.getDev libcxx}/include/c++/v1";
-
-  postPatch = lib.optionalString stdenv.isLinux ''
-    substituteInPlace kivy/lib/mtdev.py \
-      --replace "LoadLibrary('libmtdev.so.1')" "LoadLibrary('${mtdev}/lib/libmtdev.so.1')"
-  '';
+  env.NIX_CFLAGS_COMPILE = toString (
+    lib.optionals stdenv.cc.isGNU [
+      "-Wno-error=incompatible-pointer-types"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      "-I${lib.getInclude stdenv.cc.libcxx}/include/c++/v1"
+    ]
+  );
 
   /*
     We cannot run tests as Kivy tries to import itself before being fully
@@ -82,8 +110,9 @@ buildPythonPackage rec {
   pythonImportsCheck = [ "kivy" ];
 
   meta = with lib; {
-    description = "Library for rapid development of hardware-accelerated multitouch applications.";
-    homepage = "https://pypi.python.org/pypi/kivy";
+    changelog = "https://github.com/kivy/kivy/releases/tag/${src.tag}";
+    description = "Library for rapid development of hardware-accelerated multitouch applications";
+    homepage = "https://github.com/kivy/kivy";
     license = licenses.mit;
     maintainers = with maintainers; [ risson ];
   };

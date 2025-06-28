@@ -1,35 +1,64 @@
-{ lib, stdenv, fetchurl, pkg-config, perl
-, buildsystem
-, libparserutils
-, libwapcaplet
+{
+  lib,
+  stdenv,
+  fetchurl,
+  fetchpatch,
+  perl,
+  pkg-config,
+  buildsystem,
+  libparserutils,
+  libwapcaplet,
 }:
 
-stdenv.mkDerivation rec {
-  pname = "netsurf-${libname}";
-  libname = "libcss";
-  version = "0.9.1";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "netsurf-libcss";
+  version = "0.9.2";
 
   src = fetchurl {
-    url = "http://download.netsurf-browser.org/libs/releases/${libname}-${version}-src.tar.gz";
-    sha256 = "sha256-0tzhbpM5Lo1qcglCDUfC1Wo4EXAaDoGnJPxUHGPTxtw=";
+    url = "http://download.netsurf-browser.org/libs/releases/libcss-${finalAttrs.version}-src.tar.gz";
+    hash = "sha256-LfIVu+w01R1gwaBLAbLfTV0Y9RDx86evS4DN21ZxFU4=";
   };
 
+  patches = [
+    # select: computed: Squash -Wcalloc-transposed-args (gcc-14)
+    # remove on next release
+    (fetchpatch {
+      name = "fix-calloc-transposed-args-computed.patch";
+      url = "https://source.netsurf-browser.org/libcss.git/patch/?id=0541e18b442d2f46abc0f0b09e0db950e1b657e5";
+      hash = "sha256-6nrT1S1E+jU6UDr3BZo9GH8jcSiIwTNLnmI1rthhhws=";
+    })
+    # select: select: Squash -Wcalloc-transposed-args (gcc-14)
+    # remove on next release
+    (fetchpatch {
+      name = "fix-calloc-transposed-args-select.patch";
+      url = "https://source.netsurf-browser.org/libcss.git/patch/?id=8619d09102d6cc34d63fe87195c548852fc93bf4";
+      hash = "sha256-Clkhw/n/+NQR/T8Gi+2Lc1Neq5dWsNKM8RqieYuTnzQ=";
+    })
+  ];
+
   nativeBuildInputs = [ pkg-config ];
+
   buildInputs = [
     perl
+    buildsystem
     libparserutils
     libwapcaplet
-    buildsystem ];
+  ];
 
   makeFlags = [
     "PREFIX=$(out)"
     "NSSHARED=${buildsystem}/share/netsurf-buildsystem"
   ];
 
-  NIX_CFLAGS_COMPILE= [ "-Wno-error=implicit-fallthrough" "-Wno-error=maybe-uninitialized" ];
+  env.NIX_CFLAGS_COMPILE = toString [
+    "-Wno-error=implicit-fallthrough"
+    "-Wno-error=${if stdenv.cc.isGNU then "maybe-uninitialized" else "uninitialized"}"
+  ];
 
-  meta = with lib; {
-    homepage = "https://www.netsurf-browser.org/projects/${libname}/";
+  enableParallelBuilding = true;
+
+  meta = {
+    homepage = "https://www.netsurf-browser.org/projects/libcss/";
     description = "Cascading Style Sheets library for netsurf browser";
     longDescription = ''
       LibCSS is a CSS parser and selection engine. It aims to parse the forward
@@ -37,8 +66,7 @@ stdenv.mkDerivation rec {
       and is available for use by other software, under a more permissive
       license.
     '';
-    license = licenses.mit;
-    maintainers = [ maintainers.vrthra maintainers.AndersonTorres ];
-    platforms = platforms.linux;
+    license = lib.licenses.mit;
+    inherit (buildsystem.meta) maintainers platforms;
   };
-}
+})

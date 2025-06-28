@@ -1,29 +1,68 @@
-{ lib, mkXfceDerivation, gettext, gtk3, glib, cmake, exo, garcon, libxfce4ui, libxfce4util, xfce4-panel, xfconf }:
+{
+  stdenv,
+  lib,
+  fetchFromGitLab,
+  gettext,
+  meson,
+  ninja,
+  pkg-config,
+  wrapGAppsHook3,
+  accountsservice,
+  exo,
+  garcon,
+  glib,
+  gtk-layer-shell,
+  gtk3,
+  libxfce4ui,
+  libxfce4util,
+  xfce4-panel,
+  xfconf,
+  gitUpdater,
+}:
 
-mkXfceDerivation {
-  category = "panel-plugins";
+stdenv.mkDerivation (finalAttrs: {
   pname = "xfce4-whiskermenu-plugin";
-  version = "2.7.1";
-  rev-prefix = "v";
-  odd-unstable = false;
-  sha256 = "sha256-aN8PwH5YIbjiyS5tTcU2AU4LAYC2tBStDxhCXi/dvkQ=";
+  version = "2.10.0";
 
-  nativeBuildInputs = [ cmake ];
-
-  buildInputs = [ gettext exo garcon gtk3 glib libxfce4ui libxfce4util xfce4-panel xfconf ];
-
-  postPatch = ''
-    substituteInPlace panel-plugin/xfce4-popup-whiskermenu.in \
-      --replace gettext ${gettext}/bin/gettext
-  '';
-
-  postInstall = ''
-    substituteInPlace $out/bin/xfce4-popup-whiskermenu \
-      --replace $out/bin/xfce4-panel ${xfce4-panel.out}/bin/xfce4-panel
-  '';
-
-  meta = with lib; {
-    description = "Alternate application launcher for Xfce";
-    maintainers = with maintainers; [ ] ++ teams.xfce.members;
+  src = fetchFromGitLab {
+    domain = "gitlab.xfce.org";
+    owner = "panel-plugins";
+    repo = "xfce4-whiskermenu-plugin";
+    tag = "xfce4-whiskermenu-plugin-${finalAttrs.version}";
+    hash = "sha256-2FACsP6mKx0k91xG3DaVS6hdvdLrjLu9Y9rVOW6PZ3M=";
   };
-}
+
+  strictDeps = true;
+
+  nativeBuildInputs = [
+    gettext
+    meson
+    ninja
+    pkg-config
+    wrapGAppsHook3
+  ];
+
+  buildInputs = [
+    accountsservice
+    exo
+    garcon
+    glib
+    gtk-layer-shell
+    gtk3
+    libxfce4ui
+    libxfce4util
+    xfce4-panel
+    xfconf
+  ];
+
+  passthru.updateScript = gitUpdater { rev-prefix = "xfce4-whiskermenu-plugin-"; };
+
+  meta = {
+    description = "Alternate application launcher for Xfce";
+    mainProgram = "xfce4-popup-whiskermenu";
+    homepage = "https://gitlab.xfce.org/panel-plugins/xfce4-whiskermenu-plugin";
+    license = lib.licenses.gpl2Plus;
+    teams = [ lib.teams.xfce ];
+    platforms = lib.platforms.linux;
+  };
+})

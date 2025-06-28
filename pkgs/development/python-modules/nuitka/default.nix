@@ -1,45 +1,46 @@
-{ lib, stdenv
-, buildPythonPackage
-, fetchFromGitHub
-, vmprof
-, pyqt4
-, isPyPy
-, pkgs
-, scons
-, chrpath
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  isPyPy,
+  ordered-set,
+  python,
+  setuptools,
+  zstandard,
+  wheel,
 }:
 
 buildPythonPackage rec {
-  version = "1.1.5";
-  pname = "Nuitka";
+  pname = "nuitka";
+  version = "2.6.9";
+  pyproject = true;
 
-  # Latest version is not yet on PyPi
   src = fetchFromGitHub {
     owner = "Nuitka";
     repo = "Nuitka";
     rev = version;
-    sha256 = "0wgcl860acbxnq8q9hck147yhxz8pcbqhv9glracfnrsd2qkpgpp";
+    hash = "sha256-QKJAMDVXO78VQ0P+nuuQ4dxCKEJLtcqCinJYs018rTA=";
   };
 
-  checkInputs = [ vmprof pyqt4 ];
-  nativeBuildInputs = [ scons ];
-  propagatedBuildInputs = [ chrpath ];
+  build-system = [
+    setuptools
+    wheel
+  ];
 
-  postPatch = ''
-    patchShebangs tests/run-tests
-  '' + lib.optionalString stdenv.isLinux ''
-    substituteInPlace nuitka/plugins/standard/ImplicitImports.py --replace 'locateDLL("uuid")' '"${lib.getLib pkgs.util-linux}/lib/libuuid.so"'
-  '';
-
-  # We do not want any wrappers here.
-  postFixup = "";
+  dependencies = [
+    ordered-set
+    zstandard
+  ];
 
   checkPhase = ''
-    tests/run-tests
+    runHook preCheck
+
+    ${python.interpreter} tests/basics/run_all.py search
+
+    runHook postCheck
   '';
 
-  # Problem with a subprocess (parts)
-  doCheck = false;
+  pythonImportsCheck = [ "nuitka" ];
 
   # Requires CPython
   disabled = isPyPy;
@@ -49,5 +50,4 @@ buildPythonPackage rec {
     license = licenses.asl20;
     homepage = "https://nuitka.net/";
   };
-
 }

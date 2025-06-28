@@ -1,29 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, niapy
-, numpy
-, pandas
-, poetry-core
-, scikit-learn
-, toml-adapt
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  loguru,
+  niapy,
+  numpy,
+  pandas,
+  poetry-core,
+  pytestCheckHook,
+  pythonOlder,
+  scikit-learn,
+  toml-adapt,
+  typer,
 }:
 
 buildPythonPackage rec {
   pname = "niaaml";
-  version = "1.1.11";
-  format = "pyproject";
+  version = "2.1.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
-    owner = "lukapecnik";
+    owner = "firefly-cpp";
     repo = "NiaAML";
-    rev = version;
-    sha256 = "sha256-B87pI1EpZj1xECrgTmzN5S35Cy1nPowBRyu1IDb5zCE=";
+    tag = version;
+    hash = "sha256-i5hjmvN9qJCGVDmRDBTiaNQn+1kZHr2iWNnD7GUimr4=";
   };
+
+  pythonRelaxDeps = [
+    "numpy"
+    "pandas"
+  ];
 
   nativeBuildInputs = [
     poetry-core
@@ -31,28 +39,28 @@ buildPythonPackage rec {
   ];
 
   propagatedBuildInputs = [
+    loguru
     niapy
     numpy
     pandas
     scikit-learn
+    typer
   ];
 
-  # create scikit-learn dep version consistent
+  # create scikit-learn and niapy deps version consistent
   preBuild = ''
     toml-adapt -path pyproject.toml -a change -dep scikit-learn -ver X
+    toml-adapt -path pyproject.toml -a change -dep niapy -ver X
   '';
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pythonImportsCheck = [
-    "niaaml"
-  ];
+  pythonImportsCheck = [ "niaaml" ];
 
   meta = with lib; {
     description = "Python automated machine learning framework";
-    homepage = "https://github.com/lukapecnik/NiaAML";
+    homepage = "https://github.com/firefly-cpp/NiaAML";
+    changelog = "https://github.com/firefly-cpp/NiaAML/releases/tag/${version}";
     license = licenses.mit;
     maintainers = with maintainers; [ firefly-cpp ];
   };

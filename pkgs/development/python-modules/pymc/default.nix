@@ -1,71 +1,73 @@
-{ lib
-, aeppl
-, aesara
-, arviz
-, buildPythonPackage
-, cachetools
-, cloudpickle
-, fastprogress
-, fetchFromGitHub
-, numpy
-, pythonOlder
-, pythonRelaxDepsHook
-, scipy
-, typing-extensions
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  versioneer,
+
+  # dependencies
+  arviz,
+  cachetools,
+  cloudpickle,
+  numpy,
+  pandas,
+  pytensor,
+  rich,
+  scipy,
+  threadpoolctl,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "pymc";
-  version = "4.3.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "5.23.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pymc-devs";
     repo = "pymc";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-pkeAcsdVBDc7eKC03+FDJCYT48PaVcXT8K8U8T4gGKo=";
+    tag = "v${version}";
+    hash = "sha256-Hlj5kOSMz8uoqeBkLiq9kT6CZrb2XJW9mas45G2EZB4=";
   };
 
-  nativeBuildInputs = [
-    pythonRelaxDepsHook
+  build-system = [
+    setuptools
+    versioneer
   ];
 
-  propagatedBuildInputs = [
-    aeppl
-    aesara
+  pythonRelaxDeps = [
+    "pytensor"
+  ];
+
+  dependencies = [
     arviz
     cachetools
     cloudpickle
-    fastprogress
     numpy
+    pandas
+    pytensor
+    rich
     scipy
+    threadpoolctl
     typing-extensions
-  ];
-
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace ', "pytest-cov"' ""
-  '';
-
-  pythonRelaxDeps = [
-    "aesara"
-    "aeppl"
   ];
 
   # The test suite is computationally intensive and test failures are not
   # indicative for package usability hence tests are disabled by default.
   doCheck = false;
 
-  pythonImportsCheck = [
-    "pymc"
-  ];
+  pythonImportsCheck = [ "pymc" ];
 
-  meta = with lib; {
+  meta = {
     description = "Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC)";
-    homepage = "https://github.com/pymc-devs/pymc3";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ nidabdella ];
+    homepage = "https://github.com/pymc-devs/pymc";
+    changelog = "https://github.com/pymc-devs/pymc/releases/tag/v${version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      nidabdella
+      ferrine
+    ];
   };
 }

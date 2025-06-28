@@ -16,11 +16,17 @@ buildDunePackage rec {
     sha256 = "sha256-KaUpAT+BWxmUP5obi4loR9vVUeQmz3p3zG3CBolUuL4=";
   };
 
+  duneVersion = "3";
+
   minimalOCamlVersion = "4.08";
 
   propagatedBuildInputs = [ bls12-381 ];
 
-  checkInputs = [alcotest bisect_ppx integers_stubs_js];
+  checkInputs = [
+    alcotest
+    bisect_ppx
+    integers_stubs_js
+  ];
 
   doCheck = true;
 
@@ -28,6 +34,6 @@ buildDunePackage rec {
     description = "Implementation of BLS signatures for the pairing-friendly curve BLS12-381";
     license = lib.licenses.mit;
     homepage = "https://gitlab.com/nomadic-labs/cryptography/ocaml-bls12-381-signature";
-    maintainers = [lib.maintainers.ulrikstrid];
+    maintainers = [ lib.maintainers.ulrikstrid ];
   };
 }

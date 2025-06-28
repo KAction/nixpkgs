@@ -1,47 +1,63 @@
-{ lib
-, fetchpatch
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, swig2
-, openssl
-, typing
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  fetchurl,
+  openssl,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
+  swig,
 }:
 
-
 buildPythonPackage rec {
-  version = "0.36.0";
-  pname = "M2Crypto";
+  pname = "m2crypto";
+  version = "0.45.0";
+  pyproject = true;
+
+  disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1hadbdckmjzfb8qzbkafypin6sakfx35j2qx0fsivh757s7c2hhm";
+    hash = "sha256-/8ENTQmQFRT0CNx09gpNffIcROvJv3dslHv9xzWUIc8=";
   };
-
   patches = [
-    (fetchpatch {
-      url = "https://github.com/void-linux/void-packages/raw/7946d12eb3d815e5ecd4578f1a6133d948694370/srcpkgs/python-M2Crypto/patches/libressl.patch";
-      sha256 = "0z5qnkndg6ma5f5qqrid5m95i9kybsr000v3fdy1ab562kf65a27";
+    (fetchurl {
+      url = "https://sources.debian.org/data/main/m/m2crypto/0.42.0-2.1/debian/patches/0004-swig-Workaround-for-reading-sys-select.h-ending-with.patch";
+      hash = "sha256-/Bkuqu/Od+S56AUWo0ZzpZF7FGMxP766K2GJnfKXrOI=";
     })
   ];
-  patchFlags = [ "-p0" ];
 
-  nativeBuildInputs = [ swig2 ];
-  buildInputs = [ swig2 openssl ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = lib.optional (pythonOlder "3.5") typing;
+  nativeBuildInputs = [ swig ];
 
-  preConfigure = ''
-    substituteInPlace setup.py --replace "self.openssl = '/usr'" "self.openssl = '${openssl.dev}'"
-  '';
+  buildInputs = [ openssl ];
 
-  doCheck = false; # another test that depends on the network.
+  env =
+    {
+      NIX_CFLAGS_COMPILE = lib.optionalString stdenv.hostPlatform.isDarwin (toString [
+        "-Wno-error=implicit-function-declaration"
+        "-Wno-error=incompatible-pointer-types"
+      ]);
+    }
+    // lib.optionalAttrs (stdenv.hostPlatform != stdenv.buildPlatform) {
+      CPP = "${stdenv.cc.targetPrefix}cpp";
+    };
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    openssl
+  ];
+
+  pythonImportsCheck = [ "M2Crypto" ];
 
   meta = with lib; {
-    description = "A Python crypto and SSL toolkit";
+    description = "Python crypto and SSL toolkit";
     homepage = "https://gitlab.com/m2crypto/m2crypto";
+    changelog = "https://gitlab.com/m2crypto/m2crypto/-/blob/${version}/CHANGES";
     license = licenses.mit;
-    maintainers = with maintainers; [ andrew-d ];
+    maintainers = [ ];
   };
-
 }

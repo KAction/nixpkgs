@@ -1,105 +1,118 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, buildPackages
-, pkg-config
-, libusb-compat-0_1
-, readline
-, libewf
-, perl
-, zlib
-, openssl
-, libuv
-, file
-, libzip
-, xxHash
-, gtk2
-, vte
-, gtkdialog
-, python3
-, ruby
-, lua
-, capstone
-, useX11 ? false
-, rubyBindings ? false
-, pythonBindings ? false
-, luaBindings ? false
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  buildPackages,
+  pkg-config,
+  meson,
+  ninja,
+  libusb-compat-0_1,
+  readline,
+  libewf,
+  perl,
+  zlib,
+  openssl,
+  libuv,
+  file,
+  libzip,
+  xxHash,
+  gtk2,
+  vte,
+  gtkdialog,
+  python3,
+  ruby,
+  lua,
+  lz4,
+  capstone,
+  useX11 ? false,
+  rubyBindings ? false,
+  luaBindings ? false,
 }:
 
 let
-  # FIXME: Compare revision with https://github.com/radareorg/radare2/blob/master/libr/asm/arch/arm/v35arm64/Makefile#L20
+  # NOTE: Check these revision changes when updating the package.
+  # https://github.com/radareorg/radare2/blob/master/libr/arch/p/arm/v35/Makefile#L25-L26
   arm64 = fetchFromGitHub {
     owner = "radareorg";
     repo = "vector35-arch-arm64";
-    rev = "9ab2b0bedde459dc86e079718333de4a63bbbacb";
-    sha256 = "sha256-2KLtjgCqHzBBlo9ImZ8WJ1bsWy/kdJCjCFxlLE+HxoI=";
+    rev = "55d73c6bbb94448a5c615933179e73ac618cf876";
+    hash = "sha256-pZxxp5xDg8mgkGEx7LaBSoKxNPyggFYA4um9YaO20LU=";
   };
   armv7 = fetchFromGitHub {
     owner = "radareorg";
     repo = "vector35-arch-armv7";
-    rev = "dde39f69ffea19fc37e681874b12cb4707bc4f30";
-
-    sha256 = "sha256-bnWQc0dScM9rhIdzf+iVXvMqYWq/bguEAUQPaZRgdlU=";
+    rev = "f270a6cc99644cb8e76055b6fa632b25abd26024";
+    hash = "sha256-YhfgJ7M8ys53jh1clOzj0I2yfJshXQm5zP0L9kMYsmk=";
   };
 in
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "radare2";
-  version = "5.7.2";
+  version = "5.9.8";
 
   src = fetchFromGitHub {
     owner = "radare";
     repo = "radare2";
-    rev = version;
-    sha256 = "sha256-TZeW+9buJvCOudHsLTMITFpRUlmNpo71efc3xswJoPw=";
+    tag = finalAttrs.version;
+    hash = "sha256-XSnv0yWEPlXHUPjf1Qu50AN3Gvgr0o6Q4e0dOyRdO9A=";
   };
 
   preBuild = ''
-    cp -r ${arm64} libr/asm/arch/arm/v35arm64/arch-arm64
-    chmod -R +w libr/asm/arch/arm/v35arm64/arch-arm64
+    pushd ../libr/arch/p/arm/v35
+    cp -r ${arm64} arch-arm64
+    chmod -R +w arch-arm64
 
-    cp -r ${armv7} libr/asm/arch/arm/v35arm64/arch-armv7
-    chmod -R +w libr/asm/arch/arm/v35arm64/arch-armv7
+    cp -r ${armv7} arch-armv7
+    chmod -R +w arch-armv7
+    popd
   '';
 
-  postFixup = lib.optionalString stdenv.isDarwin ''
-    for file in $out/bin/rasm2 $out/bin/ragg2 $out/bin/rabin2 $out/lib/libr_asm.${version}.dylib $out/lib/libr_anal.${version}.dylib; do
-      install_name_tool -change libcapstone.4.dylib ${capstone}/lib/libcapstone.4.dylib $file
-    done
+  postFixup = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    install_name_tool -add_rpath $out/lib $out/lib/libr_io.${finalAttrs.version}.dylib
   '';
 
-  WITHOUT_PULL = "1";
-  makeFlags = [
-    "GITTAP=${version}"
-    "RANLIB=${stdenv.cc.bintools.bintools}/bin/${stdenv.cc.bintools.targetPrefix}ranlib"
-    "CC=${stdenv.cc.targetPrefix}cc"
-    "HOST_CC=${stdenv.cc.targetPrefix}cc"
-  ];
-
-  configureFlags = [
-    "--with-sysmagic"
-    "--with-syszip"
-    "--with-sysxxhash"
-    "--with-syscapstone"
-    "--with-openssl"
+  mesonFlags = [
+    "-Dr2_gittap=${finalAttrs.version}"
+    "-Duse_sys_capstone=true"
+    "-Duse_sys_lz4=true"
+    "-Duse_sys_magic=true"
+    "-Duse_sys_openssl=true"
+    "-Duse_sys_xxhash=true"
+    "-Duse_sys_zip=true"
+    "-Duse_sys_zlib=true"
   ];
 
   enableParallelBuilding = true;
+
   depsBuildBuild = [ buildPackages.stdenv.cc ];
 
-  nativeBuildInputs = [ pkg-config ];
-  buildInputs = [
-    capstone
-    file
-    readline
-    libusb-compat-0_1
-    libewf
-    perl
-    zlib
-    openssl
-    libuv
-  ] ++ lib.optionals useX11 [ gtkdialog vte gtk2 ]
+  strictDeps = true;
+
+  nativeBuildInputs = [
+    pkg-config
+    meson
+    ninja
+    python3
+  ];
+
+  buildInputs =
+    [
+      capstone
+      file
+      readline
+      libusb-compat-0_1
+      libewf
+      perl
+      zlib
+      openssl
+      libuv
+      lz4
+    ]
+    ++ lib.optionals useX11 [
+      gtkdialog
+      vte
+      gtk2
+    ]
     ++ lib.optionals rubyBindings [ ruby ]
-    ++ lib.optionals pythonBindings [ python3 ]
     ++ lib.optionals luaBindings [ lua ];
 
   propagatedBuildInputs = [
@@ -110,10 +123,36 @@ stdenv.mkDerivation rec {
   ];
 
   meta = with lib; {
-    description = "unix-like reverse engineering framework and commandline tools";
-    homepage = "https://radare.org/";
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ raskin makefu mic92 arkivm ];
+    description = "UNIX-like reverse engineering framework and command-line toolset";
+    longDescription = ''
+      r2 is a complete rewrite of radare. It provides a set of libraries, tools
+      and plugins to ease reverse engineering tasks. Distributed mostly under
+      LGPLv3, each plugin can have different licenses.
+
+      The radare project started as a simple command-line hexadecimal editor
+      focused on forensics. Today, r2 is a featureful low-level command-line
+      tool with support for scripting with the embedded JavaScript interpreter
+      or via r2pipe.
+
+      r2 can edit files on local hard drives, view kernel memory, and debug
+      programs locally or via a remote gdb/windbg servers. r2's wide
+      architecture support allows you to analyze, emulate, debug, modify, and
+      disassemble any binary.
+    '';
+    homepage = "https://radare.org";
+    changelog = "https://github.com/radareorg/radare2/releases/tag/${finalAttrs.version}";
+    license = with licenses; [
+      gpl3Only
+      lgpl3Only
+    ];
+    maintainers = with maintainers; [
+      azahi
+      raskin
+      makefu
+      mic92
+      arkivm
+    ];
+    mainProgram = "radare2";
     platforms = platforms.unix;
   };
-}
+})

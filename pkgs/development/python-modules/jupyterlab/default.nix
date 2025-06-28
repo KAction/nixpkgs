@@ -1,34 +1,83 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, jupyterlab_server
-, notebook
-, pythonOlder
-, jupyter-packaging
-, nbclassic
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  nodejs,
+  yarn-berry_3,
+  hatch-jupyter-builder,
+  hatchling,
+  async-lru,
+  httpx,
+  importlib-metadata,
+  ipykernel,
+  jinja2,
+  jupyter-core,
+  jupyter-lsp,
+  jupyter-server,
+  jupyterlab-server,
+  notebook-shim,
+  packaging,
+  setuptools,
+  tomli,
+  tornado,
+  traitlets,
+  pythonOlder,
 }:
 
 buildPythonPackage rec {
   pname = "jupyterlab";
-  version = "3.5.0";
-  format = "setuptools";
+  version = "4.4.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-4CVWyOobOGljxLRk5GGK7hU8VBawerSBQlyBegMzI6I=";
+  src = fetchFromGitHub {
+    owner = "jupyterlab";
+    repo = "jupyterlab";
+    tag = "v${version}";
+    hash = "sha256-j1K5aBLLGSWER3S0Vojrwdd+9T9vYbp1+XgxYD2NORY=";
   };
 
   nativeBuildInputs = [
-    jupyter-packaging
+    nodejs
+    yarn-berry_3.yarnBerryConfigHook
   ];
 
-  propagatedBuildInputs = [
-    jupyterlab_server
-    notebook
-    nbclassic
+  preConfigure = ''
+    pushd jupyterlab/staging
+  '';
+
+  offlineCache = yarn-berry_3.fetchYarnBerryDeps {
+    inherit src;
+    sourceRoot = "${src.name}/jupyterlab/staging";
+    hash = "sha256-rko09rqT7UQUq/Ddi8lo3V02eJQEEnpjH5RaLSgqj/o=";
+  };
+
+  preBuild = ''
+    popd
+  '';
+
+  build-system = [
+    hatch-jupyter-builder
+    hatchling
   ];
+
+  dependencies =
+    [
+      async-lru
+      httpx
+      ipykernel
+      jinja2
+      jupyter-core
+      jupyter-lsp
+      jupyter-server
+      jupyterlab-server
+      notebook-shim
+      packaging
+      setuptools
+      tornado
+      traitlets
+    ]
+    ++ lib.optionals (pythonOlder "3.11") [ tomli ]
+    ++ lib.optionals (pythonOlder "3.10") [ importlib-metadata ];
 
   makeWrapperArgs = [
     "--set"
@@ -39,14 +88,14 @@ buildPythonPackage rec {
   # Depends on npm
   doCheck = false;
 
-  pythonImportsCheck = [
-    "jupyterlab"
-  ];
+  pythonImportsCheck = [ "jupyterlab" ];
 
   meta = with lib; {
+    changelog = "https://github.com/jupyterlab/jupyterlab/blob/v${version}/CHANGELOG.md";
     description = "Jupyter lab environment notebook server extension";
-    license = with licenses; [ bsd3 ];
+    license = licenses.bsd3;
     homepage = "https://jupyter.org/";
-    maintainers = with maintainers; [ zimbatm costrouc ];
+    teams = [ lib.teams.jupyter ];
+    mainProgram = "jupyter-lab";
   };
 }

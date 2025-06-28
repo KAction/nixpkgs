@@ -1,32 +1,55 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytest
-, numpy
-, zlib
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  numpy,
+  pytestCheckHook,
+  pythonOlder,
+  zlib,
 }:
 
 buildPythonPackage rec {
-  pname = "pyBigWig";
-  version = "0.3.18";
+  pname = "pybigwig";
+  version = "0.3.24";
+  format = "setuptools";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "4c2a8c571b4100ad7c4c318c142eb48558646be52aaab28215a70426f5be31bc";
+  disabled = pythonOlder "3.9";
+
+  src = fetchFromGitHub {
+    owner = "deeptools";
+    repo = "pyBigWig";
+    tag = version;
+    hash = "sha256-gK3cOwbvQtf+g1H/4x69swqCFdkBwpV7ZOrbE0eANh0=";
   };
 
   buildInputs = [ zlib ];
 
-  checkInputs = [ numpy pytest ];
+  nativeCheckInputs = [
+    numpy
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "pyBigWig" ];
+
+  pytestFlagsArray = [ "pyBigWigTest/test*.py" ];
+
+  disabledTests = [
+    # Test file is downloaded from GitHub
+    "testAll"
+    "testBigBed"
+    "testFoo"
+    "testNumpyValues"
+  ];
 
   meta = with lib; {
-    homepage = "https://github.com/deeptools/pyBigWig";
     description = "File access to bigBed files, and read and write access to bigWig files";
     longDescription = ''
-      A python extension, written in C, for quick access to bigBed files
+      A Python extension, written in C, for quick access to bigBed files
       and access to and creation of bigWig files. This extension uses
       libBigWig for local and remote file access.
     '';
+    homepage = "https://github.com/deeptools/pyBigWig";
+    changelog = "https://github.com/deeptools/pyBigWig/releases/tag/${src.tag}";
     license = licenses.mit;
     maintainers = with maintainers; [ scalavision ];
   };

@@ -1,39 +1,35 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
-, tokenize-rt
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  pytestCheckHook,
+  tokenize-rt,
 }:
 
 buildPythonPackage rec {
   pname = "pyupgrade";
-  version = "3.1.0";
+  version = "3.19.1";
   format = "setuptools";
 
   disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "asottile";
-    repo = pname;
+    repo = "pyupgrade";
     rev = "v${version}";
-    hash = "sha256-OzU3Qv6qdEw0hJdbQ7Q3T6zOGpUt2uZyfy1Fxm3GT0Q=";
+    hash = "sha256-bijW1uxoaVKLO0Psv3JeAG6rKeTwGa9ZW06VU1qFrrU=";
   };
 
-  propagatedBuildInputs = [
-    tokenize-rt
-  ];
+  propagatedBuildInputs = [ tokenize-rt ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pythonImportsCheck = [
-    "pyupgrade"
-  ];
+  pythonImportsCheck = [ "pyupgrade" ];
 
   meta = with lib; {
     description = "Tool to automatically upgrade syntax for newer versions of the language";
+    mainProgram = "pyupgrade";
     homepage = "https://github.com/asottile/pyupgrade";
     license = licenses.mit;
     maintainers = with maintainers; [ lovesegfault ];

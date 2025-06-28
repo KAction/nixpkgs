@@ -1,30 +1,25 @@
-{ lib
-, stdenv
-, fetchurl
-, which
-, autoconf
-, automake
-, flex
-, bison
-, kernel
-, glibc
-, perl
-, libtool_2
-, libkrb5
-, fetchpatch
+{
+  lib,
+  stdenv,
+  fetchurl,
+  fetchpatch,
+  which,
+  autoconf,
+  automake,
+  flex,
+  bison,
+  kernel,
+  glibc,
+  perl,
+  libtool_2,
+  libkrb5,
 }:
 
-with (import ./srcs.nix {
-  inherit fetchurl;
-});
-
 let
+  inherit (import ./srcs.nix { inherit fetchurl; }) src version;
+
   modDestDir = "$out/lib/modules/${kernel.modDirVersion}/extra/openafs";
   kernelBuildDir = "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build";
-
-  fetchBase64Patch = args: (fetchpatch args).overrideAttrs (o: {
-    postFetch = "mv $out p; base64 -d p > $out; " + o.postFetch;
-  });
 
 in
 stdenv.mkDerivation {
@@ -32,68 +27,68 @@ stdenv.mkDerivation {
   version = "${version}-${kernel.modDirVersion}";
   inherit src;
 
-  nativeBuildInputs = [ autoconf automake flex libtool_2 perl which bison ]
-    ++ kernel.moduleBuildDependencies;
-
-  buildInputs = [ libkrb5 ];
-
   patches = [
-    # Import of code from autoconf-archive
+    # LINUX: Refactor afs_linux_dentry_revalidate()
     (fetchpatch {
-      url = "https://git.openafs.org/?p=openafs.git;a=patch;h=d8205bbb482554812fbe66afa3c337d991a247b6";
-      hash = "sha256-ohkjSux+S3+6slh6uZIw5UJXlvhy9UUDpDlP0YFRwmw=";
+      url = "https://gerrit.openafs.org/changes/16276/revisions/c1d074317e5c8cb8212e0b19a29f7d710bcabb32/patch";
+      decode = "base64 -d";
+      hash = "sha256-8ga9ks9pr6pWaV2t67v+FaG0yVExhqELkvkpdLvO8Nc=";
     })
-    # Use autoconf-archive m4 from src/external
-    (fetchBase64Patch {
-      url = "https://gerrit.openafs.org/changes/14944/revisions/ea2a0e128d71802f61b8da2e44de3c6325c5f328/patch";
-      hash = "sha256-PAUk/MXL5p8xwhn40/UGmo3UIhvl1PB2FwgqhmqsjJ4=";
-    })
-    # cf: Use common macro to test compiler flags
+    # Linux-6.14: Handle dops.d_revalidate with parent
     (fetchpatch {
-      url = "https://git.openafs.org/?p=openafs.git;a=patch;h=790824ff749b6ee01c4d7101493cbe8773ef41c6";
-      hash = "sha256-Zc7AjCsH7eTmZJWCrx7ci1tBjEAgcFXS9lY1YBeboLA=";
+      url = "https://gerrit.openafs.org/changes/16277/revisions/0051bd0ee82b05e8caacdc0596e5b62609bebd2e/patch";
+      decode = "base64 -d";
+      hash = "sha256-08jedwZ1KX1RSs8y9sh7BUvv5xK9tlzZ6uBOR4kS0Jo=";
     })
-    # Linux-5.17: kernel func complete_and_exit renamed
-    (fetchBase64Patch {
-      url = "https://gerrit.openafs.org/changes/14945/revisions/a714e865efe41aa1112f6f9c8479112660dacd6f/patch";
-      hash = "sha256-zvyR/GOPJeAbG6ySRRMp44oT5tPujUwybyU0XR/5Xyc=";
-    })
-    # Linux-5.17: Kernel build uses -Wcast-function-type
-    (fetchBase64Patch {
-      url = "https://gerrit.openafs.org/changes/14946/revisions/449d1faf87e2841e80be38cf2b4a5cf5ff4df2d8/patch";
-      hash = "sha256-3bRTHYeMRIleLhob56m2Xt0dWzIMDo3QrytY0K1/q7c=";
-    })
-    # afs: Introduce afs_IsDCacheFresh
+    # Linux: Add required MODULE_DESCRIPTION
     (fetchpatch {
-      url = "https://git.openafs.org/?p=openafs.git;a=patch;h=0d8ce846ab2e6c45166a61f04eb3af271cbd27db";
-      hash = "sha256-+xgRYVXz8XpT5c4Essc4VEn9Fj53vasAYhcFkK0oCBc=";
+      url = "https://gerrit.openafs.org/changes/16372/revisions/39189eba45542376e668636bd79a93ae6a8a7cd2/patch";
+      decode = "base64 -d";
+      hash = "sha256-j5ckKQvybEvmlnFs5jX8g8Dfw37LYWGnfsl4hnZ3+A4=";
     })
-    # LINUX: Don't panic on some file open errors
+    # linux: inode_ops mkdir returns struct dentry *
     (fetchpatch {
-      url = "https://git.openafs.org/?p=openafs.git;a=patch;h=af73b9a3b1fc625694807287c0897391feaad52d";
-      hash = "sha256-k0d+Gav1LApU24SaMI0pmR3gGfWyicqdCpTpVJLcx7U=";
+      url = "https://gerrit.openafs.org/changes/16373/revisions/769847e205d5908a0c430f7bcfbd2f48e19f8bf8/patch";
+      decode = "base64 -d";
+      hash = "sha256-znv5gunyPnJgi4SRFERJudtYFqiS+AVYDWfvr52Ku3s=";
     })
-    # Linux-5.18 replace set_page_dirty with dirty_folio
+    # Linux: Use __filemap_get_folio()
     (fetchpatch {
-      url = "https://git.openafs.org/?p=openafs.git;a=patch;h=6aa129e743e882cf30c35afd67eabf82274c5fca";
-      hash = "sha256-8R0rdKYs7+Zl1sdizOZzpBjy6e9J+42R9HzsNUa/PQ4=";
+      url = "https://gerrit.openafs.org/changes/16374/revisions/f187add554da9e9c52752edbfa98f486f683cf25/patch";
+      decode = "base64 -d";
+      hash = "sha256-+ay87ThSn6QyPZcN0+oE01Wqbxmz0Z1KXYwocQCvYLg=";
     })
-    # afs: introduce afs_alloc_ncr/afs_free_ncr
+    # Linux: Use folio_wait_locked()
     (fetchpatch {
-      url = "https://git.openafs.org/?p=openafs.git;a=patch;h=209eb92448001e59525413610356070d8e4f10a0";
-      hash = "sha256-t455gTaK5U+m0qcyKjTqnWTOb4qz6VN/JYZzRAAV8kM=";
+      url = "https://gerrit.openafs.org/changes/16375/revisions/87a93f6488585553d833e1397e7f0dae0545cb7e/patch";
+      decode = "base64 -d";
+      hash = "sha256-MOVX2LFe8OBnvsQ2UdLvwKrwztOmnu1rdIou4CF+EBs=";
     })
-    # afs: introduce get_dcache_readahead
+    # cf: Introduce AC_CHECK_LINUX_SYMBOL
     (fetchpatch {
-      url = "https://git.openafs.org/?p=openafs.git;a=patch;h=44e24ae5d7dc41e54d23638d5f64ab2e81e43ad0";
-      hash = "sha256-gtUNDSHAq+RY1Rm17YcxcUALy7FEBQf9k8/ELQlPORU=";
+      url = "https://gerrit.openafs.org/changes/16376/revisions/bab5968d7f4639d4a0cbe81aaa3e9716dda00632/patch";
+      decode = "base64 -d";
+      hash = "sha256-d6DZqDTW1uEKSB5PsomS4ix9fYYQzdQVmDATKl6n7x4=";
     })
-    # Linux-5.18: replace readpages with readahead
-    (fetchBase64Patch {
-      url = "https://gerrit.openafs.org/changes/14953/revisions/0497b0cd7bffb6335ab9bcbf5a1310b8c6a4b299/patch";
-      hash = "sha256-a5pd+CHHPr1mGxsF7tSlaBqoiKw2IGr1mJ7EaDHDJSw=";
+    # cf: check for dentry flag macros/enums
+    (fetchpatch {
+      url = "https://gerrit.openafs.org/changes/16377/revisions/f791d8ca4804486c656bc7c221076480df39b465/patch";
+      decode = "base64 -d";
+      hash = "sha256-7B0VJE3FeSQU1ElvXI5zXCPq1JRLAycyhqIQuDdR7xE=";
     })
   ];
+
+  nativeBuildInputs = [
+    autoconf
+    automake
+    flex
+    libtool_2
+    perl
+    which
+    bison
+  ] ++ kernel.moduleBuildDependencies;
+
+  buildInputs = [ libkrb5 ];
 
   hardeningDisable = [ "pic" ];
 
@@ -102,7 +97,6 @@ stdenv.mkDerivation {
     "--sysconfdir=/etc"
     "--localstatedir=/var"
     "--with-gssapi"
-    "--disable-linux-d_splice-alias-extra-iput"
   ];
 
   preConfigure = ''
@@ -132,7 +126,11 @@ stdenv.mkDerivation {
     homepage = "https://www.openafs.org";
     license = licenses.ipl10;
     platforms = platforms.linux;
-    maintainers = with maintainers; [ andersk maggesi spacefrogg ];
-    broken = kernel.isHardened || kernel.kernelAtLeast "5.19";
+    maintainers = with maintainers; [
+      andersk
+      maggesi
+      spacefrogg
+    ];
+    broken = kernel.isHardened;
   };
 }

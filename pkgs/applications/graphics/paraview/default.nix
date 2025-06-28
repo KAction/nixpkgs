@@ -1,32 +1,48 @@
-{ lib, fetchFromGitLab, fetchurl
-, boost, cmake, ffmpeg, qtbase, qtx11extras
-, qttools, qtxmlpatterns, qtsvg, gdal, gfortran, libXt, makeWrapper
-, mkDerivation, ninja, mpi, python3, tbb, libGLU, libGL
-, withDocs ? true
+{
+  lib,
+  stdenv,
+  fetchFromGitLab,
+  fetchurl,
+  boost,
+  cmake,
+  ffmpeg,
+  libsForQt5,
+  gdal,
+  gfortran,
+  libXt,
+  makeWrapper,
+  ninja,
+  mpi,
+  python3,
+  tbb,
+  libGLU,
+  libGL,
+  withDocs ? true,
 }:
 
 let
-  version = "5.10.0";
+  version = "5.13.2";
 
   docFiles = [
     (fetchurl {
       url = "https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v${lib.versions.majorMinor version}&type=data&os=Sources&downloadFile=ParaViewTutorial-${version}.pdf";
       name = "Tutorial.pdf";
-      sha256 = "1knpirjbz3rv8p8n03p39vv8vi5imvxakjsssqgly09g0cnsikkw";
+      hash = "sha256-jJ6YUT2rgVExfKv900LbSO+MDQ4u73K7cBScHxWoP+g=";
     })
     (fetchurl {
       url = "https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v${lib.versions.majorMinor version}&type=data&os=Sources&downloadFile=ParaViewGettingStarted-${version}.pdf";
       name = "GettingStarted.pdf";
-      sha256 = "14xhlvg7s7d5amqf4qfyamx2a6b66zf4cmlfm3s7iw3jq01x1lx6";
+      hash = "sha256-ptPQA8By8Hj0qI5WRtw3ZhklelXeYeJwVaUdfd6msJM=";
     })
     (fetchurl {
       url = "https://www.paraview.org/paraview-downloads/download.php?submit=Download&version=v${lib.versions.majorMinor version}&type=data&os=Sources&downloadFile=ParaViewCatalystGuide-${version}.pdf";
       name = "CatalystGuide.pdf";
-      sha256 = "133vcfrbg2nh15igl51ns6gnfn1is20vq6j0rg37wha697pmcr4a";
+      hash = "sha256-Pl7X5cBj3OralkOw5A29CtXnA+agYr6kWHf/+KZNHow=";
     })
   ];
 
-in mkDerivation rec {
+in
+stdenv.mkDerivation rec {
   pname = "paraview";
   inherit version;
 
@@ -35,17 +51,16 @@ in mkDerivation rec {
     owner = "paraview";
     repo = "paraview";
     rev = "v${version}";
-    sha256 = "0ipx6zq44hpic7gvv0s2jvjncak6vlmrz5sp9ypc15b15bna0gs2";
+    hash = "sha256-29PLXVpvj8RLkSDWQgj5QjBZ6l1/0NoVx/qcJXOSssU=";
     fetchSubmodules = true;
   };
 
   # Find the Qt platform plugin "minimal"
   preConfigure = ''
-    export QT_PLUGIN_PATH=${qtbase.bin}/${qtbase.qtPluginPrefix}
+    export QT_PLUGIN_PATH=${libsForQt5.qtbase.bin}/${libsForQt5.qtbase.qtPluginPrefix}
   '';
 
   cmakeFlags = [
-    "-DCMAKE_BUILD_TYPE=Release"
     "-DPARAVIEW_ENABLE_FFMPEG=ON"
     "-DPARAVIEW_ENABLE_GDAL=ON"
     "-DPARAVIEW_ENABLE_MOTIONFX=ON"
@@ -68,6 +83,7 @@ in mkDerivation rec {
     makeWrapper
     ninja
     gfortran
+    libsForQt5.wrapQtAppsHook
   ];
 
   buildInputs = [
@@ -79,14 +95,17 @@ in mkDerivation rec {
     boost
     ffmpeg
     gdal
-    qtbase
-    qtx11extras
-    qttools
-    qtxmlpatterns
-    qtsvg
+    libsForQt5.qtbase
+    libsForQt5.qtx11extras
+    libsForQt5.qttools
+    libsForQt5.qtxmlpatterns
+    libsForQt5.qtsvg
   ];
 
-  postInstall = let docDir = "$out/share/paraview-${lib.versions.majorMinor version}/doc"; in
+  postInstall =
+    let
+      docDir = "$out/share/paraview-${lib.versions.majorMinor version}/doc";
+    in
     lib.optionalString withDocs ''
       mkdir -p ${docDir};
       for docFile in ${lib.concatStringsSep " " docFiles}; do
@@ -95,14 +114,24 @@ in mkDerivation rec {
     '';
 
   propagatedBuildInputs = [
-    (python3.withPackages (ps: with ps; [ numpy matplotlib mpi4py ]))
+    (python3.withPackages (
+      ps: with ps; [
+        numpy
+        matplotlib
+        mpi4py
+      ]
+    ))
   ];
 
-  meta = with lib; {
-    homepage = "https://www.paraview.org/";
+  # 23k objects, >4h on a normal build slot
+  requiredSystemFeatures = [ "big-parallel" ];
+
+  meta = {
+    homepage = "https://www.paraview.org";
     description = "3D Data analysis and visualization application";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ guibert ];
-    platforms = platforms.linux;
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ guibert ];
+    changelog = "https://www.kitware.com/paraview-${lib.concatStringsSep "-" (lib.versions.splitVersion version)}-release-notes";
+    platforms = lib.platforms.linux;
   };
 }

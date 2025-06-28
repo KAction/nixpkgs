@@ -1,19 +1,31 @@
-{ callPackage, AudioToolbox, AVFoundation, Cocoa, CoreFoundation, CoreMedia, CoreServices, CoreVideo, DiskArbitration, Foundation, IOKit, MediaToolbox, OpenGL, VideoToolbox }:
-
 {
-  gstreamer = callPackage ./core { inherit CoreServices; };
+  config,
+  lib,
+  callPackage,
+  ipu6ep-camera-hal,
+  ipu6epmtl-camera-hal,
+  apple-sdk_13,
+}:
+
+let
+  apple-sdk_gstreamer = apple-sdk_13;
+in
+{
+  inherit apple-sdk_gstreamer;
+
+  gstreamer = callPackage ./core { };
 
   gstreamermm = callPackage ./gstreamermm { };
 
-  gst-plugins-base = callPackage ./base { inherit Cocoa OpenGL; };
+  gst-plugins-base = callPackage ./base { };
 
-  gst-plugins-good = callPackage ./good { inherit Cocoa; };
+  gst-plugins-good = callPackage ./good { };
 
-  gst-plugins-bad = callPackage ./bad { inherit AudioToolbox AVFoundation CoreMedia CoreVideo Foundation MediaToolbox VideoToolbox; };
+  gst-plugins-bad = callPackage ./bad { };
 
-  gst-plugins-ugly = callPackage ./ugly { inherit CoreFoundation DiskArbitration IOKit; };
+  gst-plugins-ugly = callPackage ./ugly { };
 
-  gst-plugins-viperfx = callPackage ./viperfx { };
+  gst-plugins-rs = callPackage ./rs { };
 
   gst-rtsp-server = callPackage ./rtsp-server { };
 
@@ -25,5 +37,16 @@
 
   gst-vaapi = callPackage ./vaapi { };
 
-  # note: gst-python is in ./python/default.nix - called under pythonPackages
+  icamerasrc-ipu6 = callPackage ./icamerasrc { };
+  icamerasrc-ipu6ep = callPackage ./icamerasrc {
+    ipu6-camera-hal = ipu6ep-camera-hal;
+  };
+  icamerasrc-ipu6epmtl = callPackage ./icamerasrc {
+    ipu6-camera-hal = ipu6epmtl-camera-hal;
+  };
+
+  # note: gst-python is in ../../python-modules/gst-python - called under python3Packages
+}
+// lib.optionalAttrs config.allowAliases {
+  gst-plugins-viperfx = throw "'gst_all_1.gst-plugins-viperfx' was removed as it is broken and not maintained upstream"; # Added 2024-12-16
 }

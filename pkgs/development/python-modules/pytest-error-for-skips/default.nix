@@ -1,24 +1,26 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytest
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytest,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "pytest-error-for-skips";
   version = "2.0.2";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "jankatins";
-    repo = pname;
+    repo = "pytest-error-for-skips";
     rev = version;
     sha256 = "04i4jd3bg4lgn2jfh0a0dzg3ml9b2bjv2ndia6b64w96r3r4p3qr";
   };
 
   buildInputs = [ pytest ];
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "pytest_error_for_skips" ];
 

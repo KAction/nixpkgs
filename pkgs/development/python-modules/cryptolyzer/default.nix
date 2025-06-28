@@ -1,40 +1,65 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, certvalidator
-, attrs
-, six
-, urllib3
-, cryptoparser
-, requests
+{
+  lib,
+  attrs,
+  beautifulsoup4,
+  buildPythonPackage,
+  certvalidator,
+  colorama,
+  cryptoparser,
+  dnspython,
+  fetchPypi,
+  pathlib2,
+  pyfakefs,
+  python-dateutil,
+  pythonOlder,
+  requests,
+  setuptools,
+  setuptools-scm,
+  urllib3,
 }:
 
 buildPythonPackage rec {
   pname = "cryptolyzer";
-  version = "0.8.1";
+  version = "1.0.0";
+  pyproject = true;
+
+  disabled = pythonOlder "3.9";
 
   src = fetchPypi {
-    pname = "CryptoLyzer";
-    inherit version;
-    sha256 = "sha256-FbxSjKxhzlpj3IezuLCQvoeZMG1q+OE/yn5vB/XE1rI=";
+    inherit pname version;
+    hash = "sha256-rRiRaXONLMNirKsK+QZWMSvaGeSLrHN9BpM8dhxoaxY=";
   };
 
-  propagatedBuildInputs = [
-    certvalidator
-    attrs
-    six
-    urllib3
-    cryptoparser
-    requests
+  pythonRemoveDeps = [ "bs4" ];
+
+  build-system = [
+    setuptools
+    setuptools-scm
   ];
 
-  doCheck = false; # Tests require networking
+  dependencies = [
+    attrs
+    beautifulsoup4
+    certvalidator
+    colorama
+    cryptoparser
+    dnspython
+    pathlib2
+    pyfakefs
+    python-dateutil
+    requests
+    urllib3
+  ];
+
+  # Tests require networking
+  doCheck = false;
 
   pythonImportsCheck = [ "cryptolyzer" ];
 
   meta = with lib; {
-    description = "Fast and flexible cryptographic protocol analyzer";
+    description = "Cryptographic protocol analyzer";
     homepage = "https://gitlab.com/coroner/cryptolyzer";
+    changelog = "https://gitlab.com/coroner/cryptolyzer/-/blob/v${version}/CHANGELOG.md";
     license = licenses.mpl20;
     maintainers = with maintainers; [ kranzes ];
   };

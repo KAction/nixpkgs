@@ -1,65 +1,65 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchFromGitHub
-, cliff
-, oslo-i18n
-, oslo-utils
-, openstacksdk
-, pbr
-, requests-mock
-, simplejson
-, stestr
+{
+  lib,
+  buildPythonPackage,
+  cliff,
+  fetchFromGitHub,
+  keystoneauth1,
+  openstacksdk,
+  oslo-i18n,
+  oslo-utils,
+  pbr,
+  requests,
+  requests-mock,
+  setuptools,
+  stestr,
+  stevedore,
 }:
 
 buildPythonPackage rec {
   pname = "osc-lib";
-  version = "unstable-2022-03-09";
+  version = "3.2.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "openstack";
     repo = "osc-lib";
-    rev = "65c73fd5030276e34f3d52c03ddb9d27cd8ec6f5";
-    sha256 = "sha256-CLE9lrMMlvVrihe+N4wvIKe8t9IZ1TpHHVdn2dnvAOI=";
+    rev = version;
+    hash = "sha256-P1f0wwtOo0LKbc3ay0Vh8GGi/2nRXcTr9JOByc2nlZY=";
   };
 
   # fake version to make pbr.packaging happy and not reject it...
-  PBR_VERSION = "2.5.0";
+  PBR_VERSION = version;
 
-  nativeBuildInputs = [
+  build-system = [
     pbr
+    setuptools
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     cliff
+    keystoneauth1
     openstacksdk
     oslo-i18n
     oslo-utils
-    simplejson
+    requests
+    stevedore
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     requests-mock
     stestr
   ];
 
   checkPhase = ''
-    # tests parse cli output which slightly changed
-    stestr run -e <(echo "
-      osc_lib.tests.utils.test_tags.TestTagHelps.test_add_tag_filtering_option_to_parser
-      osc_lib.tests.utils.test_tags.TestTagHelps.test_add_tag_option_to_parser_for_create
-      osc_lib.tests.utils.test_tags.TestTagHelps.test_add_tag_option_to_parser_for_set
-      osc_lib.tests.utils.test_tags.TestTagHelps.test_add_tag_option_to_parser_for_unset
-    ")
+    stestr run
   '';
 
   pythonImportsCheck = [ "osc_lib" ];
 
   meta = with lib; {
-    broken = stdenv.isDarwin;
     description = "OpenStackClient Library";
     homepage = "https://github.com/openstack/osc-lib";
     license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    teams = [ teams.openstack ];
   };
 }

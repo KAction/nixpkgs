@@ -1,101 +1,104 @@
-{ lib
-, fetchFromSourcehut
-, fetchNodeModules
-, buildPythonPackage
-, pgpy
-, flask
-, bleach
-, misaka
-, humanize
-, html5lib
-, markdown
-, psycopg2
-, pygments
-, requests
-, sqlalchemy
-, cryptography
-, beautifulsoup4
-, sqlalchemy-utils
-, prometheus-client
-, celery
-, alembic
-, importlib-metadata
-, mistletoe
-, minio
-, sassc
-, nodejs
-, redis
+{
+  lib,
+  fetchFromSourcehut,
+  buildPythonPackage,
+  flask,
+  humanize,
+  sqlalchemy,
+  sqlalchemy-utils,
+  psycopg2,
+  markdown,
+  mistletoe,
+  bleach,
+  requests,
+  beautifulsoup4,
+  pygments,
+  cryptography,
+  prometheus-client,
+  alembic,
+  redis,
+  celery,
+  html5lib,
+  importlib-metadata,
+  tinycss2,
+  sassc,
+  pythonOlder,
+  minify,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "srht";
-  version = "0.69.0";
+  version = "0.76.1";
+  pyproject = true;
+
+  disabled = pythonOlder "3.7";
 
   src = fetchFromSourcehut {
     owner = "~sircmpwn";
     repo = "core.sr.ht";
     rev = version;
-    sha256 = "sha256-s/I0wxtPggjTkkTZnhm77PxdQjiT0Vq2MIk7JMvdupc=";
+    hash = "sha256-lAN1JZXQuN2zxi/BdBtbNj52LPj9iYn0WB2OpyQcyuU=";
     fetchSubmodules = true;
   };
 
-  node_modules = fetchNodeModules {
-    src = "${src}/srht";
-    nodejs = nodejs;
-    sha256 = "sha256-IWKahdWv3qJ5DNyb1GB9JWYkZxghn6wzZe68clYXij8=";
-  };
-
   patches = [
-    # Disable check for npm
-    ./disable-npm-install.patch
     # Fix Unix socket support in RedisQueueCollector
     patches/redis-socket/core/0001-Fix-Unix-socket-support-in-RedisQueueCollector.patch
   ];
 
+  nativeBuildInputs = [
+    setuptools-scm
+  ];
+
   propagatedNativeBuildInputs = [
     sassc
-    nodejs
+    minify
   ];
 
   propagatedBuildInputs = [
-    pgpy
     flask
-    bleach
-    misaka
     humanize
-    html5lib
-    markdown
-    psycopg2
-    pygments
-    requests
-    mistletoe
     sqlalchemy
-    cryptography
-    beautifulsoup4
     sqlalchemy-utils
+    psycopg2
+    markdown
+    mistletoe
+    bleach
+    requests
+    beautifulsoup4
+    pygments
+    cryptography
     prometheus-client
-
-    # Unofficial runtime dependencies?
-    celery
     alembic
-    importlib-metadata
-    minio
     redis
+    celery
+    # Used transitively through beautifulsoup4
+    html5lib
+    # Used transitively trough bleach.css_sanitizer
+    tinycss2
+    # Used by srht.debug
+    importlib-metadata
   ];
 
-  PKGVER = version;
+  env = {
+    PREFIX = placeholder "out";
+    PKGVER = version;
+  };
 
-  preBuild = ''
-    cp -r ${node_modules} srht/node_modules
+  postInstall = ''
+    make install
   '';
 
-  dontUseSetuptoolsCheck = true;
   pythonImportsCheck = [ "srht" ];
 
   meta = with lib; {
-    homepage = "https://git.sr.ht/~sircmpwn/srht";
+    homepage = "https://git.sr.ht/~sircmpwn/core.sr.ht";
     description = "Core modules for sr.ht";
     license = licenses.bsd3;
-    maintainers = with maintainers; [ eadwu ];
+    maintainers = with maintainers; [
+      eadwu
+      christoph-heiss
+    ];
   };
 }

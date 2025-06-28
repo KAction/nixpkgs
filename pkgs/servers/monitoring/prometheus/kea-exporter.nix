@@ -1,22 +1,29 @@
-{ lib, python3Packages, nixosTests }:
+{
+  lib,
+  python3Packages,
+  fetchPypi,
+  nixosTests,
+}:
 
 python3Packages.buildPythonApplication rec {
   pname = "kea-exporter";
-  version = "0.5.0";
+  version = "0.7.0";
   format = "pyproject";
 
-  src = python3Packages.fetchPypi {
-    inherit pname version;
-    hash = "sha256-RSW1HStfPV7yiuLgGIuMjS3vPXz8P3vmtfw6tDHXp6o=";
+  src = fetchPypi {
+    pname = "kea_exporter";
+    inherit version;
+    hash = "sha256-kn2iwYWcyW90tgfWmzLF7rU06fJyLRzqYKNLOgu/Yqk=";
   };
 
   nativeBuildInputs = with python3Packages; [
-    pdm-pep517
+    pdm-backend
   ];
 
   propagatedBuildInputs = with python3Packages; [
     click
     prometheus-client
+    requests
   ];
 
   checkPhase = ''
@@ -25,14 +32,15 @@ python3Packages.buildPythonApplication rec {
   '';
 
   passthru.tests = {
-    inherit (nixosTests.prometheus-exporters) kea;
+    inherit (nixosTests) kea;
   };
 
   meta = with lib; {
+    changelog = "https://github.com/mweinelt/kea-exporter/blob/v${version}/HISTORY";
     description = "Export Kea Metrics in the Prometheus Exposition Format";
+    mainProgram = "kea-exporter";
     homepage = "https://github.com/mweinelt/kea-exporter";
     license = licenses.mit;
     maintainers = with maintainers; [ hexa ];
   };
 }
-

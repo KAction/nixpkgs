@@ -1,20 +1,21 @@
-{ lib
-, buildPythonPackage
-, factory_boy
-, fetchFromGitHub
-, httpretty
-, inflection
-, jsondate
-, mock
-, more-itertools
-, numpy
-, pandas
-, parameterized
-, pytestCheckHook
-, python-dateutil
-, pythonOlder
-, requests
-, six
+{
+  lib,
+  buildPythonPackage,
+  factory-boy,
+  fetchFromGitHub,
+  httpretty,
+  inflection,
+  jsondate,
+  mock,
+  more-itertools,
+  numpy,
+  pandas,
+  parameterized,
+  pytestCheckHook,
+  python-dateutil,
+  pythonOlder,
+  requests,
+  six,
 }:
 
 buildPythonPackage rec {
@@ -27,7 +28,7 @@ buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "Nasdaq";
     repo = "data-link-python";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-Q3Ay9FpJsvSVu0WU2bxFyo3ODKP/ZUo3SqsBtOGrIIE=";
   };
 
@@ -41,8 +42,8 @@ buildPythonPackage rec {
     six
   ];
 
-  checkInputs = [
-    factory_boy
+  nativeCheckInputs = [
+    factory-boy
     httpretty
     jsondate
     mock
@@ -50,9 +51,7 @@ buildPythonPackage rec {
     pytestCheckHook
   ];
 
-  pythonImportsCheck = [
-    "nasdaqdatalink"
-  ];
+  pythonImportsCheck = [ "nasdaqdatalink" ];
 
   meta = with lib; {
     description = "Library for Nasdaq Data Link's RESTful API";

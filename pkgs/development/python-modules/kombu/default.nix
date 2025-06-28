@@ -1,53 +1,99 @@
-{ lib
-, amqp
-, azure-servicebus
-, buildPythonPackage
-, cached-property
-, case
-, fetchPypi
-, importlib-metadata
-, Pyro4
-, pytestCheckHook
-, pythonOlder
-, pytz
-, vine
+{
+  lib,
+  amqp,
+  azure-identity,
+  azure-servicebus,
+  azure-storage-queue,
+  boto3,
+  buildPythonPackage,
+  confluent-kafka,
+  fetchPypi,
+  google-cloud-pubsub,
+  google-cloud-monitoring,
+  hypothesis,
+  kazoo,
+  msgpack,
+  pycurl,
+  pymongo,
+  #, pyro4
+  pytestCheckHook,
+  pythonOlder,
+  pyyaml,
+  redis,
+  setuptools,
+  sqlalchemy,
+  typing-extensions,
+  tzdata,
+  urllib3,
+  vine,
 }:
 
 buildPythonPackage rec {
   pname = "kombu";
-  version = "5.2.4";
-  format = "setuptools";
+  version = "5.5.3";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.9";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-N87j7nJflOqLsXPqq3wXYCA+pTu+uuImMoYA+dJ5lhA=";
+    hash = "sha256-AhoOEfz82bAmDvH7ZAiMDpK+uXbrWcHfyn3dStRWLqI=";
   };
+
+  build-system = [ setuptools ];
 
   propagatedBuildInputs = [
     amqp
+    tzdata
     vine
-  ] ++ lib.optionals (pythonOlder "3.8") [
-    cached-property
-    importlib-metadata
-  ];
+  ] ++ lib.optionals (pythonOlder "3.10") [ typing-extensions ];
 
-  checkInputs = [
-    azure-servicebus
-    case
-    Pyro4
+  optional-dependencies = {
+    msgpack = [ msgpack ];
+    yaml = [ pyyaml ];
+    redis = [ redis ];
+    mongodb = [ pymongo ];
+    sqs = [
+      boto3
+      urllib3
+      pycurl
+    ];
+    zookeeper = [ kazoo ];
+    sqlalchemy = [ sqlalchemy ];
+    azurestoragequeues = [
+      azure-identity
+      azure-storage-queue
+    ];
+    azureservicebus = [ azure-servicebus ];
+    confluentkafka = [ confluent-kafka ];
+    gcpubsub = [
+      google-cloud-pubsub
+      google-cloud-monitoring
+    ];
+    # pyro4 doesn't support Python 3.11
+    #pyro = [
+    #  pyro4
+    #];
+  };
+
+  nativeCheckInputs = [
+    hypothesis
     pytestCheckHook
-    pytz
-  ];
+  ] ++ lib.flatten (lib.attrValues optional-dependencies);
 
-  pythonImportsCheck = [
-    "kombu"
+  pythonImportsCheck = [ "kombu" ];
+
+  disabledTests = [
+    # Disable pyro4 test
+    "test_driver_version"
+    # AssertionError: assert [call('WATCH'..., 'test-tag')] ==...
+    "test_global_keyprefix_transaction"
   ];
 
   meta = with lib; {
     description = "Messaging library for Python";
     homepage = "https://github.com/celery/kombu";
+    changelog = "https://github.com/celery/kombu/blob/v${version}/Changelog.rst";
     license = licenses.bsd3;
     maintainers = with maintainers; [ fab ];
   };

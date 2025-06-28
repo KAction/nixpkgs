@@ -1,55 +1,41 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonAtLeast
-, pythonOlder
-, isPyPy
-, lazy-object-proxy
-, setuptools
-, setuptools-scm
-, typing-extensions
-, typed-ast
-, pylint
-, pytestCheckHook
-, wrapt
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  setuptools,
+  typing-extensions,
+  pip,
+  pylint,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "astroid";
-  version = "2.11.7"; # Check whether the version is compatible with pylint
+  version = "3.3.10"; # Check whether the version is compatible with pylint
+  pyproject = true;
 
-  disabled = pythonOlder "3.6.2";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "PyCQA";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-HpniGxKf+daMh/sxP9T9UriYRrUFWqk7kDa8r+EqtVI=";
+    repo = "astroid";
+    tag = "v${version}";
+    hash = "sha256-q4ZPXz2xaKJ39q6g1c9agktKSCfbRp+3INDfXg/wP8k=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
+  nativeBuildInputs = [ setuptools ];
 
-  nativeBuildInputs = [
-    setuptools-scm
-  ];
+  propagatedBuildInputs = lib.optionals (pythonOlder "3.11") [ typing-extensions ];
 
-  propagatedBuildInputs = [
-    lazy-object-proxy
-    setuptools
-    wrapt
-  ] ++ lib.optionals (pythonOlder "3.10") [
-    typing-extensions
-  ] ++ lib.optionals (!isPyPy && pythonOlder "3.8") [
-    typed-ast
-  ];
-
-  checkInputs = [
+  nativeCheckInputs = [
+    pip
     pytestCheckHook
   ];
 
-  disabledTests = [
-    # AssertionError: Lists differ: ['ABC[16 chars]yBase', 'Final', 'Generic', 'MyProtocol', 'Protocol', 'object'] != ['ABC[16 chars]yBase', 'Final', 'Generic', 'MyProtocol', 'object']
-    "test_mro_typing_extensions"
+  disabledTestPaths = [
+    # requires mypy
+    "tests/test_raw_building.py"
   ];
 
   passthru.tests = {
@@ -57,9 +43,10 @@ buildPythonPackage rec {
   };
 
   meta = with lib; {
-    description = "An abstract syntax tree for Python with inference support";
+    changelog = "https://github.com/PyCQA/astroid/blob/v${version}/ChangeLog";
+    description = "Abstract syntax tree for Python with inference support";
     homepage = "https://github.com/PyCQA/astroid";
     license = licenses.lgpl21Plus;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    maintainers = with maintainers; [ GaetanLepage ];
   };
 }

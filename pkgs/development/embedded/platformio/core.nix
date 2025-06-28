@@ -1,61 +1,121 @@
-{ stdenv, lib, python3
-, fetchFromGitHub
-, fetchPypi
-, git
-, spdx-license-list-data
-, version, src
+{
+  lib,
+  python3Packages,
+  fetchFromGitHub,
+  fetchpatch,
+  installShellFiles,
+  git,
+  spdx-license-list-data,
+  replaceVars,
+  writableTmpDirAsHomeHook,
+  udevCheckHook,
 }:
 
-with python3.pkgs; buildPythonApplication rec {
+with python3Packages;
+buildPythonApplication rec {
   pname = "platformio";
-  inherit version src;
+  version = "6.1.18";
+  pyproject = true;
+
+  # pypi tarballs don't contain tests - https://github.com/platformio/platformio-core/issues/1964
+  src = fetchFromGitHub {
+    owner = "platformio";
+    repo = "platformio-core";
+    tag = "v${version}";
+    hash = "sha256-h9/xDWXCoGHQ9r2f/ZzAtwTAs4qzDrvVAQ2kuLS9Lk8=";
+  };
+
+  outputs = [
+    "out"
+    "udev"
+  ];
 
   patches = [
-    ./fix-searchpath.patch
-    ./use-local-spdx-license-list.patch
+    (replaceVars ./interpreter.patch {
+      interpreter = (python3Packages.python.withPackages (_: propagatedBuildInputs)).interpreter;
+    })
+    (replaceVars ./use-local-spdx-license-list.patch {
+      spdx_license_list_data = spdx-license-list-data.json;
+    })
     ./missing-udev-rules-nixos.patch
+    (fetchpatch {
+      # restore PYTHONPATH when calling scons
+      # https://github.com/platformio/platformio-core/commit/097de2be98af533578671baa903a3ae825d90b94
+      url = "https://github.com/platformio/platformio-core/commit/097de2be98af533578671baa903a3ae825d90b94.patch";
+      hash = "sha256-yq+/QHCkhAkFND11MbKFiiWT3oF1cHhgWj5JkYjwuY0=";
+      revert = true;
+    })
   ];
 
   postPatch = ''
-    substitute platformio/package/manifest/schema.py platformio/package/manifest/schema.py \
-      --subst-var-by SPDX_LICENSE_LIST_DATA '${spdx-license-list-data.json}'
+    # Disable update checks at runtime
+    substituteInPlace platformio/maintenance.py --replace-fail '    check_platformio_upgrade()' ""
 
-    substituteInPlace setup.py \
-      --replace 'uvicorn==%s" % ("0.17.*"' 'uvicorn==%s" % ("0.18.*"' \
-      --replace 'wsproto==' 'wsproto>='
+    # Remove filterwarnings which fails on new deprecations in Python 3.12 for 3.14
+    rm tox.ini
   '';
 
-  propagatedBuildInputs = [
-    aiofiles
-    ajsonrpc
-    bottle
-    click
-    click-completion
-    colorama
-    git
-    lockfile
-    marshmallow
-    pyelftools
-    pyserial
-    requests
-    semantic-version
-    spdx-license-list-data.json
-    starlette
-    tabulate
-    uvicorn
-    wsproto
-    zeroconf
+  nativeBuildInputs = [
+    installShellFiles
+    setuptools
+    udevCheckHook
   ];
 
+  pythonRelaxDeps = true;
+
+  propagatedBuildInputs =
+    [
+      aiofiles
+      ajsonrpc
+      bottle
+      click
+      click-completion
+      colorama
+      git
+      lockfile
+      marshmallow
+      pyelftools
+      pyserial
+      requests
+      semantic-version
+      setuptools
+      spdx-license-list-data.json
+      starlette
+      tabulate
+      uvicorn
+      wsproto
+      zeroconf
+    ]
+    ++ lib.optionals (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isAarch64) [
+      chardet
+    ];
+
   preCheck = ''
-    export HOME=$(mktemp -d)
     export PATH=$PATH:$out/bin
   '';
 
-  checkInputs = [
+  nativeCheckInputs = [
     jsondiff
     pytestCheckHook
+    writableTmpDirAsHomeHook
   ];
+
+  # Install udev rules into a separate output so all of platformio-core is not a dependency if
+  # you want to use the udev rules on NixOS but not install platformio in your system packages.
+  postInstall = ''
+    mkdir -p $udev/lib/udev/rules.d
+    cp platformio/assets/system/99-platformio-udev.rules $udev/lib/udev/rules.d/99-platformio-udev.rules
+
+    installShellCompletion --cmd platformio \
+      --bash <(_PLATFORMIO_COMPLETE=bash_source $out/bin/platformio) \
+      --zsh <(_PLATFORMIO_COMPLETE=zsh_source $out/bin/platformio) \
+      --fish <(_PLATFORMIO_COMPLETE=fish_source $out/bin/platformio)
+
+    installShellCompletion --cmd pio \
+      --bash <(_PIO_COMPLETE=bash_source $out/bin/pio) \
+      --zsh <(_PIO_COMPLETE=zsh_source $out/bin/pio) \
+      --fish <(_PIO_COMPLETE=fish_source $out/bin/pio)
+  '';
 
   disabledTestPaths = [
     "tests/commands/pkg/test_install.py"
@@ -79,74 +139,86 @@ with python3.pkgs; buildPythonApplication rec {
     # requires internet connection
     "test_api_cache"
     "test_ping_internet_ips"
+    "test_metadata_dump"
   ];
 
-  pytestFlagsArray = [
-    "tests"
-  ] ++ (map (e: "--deselect tests/${e}") [
-    "commands/pkg/test_exec.py::test_pkg_specified"
-    "commands/pkg/test_exec.py::test_unrecognized_options"
-    "commands/test_ci.py::test_ci_boards"
-    "commands/test_ci.py::test_ci_build_dir"
-    "commands/test_ci.py::test_ci_keep_build_dir"
-    "commands/test_ci.py::test_ci_lib_and_board"
-    "commands/test_ci.py::test_ci_project_conf"
-    "commands/test_init.py::test_init_custom_framework"
-    "commands/test_init.py::test_init_duplicated_boards"
-    "commands/test_init.py::test_init_enable_auto_uploading"
-    "commands/test_init.py::test_init_ide_atom"
-    "commands/test_init.py::test_init_ide_clion"
-    "commands/test_init.py::test_init_ide_eclipse"
-    "commands/test_init.py::test_init_ide_vscode"
-    "commands/test_init.py::test_init_incorrect_board"
-    "commands/test_init.py::test_init_special_board"
-    "commands/test_lib.py::test_global_install_archive"
-    "commands/test_lib.py::test_global_install_registry"
-    "commands/test_lib.py::test_global_install_repository"
-    "commands/test_lib.py::test_global_lib_list"
-    "commands/test_lib.py::test_global_lib_uninstall"
-    "commands/test_lib.py::test_global_lib_update"
-    "commands/test_lib.py::test_global_lib_update_check"
-    "commands/test_lib.py::test_install_duplicates"
-    "commands/test_lib.py::test_lib_show"
-    "commands/test_lib.py::test_lib_stats"
-    "commands/test_lib.py::test_saving_deps"
-    "commands/test_lib.py::test_search"
-    "commands/test_lib.py::test_update"
-    "commands/test_lib_complex.py::test_global_install_archive"
-    "commands/test_lib_complex.py::test_global_install_registry"
-    "commands/test_lib_complex.py::test_global_install_repository"
-    "commands/test_lib_complex.py::test_global_lib_list"
-    "commands/test_lib_complex.py::test_global_lib_uninstall"
-    "commands/test_lib_complex.py::test_global_lib_update"
-    "commands/test_lib_complex.py::test_global_lib_update_check"
-    "commands/test_lib_complex.py::test_install_duplicates"
-    "commands/test_lib_complex.py::test_lib_show"
-    "commands/test_lib_complex.py::test_lib_stats"
-    "commands/test_lib_complex.py::test_search"
-    "package/test_manager.py::test_download"
-    "package/test_manager.py::test_install_force"
-    "package/test_manager.py::test_install_from_registry"
-    "package/test_manager.py::test_install_lib_depndencies"
-    "package/test_manager.py::test_registry"
-    "package/test_manager.py::test_uninstall"
-    "package/test_manager.py::test_update_with_metadata"
-    "package/test_manager.py::test_update_without_metadata"
-    "test_builder.py::test_build_flags"
-    "test_builder.py::test_build_unflags"
-    "test_builder.py::test_debug_custom_build_flags"
-    "test_builder.py::test_debug_default_build_flags"
-    "test_misc.py::test_api_cache"
-    "test_misc.py::test_ping_internet_ips"
-    "test_misc.py::test_platformio_cli"
-    "test_pkgmanifest.py::test_packages"
-  ]);
+  pytestFlagsArray =
+    [
+      "tests"
+    ]
+    ++ (map (e: "--deselect tests/${e}") [
+      "commands/pkg/test_exec.py::test_pkg_specified"
+      "commands/pkg/test_exec.py::test_unrecognized_options"
+      "commands/test_ci.py::test_ci_boards"
+      "commands/test_ci.py::test_ci_build_dir"
+      "commands/test_ci.py::test_ci_keep_build_dir"
+      "commands/test_ci.py::test_ci_lib_and_board"
+      "commands/test_ci.py::test_ci_project_conf"
+      "commands/test_init.py::test_init_custom_framework"
+      "commands/test_init.py::test_init_duplicated_boards"
+      "commands/test_init.py::test_init_enable_auto_uploading"
+      "commands/test_init.py::test_init_ide_atom"
+      "commands/test_init.py::test_init_ide_clion"
+      "commands/test_init.py::test_init_ide_eclipse"
+      "commands/test_init.py::test_init_ide_vscode"
+      "commands/test_init.py::test_init_incorrect_board"
+      "commands/test_init.py::test_init_special_board"
+      "commands/test_lib.py::test_global_install_archive"
+      "commands/test_lib.py::test_global_install_registry"
+      "commands/test_lib.py::test_global_install_repository"
+      "commands/test_lib.py::test_global_lib_list"
+      "commands/test_lib.py::test_global_lib_uninstall"
+      "commands/test_lib.py::test_global_lib_update"
+      "commands/test_lib.py::test_global_lib_update_check"
+      "commands/test_lib.py::test_install_duplicates"
+      "commands/test_lib.py::test_lib_show"
+      "commands/test_lib.py::test_lib_stats"
+      "commands/test_lib.py::test_saving_deps"
+      "commands/test_lib.py::test_search"
+      "commands/test_lib.py::test_update"
+      "commands/test_lib_complex.py::test_global_install_archive"
+      "commands/test_lib_complex.py::test_global_install_registry"
+      "commands/test_lib_complex.py::test_global_install_repository"
+      "commands/test_lib_complex.py::test_global_lib_list"
+      "commands/test_lib_complex.py::test_global_lib_uninstall"
+      "commands/test_lib_complex.py::test_global_lib_update"
+      "commands/test_lib_complex.py::test_global_lib_update_check"
+      "commands/test_lib_complex.py::test_install_duplicates"
+      "commands/test_lib_complex.py::test_lib_show"
+      "commands/test_lib_complex.py::test_lib_stats"
+      "commands/test_lib_complex.py::test_search"
+      "package/test_manager.py::test_download"
+      "package/test_manager.py::test_install_force"
+      "package/test_manager.py::test_install_from_registry"
+      "package/test_manager.py::test_install_lib_depndencies"
+      "package/test_manager.py::test_registry"
+      "package/test_manager.py::test_uninstall"
+      "package/test_manager.py::test_update_with_metadata"
+      "package/test_manager.py::test_update_without_metadata"
+      "test_builder.py::test_build_flags"
+      "test_builder.py::test_build_unflags"
+      "test_builder.py::test_debug_custom_build_flags"
+      "test_builder.py::test_debug_default_build_flags"
+      "test_misc.py::test_api_cache"
+      "test_misc.py::test_ping_internet_ips"
+      "test_misc.py::test_platformio_cli"
+      "test_pkgmanifest.py::test_packages"
+    ]);
+
+  passthru = {
+    python = python3Packages.python;
+  };
 
   meta = with lib; {
-    description = "An open source ecosystem for IoT development";
+    changelog = "https://github.com/platformio/platformio-core/releases/tag/${src.tag}";
+    description = "Open source ecosystem for IoT development";
+    downloadPage = "https://github.com/platformio/platformio-core";
     homepage = "https://platformio.org";
     license = licenses.asl20;
-    maintainers = with maintainers; [ mog makefu ];
-    broken = stdenv.isAarch64;
+    maintainers = with maintainers; [
+      mog
+      makefu
+    ];
+    mainProgram = "platformio";
   };
 }

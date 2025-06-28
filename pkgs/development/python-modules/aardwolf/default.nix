@@ -1,57 +1,81 @@
-{ lib
-, arc4
-, asn1crypto
-, asn1tools
-, asysocks
-, buildPythonPackage
-, colorama
-, fetchPypi
-, minikerberos
-, pillow
-, pyperclip
-, pythonOlder
-, tqdm
-, unicrypto
-, winsspi
+{
+  lib,
+  stdenv,
+  arc4,
+  asn1crypto,
+  asn1tools,
+  asyauth,
+  asysocks,
+  buildPythonPackage,
+  cargo,
+  colorama,
+  fetchFromGitHub,
+  iconv,
+  pillow,
+  pyperclip,
+  rustPlatform,
+  rustc,
+  setuptools,
+  setuptools-rust,
+  tqdm,
+  unicrypto,
 }:
 
 buildPythonPackage rec {
   pname = "aardwolf";
-  version = "0.0.8";
-  format = "setuptools";
+  version = "0.2.12";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-plz1D+Lr5rV8iJo7IUmuXfjxLvVxX9lgyxyYXUlPH0k=";
+  src = fetchFromGitHub {
+    owner = "skelsec";
+    repo = "aardwolf";
+    tag = version;
+    hash = "sha256-CMO3qhxYmwB9kWIiHWV/0gAfs/yCnHzpfNYLTy4wX78=";
   };
 
-  propagatedBuildInputs = [
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit pname version src;
+    sourceRoot = "${src.name}/aardwolf/utils/rlers";
+    hash = "sha256-+2hENnrG35eRgQwtCCJUux9mYEkzD2astLgOqWHrH/M=";
+  };
+
+  cargoRoot = "aardwolf/utils/rlers";
+
+  build-system = [
+    setuptools
+    setuptools-rust
+  ];
+
+  nativeBuildInputs = [
+    rustPlatform.cargoSetupHook
+    cargo
+    rustc
+  ];
+
+  dependencies = [
     arc4
     asn1crypto
     asn1tools
+    asyauth
     asysocks
     colorama
-    minikerberos
     pillow
     pyperclip
     tqdm
     unicrypto
-    winsspi
-  ];
+  ] ++ lib.optionals (stdenv.hostPlatform.isDarwin) [ iconv ];
 
   # Module doesn't have tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "aardwolf"
-  ];
+  pythonImportsCheck = [ "aardwolf" ];
 
   meta = with lib; {
     description = "Asynchronous RDP protocol implementation";
+    mainProgram = "ardpscan";
     homepage = "https://github.com/skelsec/aardwolf";
-    license = with licenses; [ mit ];
+    changelog = "https://github.com/skelsec/aardwolf/releases/tag/${version}";
+    license = licenses.mit;
     maintainers = with maintainers; [ fab ];
   };
 }

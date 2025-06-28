@@ -1,40 +1,57 @@
-{ lib
-, fetchFromGitHub
-, buildDunePackage
-, alcotest
-, dedukti
-, bindlib
-, camlp-streams
-, cmdliner
-, menhir
-, pratter
-, sedlex
-, stdlib-shims
-, timed
-, why3
-, yojson
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+  alcotest,
+  dedukti,
+  bindlib,
+  camlp-streams,
+  cmdliner,
+  dream,
+  lwt_ppx,
+  menhir,
+  pratter,
+  sedlex,
+  stdlib-shims,
+  timed,
+  why3,
+  yojson,
 }:
 
 buildDunePackage rec {
   pname = "lambdapi";
-  version = "2.2.1";
+  version = "2.6.0";
 
-  minimalOCamlVersion = "4.08";
+  minimalOCamlVersion = "4.12";
 
-  src = fetchFromGitHub {
-    owner = "Deducteam";
-    repo = pname;
-    rev = version;
-    hash = "sha256-p2ZjSfiZwkf8X4fSNJx7bAVpTFl4UBHIEANIWF7NGCs=";
+  src = fetchurl {
+    url = "https://github.com/Deducteam/lambdapi/releases/download/${version}/lambdapi-${version}.tbz";
+    hash = "sha256-0B5fE9suq6bk/jMGZxSeAFnUiGxlH/nWtnLbLfyXZe0=";
   };
 
-  nativeBuildInputs = [ menhir ];
+  nativeBuildInputs = [
+    dream
+    menhir
+  ];
+  buildInputs = [ lwt_ppx ];
   propagatedBuildInputs = [
-    bindlib camlp-streams cmdliner pratter sedlex stdlib-shims timed why3 yojson
+    bindlib
+    camlp-streams
+    cmdliner
+    dream
+    pratter
+    sedlex
+    stdlib-shims
+    timed
+    why3
+    yojson
   ];
 
-  checkInputs = [ alcotest dedukti ];
-  doCheck = false;  # anomaly: Sys_error("/homeless-shelter/.why3.conf: No such file or directory")
+  checkInputs = [
+    alcotest
+    dedukti
+  ];
+  doCheck = false; # anomaly: Sys_error("/homeless-shelter/.why3.conf: No such file or directory")
 
   meta = with lib; {
     homepage = "https://github.com/Deducteam/lambdapi";

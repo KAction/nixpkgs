@@ -1,74 +1,88 @@
-{ lib
-, fetchFromSourcehut
-, buildPythonPackage
-, buildGoModule
-, pgpy
-, srht
-, redis
-, bcrypt
-, qrcode
-, stripe
-, zxcvbn
-, alembic
-, pystache
-, dnspython
-, sshpubkeys
-, weasyprint
-, prometheus-client
-, python
-, unzip
+{
+  lib,
+  fetchFromSourcehut,
+  buildPythonPackage,
+  buildGoModule,
+  alembic,
+  bcrypt,
+  dnspython,
+  qrcode,
+  redis,
+  srht,
+  stripe,
+  prometheus-client,
+  zxcvbn,
+  python,
+  unzip,
+  pip,
+  pythonOlder,
+  setuptools-scm,
 }:
 let
-  version = "0.58.18";
+  version = "0.72.11";
+  gqlgen = import ./fix-gqlgen-trimpath.nix {
+    inherit unzip;
+    gqlgenVersion = "0.17.64";
+  };
+
+  patches = [ ./patches/core-go-update/meta/patch-deps.patch ];
 
   src = fetchFromSourcehut {
     owner = "~sircmpwn";
     repo = "meta.sr.ht";
     rev = version;
-    sha256 = "sha256-OjbQHAzG2nZwpJUIvhKaCJWZbhZDC2R6C+SkbKUpk8o=";
+    hash = "sha256-dh+9wSQLL69xZ2Elmkyb9vEwpE7U7szz62VVS/0IM7Q=";
   };
 
-  metasrht-api = buildGoModule ({
-    inherit src version;
-    pname = "metasrht-api";
-    modRoot = "api";
-    vendorSha256 = "sha256-kiEuEYZFbwJ6SbKFtxH4SiRaZmqYriRHPoHdTX28+d0=";
-  } // import ./fix-gqlgen-trimpath.nix { inherit unzip; });
-
+  metasrht-api = buildGoModule (
+    {
+      inherit src version patches;
+      pname = "metasrht-api";
+      modRoot = "api";
+      vendorHash = "sha256-z4gRqI05t3m7ANyDJHmBcOCW476IG/eTfLetPRPbqtg=";
+    }
+    // gqlgen
+  );
 in
 buildPythonPackage rec {
   pname = "metasrht";
-  inherit version src;
+  inherit version src patches;
+  pyproject = true;
 
-  postPatch = ''
-    substituteInPlace Makefile \
-      --replace "all: api" ""
-  '';
+  disabled = pythonOlder "3.7";
 
-  propagatedBuildInputs = [
-    pgpy
-    srht
-    redis
-    bcrypt
-    qrcode
-    stripe
-    zxcvbn
-    alembic
-    pystache
-    sshpubkeys
-    weasyprint
-    prometheus-client
-    dnspython
+  nativeBuildInputs = [
+    pip
+    setuptools-scm
   ];
 
-  preBuild = ''
-    export PKGVER=${version}
-    export SRHT_PATH=${srht}/${python.sitePackages}/srht
+  propagatedBuildInputs = [
+    alembic
+    bcrypt
+    dnspython
+    qrcode
+    redis
+    srht
+    stripe
+    prometheus-client
+    zxcvbn
+  ];
+
+  env = {
+    PKGVER = version;
+    SRHT_PATH = "${srht}/${python.sitePackages}/srht";
+    PREFIX = placeholder "out";
+  };
+
+  postBuild = ''
+    make SASSC_INCLUDE=-I${srht}/share/sourcehut/scss/ all-share
   '';
 
   postInstall = ''
     mkdir -p $out/bin
-    ln -s ${metasrht-api}/bin/api $out/bin/metasrht-api
+    ln -s ${metasrht-api}/bin/api $out/bin/meta.sr.ht-api
+    install -Dm644 schema.sql $out/share/sourcehut/meta.sr.ht-schema.sql
+    make install-share
   '';
 
   pythonImportsCheck = [ "metasrht" ];
@@ -77,6 +91,9 @@ buildPythonPackage rec {
     homepage = "https://git.sr.ht/~sircmpwn/meta.sr.ht";
     description = "Account management service for the sr.ht network";
     license = licenses.agpl3Only;
-    maintainers = with maintainers; [ eadwu ];
+    maintainers = with maintainers; [
+      eadwu
+      christoph-heiss
+    ];
   };
 }

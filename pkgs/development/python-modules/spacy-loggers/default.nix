@@ -1,18 +1,19 @@
-{ lib
-, callPackage
-, fetchPypi
-, buildPythonPackage
-, wandb
-, wasabi
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  wandb,
+  wasabi,
 }:
 
 buildPythonPackage rec {
   pname = "spacy-loggers";
-  version = "1.0.3";
+  version = "1.0.5";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-APb9VU25/R/eZQGyPh8Ocvbu8Uux5/wVRW0R0dLekso=";
+    hash = "sha256-1gsL2/kVpg5RbMLmU7rv+Ubwz8RhtFLRGk1UWMb+XyQ=";
   };
 
   propagatedBuildInputs = [
@@ -22,7 +23,7 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "spacy_loggers" ];
 
-  # skipping the checks, becaus it requires a cycle dependency to spacy as well.
+  # skipping the checks, because it requires a cycle dependency to spacy as well.
   doCheck = false;
 
   meta = with lib; {

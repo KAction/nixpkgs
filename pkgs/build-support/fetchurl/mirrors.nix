@@ -43,6 +43,11 @@
     "http://bioconductor.jp/packages/"
   ];
 
+  # CRAN mirrors
+  cran = [
+    "https://cran.r-project.org/src/contrib/"
+  ];
+
   # BitlBee mirrors, see https://www.bitlbee.org/main.php/mirrors.html
   bitlbee = [
     "https://get.bitlbee.org/"
@@ -52,8 +57,8 @@
 
   # GCC
   gcc = [
-    "https://bigsearcher.com/mirrors/gcc/"
     "https://mirror.koddos.net/gcc/"
+    "https://bigsearcher.com/mirrors/gcc/"
     "ftp://ftp.nluug.nl/mirror/languages/gcc/"
     "ftp://ftp.fu-berlin.de/unix/languages/gcc/"
     "ftp://ftp.irisa.fr/pub/mirrors/gcc.gnu.org/gcc/"
@@ -118,13 +123,8 @@
     "ftp://ftp.sunet.se/mirror/imagemagick.org/ftp/" # also contains older versions removed from most mirrors
   ];
 
-  # Mirrors from https://download.kde.org/ls-lR.mirrorlist
   kde = [
-    "https://download.kde.org/download.php?url="
-    "https://ftp.gwdg.de/pub/linux/kde/"
-    "https://mirrors.ocf.berkeley.edu/kde/"
-    "https://mirrors.mit.edu/kde/"
-    "https://mirrors.ustc.edu.cn/kde/"
+    "https://download.kde.org/"
     "https://ftp.funet.fi/pub/mirrors/ftp.kde.org/pub/kde/"
   ];
 
@@ -168,12 +168,6 @@
   # Qt
   qt = [
     "https://download.qt.io/"
-  ];
-
-  # Roy marples mirrors
-  roy = [
-    "https://roy.marples.name/downloads/"
-    "https://cflags.cc/roy/"
   ];
 
   # Sage mirrors (https://www.sagemath.org/mirrors.html)
@@ -221,13 +215,19 @@
 
   # SAMBA
   samba = [
-    "https://www.samba.org/ftp/"
-    "http://www.samba.org/ftp/"
+    "https://download.samba.org/pub/"
+    "http://download.samba.org/pub/"
   ];
 
   # GNU Savannah
   savannah = [
-    # Mirrors from https://download-mirror.savannah.gnu.org/releases/00_MIRRORS.html
+    # Try the official HTTP(S) dispatchers first.
+    # These generate redirects to mirrors appropriate for the user.
+    "https://download.savannah.gnu.org/releases/"
+    "https://download.savannah.nongnu.org/releases/"
+
+    # If the above fail, try some individual mirrors.
+    # These are taken from https://download-mirror.savannah.gnu.org/releases/00_MIRRORS.html
     "https://mirror.easyname.at/nongnu/"
     "https://savannah.c3sl.ufpr.br/"
     "https://mirror.csclub.uwaterloo.ca/nongnu/"
@@ -264,7 +264,6 @@
     "https://versaweb.dl.sourceforge.net/sourceforge/"
     "https://freefr.dl.sourceforge.net/sourceforge/"
     "https://osdn.dl.sourceforge.net/sourceforge/"
-    "https://kent.dl.sourceforge.net/sourceforge/"
   ];
 
   # Steam Runtime
@@ -310,7 +309,13 @@
     "https://cpan.metacpan.org/"
     "https://cpan.perl.org/"
     "https://mirrors.kernel.org/CPAN/"
-    "https://backpan.perl.org/"  # for old releases
+    "https://backpan.perl.org/" # for old releases
+  ];
+
+  # D DUB
+  dub = [
+    "https://code.dlang.org/packages/"
+    "https://codemirror.dlang.org/packages/"
   ];
 
   # Haskell Hackage

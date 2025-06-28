@@ -1,33 +1,35 @@
-{ lib, fetchFromGitHub, rustPlatform, clang, rustfmt
-, runtimeShell
-, bash
+{
+  lib,
+  fetchCrate,
+  rustPlatform,
+  clang,
+  rustfmt,
 }:
 let
   # bindgen hardcodes rustfmt outputs that use nightly features
   rustfmt-nightly = rustfmt.override { asNightly = true; };
-in rustPlatform.buildRustPackage rec {
+in
+rustPlatform.buildRustPackage rec {
   pname = "rust-bindgen-unwrapped";
-  version = "0.59.2";
+  version = "0.71.1";
 
-  RUSTFLAGS = "--cap-lints warn"; # probably OK to remove after update
-
-  src = fetchFromGitHub {
-    owner = "rust-lang";
-    repo = "rust-bindgen";
-    rev = "v${version}";
-    sha256 = "sha256-bJYdyf5uZgWe7fQ80/3QsRV0qyExYn6P9UET3tzwPFs=";
+  src = fetchCrate {
+    pname = "bindgen-cli";
+    inherit version;
+    hash = "sha256-RL9P0dPYWLlEGgGWZuIvyULJfH+c/B+3sySVadJQS3w=";
   };
 
-  cargoSha256 = "sha256-RKZY5vf6CSFaKweuuNkeFF0ZXlSUibAkcL/YhkE0MoQ=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-4EyDjHreFFFSGf7UoftCh6eI/8nfIP1ANlYWq0K8a3I=";
 
-  buildInputs = [ clang.cc.lib ];
+  buildInputs = [ (lib.getLib clang.cc) ];
 
   preConfigure = ''
-    export LIBCLANG_PATH="${clang.cc.lib}/lib"
+    export LIBCLANG_PATH="${lib.getLib clang.cc}/lib"
   '';
 
   doCheck = true;
-  checkInputs = [ clang ];
+  nativeCheckInputs = [ clang ];
 
   RUSTFMT = "${rustfmt-nightly}/bin/rustfmt";
 
@@ -46,7 +48,7 @@ in rustPlatform.buildRustPackage rec {
     '';
     homepage = "https://github.com/rust-lang/rust-bindgen";
     license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ johntitor ralith ];
+    maintainers = with maintainers; [ johntitor ];
     mainProgram = "bindgen";
     platforms = platforms.unix;
   };

@@ -1,51 +1,70 @@
-{ lib
-, buildPythonPackage
-, dissect-cstruct
-, dissect-util
-, fetchFromGitHub
-, setuptools
-, setuptools-scm
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  dissect-cstruct,
+  dissect-util,
+  fetchFromGitHub,
+  setuptools,
+  setuptools-scm,
+  pytestCheckHook,
+  pythonOlder,
 }:
 
 buildPythonPackage rec {
   pname = "dissect-volume";
-  version = "3.1";
-  format = "pyproject";
+  version = "3.15";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.13";
 
   src = fetchFromGitHub {
     owner = "fox-it";
     repo = "dissect.volume";
-    rev = version;
-    hash = "sha256-9SbluaB2wV4gOCry5c7ZLABMwhGfnYg7dTPdKMXYSZM=";
+    tag = version;
+    hash = "sha256-QxIZg0svKBHp7uVsK4S40oDBOxFudSHBzi6I2iloiok=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
-  nativeBuildInputs = [
+  build-system = [
     setuptools
     setuptools-scm
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     dissect-cstruct
     dissect-util
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pythonImportsCheck = [
-    "dissect.volume"
+  pythonImportsCheck = [ "dissect.volume" ];
+
+  disabledTests = [
+    # gzip.BadGzipFile: Not a gzipped file
+    "test_apm"
+    "test_bsd"
+    "test_bsd64"
+    "test_ddf_read"
+    "test_dm_thin"
+    "test_gpt_4k"
+    "test_gpt_esxi_no_name_xff"
+    "test_gpt_esxi"
+    "test_gpt"
+    "test_hybrid_gpt"
+    "test_lvm_mirro"
+    "test_lvm_thin"
+    "test_lvm"
+    "test_lvm"
+    "test_mbr"
+    "test_md_raid0_zones"
+    "test_md_raid1_multiple_disks"
+    "test_md_read"
+    "test_vinum"
   ];
 
   meta = with lib; {
     description = "Dissect module implementing various utility functions for the other Dissect modules";
     homepage = "https://github.com/fox-it/dissect.volume";
+    changelog = "https://github.com/fox-it/dissect.volume/releases/tag/${src.tag}";
     license = licenses.agpl3Only;
     maintainers = with maintainers; [ fab ];
   };

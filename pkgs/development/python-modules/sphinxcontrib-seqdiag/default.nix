@@ -1,10 +1,11 @@
-{ lib
-, blockdiag
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, seqdiag
-, sphinx
+{
+  lib,
+  blockdiag,
+  buildPythonPackage,
+  fetchPypi,
+  pythonOlder,
+  seqdiag,
+  sphinx,
 }:
 
 buildPythonPackage rec {
@@ -25,14 +26,14 @@ buildPythonPackage rec {
     sphinx
   ];
 
-  pythonImportsCheck = [
-    "sphinxcontrib.seqdiag"
-  ];
+  pythonImportsCheck = [ "sphinxcontrib.seqdiag" ];
+
+  pythonNamespaces = [ "sphinxcontrib" ];
 
   meta = with lib; {
     description = "Sphinx seqdiag extension";
     homepage = "https://github.com/blockdiag/sphinxcontrib-seqdiag";
     license = licenses.bsd2;
-    maintainers = with maintainers; [ davidtwco ];
+    maintainers = [ ];
   };
 }

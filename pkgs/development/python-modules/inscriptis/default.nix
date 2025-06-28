@@ -1,38 +1,51 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, lxml
-, pytestCheckHook
-, requests
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  poetry-core,
+  lxml,
+  fastapi,
+  httpx,
+  pytestCheckHook,
+  pythonOlder,
+  requests,
 }:
 
 buildPythonPackage rec {
   pname = "inscriptis";
-  version = "2.3.1";
-  format = "setuptools";
+  version = "2.6.0";
+  pyproject = true;
+
+  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "weblyzard";
     repo = "inscriptis";
-    rev = version;
-    sha256 = "sha256-an/FTbujN2VnTYa0wngM8ugV1LNHJWM32RVqIbaW0KY=";
+    tag = version;
+    hash = "sha256-+qLHdQ4i/PYSUCZLYV3BguXjacjs7aB3MP0rJegv+dI=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ poetry-core ];
+
+  dependencies = [
     lxml
     requests
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    fastapi
+    httpx
     pytestCheckHook
   ];
 
   pythonImportsCheck = [ "inscriptis" ];
 
   meta = with lib; {
-    description = "inscriptis - HTML to text converter";
+    description = "HTML to text converter";
+    mainProgram = "inscript.py";
     homepage = "https://github.com/weblyzard/inscriptis";
+    changelog = "https://github.com/weblyzard/inscriptis/releases/tag/${src.tag}";
     license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    maintainers = [ ];
   };
 }

@@ -1,51 +1,91 @@
-{ lib
-, antlr4_9-python3-runtime
-, buildPythonPackage
-, fetchFromGitHub
-, jre_minimal
-, pydevd
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
-, pyyaml
+{
+  lib,
+  antlr4,
+  antlr4-python3-runtime,
+  attrs,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  jre_minimal,
+  pydevd,
+  pytest-mock,
+  pytestCheckHook,
+  pythonAtLeast,
+  pythonOlder,
+  pyyaml,
+  replaceVars,
 }:
 
 buildPythonPackage rec {
   pname = "omegaconf";
-  version = "2.2.3";
-  format = "setuptools";
+  version = "2.3.0";
+  pyproject = true;
 
   disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "omry";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    hash = "sha256-sJUYi0M/6SBSeKVSJoNY7IbVmzRZVTlek8AyL2cOPAM=";
+    repo = "omegaconf";
+    tag = "v${version}";
+    hash = "sha256-Qxa4uIiX5TAyQ5rFkizdev60S4iVAJ08ES6FpNqf8zI=";
   };
 
-  nativeBuildInputs = [
-    jre_minimal
+  patches = [
+    (replaceVars ./antlr4.patch {
+      antlr_jar = "${antlr4.out}/share/java/antlr-${antlr4.version}-complete.jar";
+    })
+
+    # https://github.com/omry/omegaconf/pull/1137
+    ./0000-add-support-for-dataclasses_missing_type.patch
   ];
 
-  propagatedBuildInputs = [
-    antlr4_9-python3-runtime
+  postPatch = ''
+    # We substitute the path to the jar with the one from our antlr4
+    # package, so this file becomes unused
+    rm -v build_helpers/bin/antlr*-complete.jar
+
+    sed -i 's/antlr4-python3-runtime==.*/antlr4-python3-runtime/' requirements/base.txt
+  '';
+
+  build-system = [ setuptools ];
+
+  nativeBuildInputs = [ jre_minimal ];
+
+  dependencies = [
+    antlr4-python3-runtime
     pyyaml
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    attrs
     pydevd
     pytest-mock
     pytestCheckHook
   ];
 
-  pythonImportsCheck = [
-    "omegaconf"
+  pythonImportsCheck = [ "omegaconf" ];
+
+  pytestFlagsArray = [
+    "-W"
+    "ignore::DeprecationWarning"
   ];
+
+  disabledTests =
+    [
+      # assert (1560791320562868035 == 1560791320562868035) == False
+      "test_eq"
+    ]
+    ++ lib.optionals (pythonAtLeast "3.13") [
+      # pathlib._local.Path != pathlib.Path type check mismatch
+      "test_errors"
+      "test_to_yaml"
+      "test_type_str"
+    ];
 
   meta = with lib; {
     description = "Framework for configuring complex applications";
     homepage = "https://github.com/omry/omegaconf";
+    changelog = "https://github.com/omry/omegaconf/blob/v${version}/NEWS.md";
     license = licenses.bsd3;
     maintainers = with maintainers; [ bcdarwin ];
   };

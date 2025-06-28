@@ -1,38 +1,51 @@
-{ lib
-, fetchFromSourcehut
-, buildGoModule
-, unzip
+{
+  lib,
+  fetchFromSourcehut,
+  buildGoModule,
+  unzip,
 }:
 
-buildGoModule (rec {
-  pname = "pagessrht";
-  version = "0.7.4";
+buildGoModule (
+  rec {
+    pname = "pagessrht";
+    version = "0.16.0";
 
-  src = fetchFromSourcehut {
-    owner = "~sircmpwn";
-    repo = "pages.sr.ht";
-    rev = version;
-    sha256 = "sha256-WM9T2LS8yIqaR0PQQRgMk/tiMYcw8DZVPMqMWkj/5RY=";
-  };
+    src = fetchFromSourcehut {
+      owner = "~sircmpwn";
+      repo = "pages.sr.ht";
+      rev = version;
+      hash = "sha256-XnKNXYzg9wuL4U2twkAspaQJZy2HWLQQQl9AITtipVU=";
+    };
 
-  postPatch = ''
-    substituteInPlace Makefile \
-      --replace "all: server" ""
-  '';
+    patches = ./patches/core-go-update/pages/patch-deps.patch;
 
-  vendorSha256 = "sha256-VOqY/nStqGyfWOXnJSZX8UYyp2kzcibQM2NRNysHYEc=";
+    postPatch = ''
+      substituteInPlace Makefile \
+        --replace-fail "all: server daily" ""
+    '';
 
-  postInstall = ''
-    mkdir -p $out/share/sql/
-    cp -r -t $out/share/sql/ schema.sql migrations
-  '';
+    vendorHash = "sha256-klDROxNvR7lk79ptckulImVVwsAfcnKtJJAaevlZSWU=";
 
-  meta = with lib; {
-    homepage = "https://git.sr.ht/~sircmpwn/pages.sr.ht";
-    description = "Web hosting service for the sr.ht network";
-    license = licenses.agpl3Only;
-    maintainers = with maintainers; [ eadwu ];
-  };
-  # There is no ./loaders but this does not cause troubles
-  # to go generate
-} // import ./fix-gqlgen-trimpath.nix { inherit unzip; gqlgenVersion= "0.17.9"; })
+    postInstall = ''
+      mkdir -p $out/share/sql/
+      cp -r -t $out/share/sql/ schema.sql migrations
+    '';
+
+    meta = with lib; {
+      homepage = "https://git.sr.ht/~sircmpwn/pages.sr.ht";
+      description = "Web hosting service for the sr.ht network";
+      mainProgram = "pages.sr.ht";
+      license = licenses.agpl3Only;
+      maintainers = with maintainers; [
+        eadwu
+        christoph-heiss
+      ];
+    };
+    # There is no ./loaders but this does not cause troubles
+    # to go generate
+  }
+  // import ./fix-gqlgen-trimpath.nix {
+    inherit unzip;
+    gqlgenVersion = "0.17.64";
+  }
+)

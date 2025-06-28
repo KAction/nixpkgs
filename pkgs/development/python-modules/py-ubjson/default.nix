@@ -1,22 +1,27 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "py-ubjson";
   version = "0.16.1";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "Iotic-Labs";
-    repo = pname;
+    repo = "py-ubjson";
     rev = "v${version}";
     sha256 = "1frn97xfa88zrfmpnvdk1pc03yihlchhph99bhjayvzlfcrhm5v3";
   };
 
-  checkInputs = [
-    pytestCheckHook
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTests = [
+    # https://github.com/Iotic-Labs/py-ubjson/issues/18
+    "test_recursion"
   ];
 
   pytestFlagsArray = [ "test/test.py" ];

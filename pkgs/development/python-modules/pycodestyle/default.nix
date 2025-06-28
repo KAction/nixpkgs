@@ -1,39 +1,41 @@
-{ buildPythonPackage
-, pythonOlder
-, fetchPypi
-, lib
-, python
+{
+  buildPythonPackage,
+  fetchFromGitHub,
+  lib,
+  python,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pycodestyle";
-  version = "2.9.1";
+  version = "2.13.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  format = "setuptools";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "2c9607871d58c76354b697b42f5d57e1ada7d261c261efac224b664affdc5785";
+  src = fetchFromGitHub {
+    owner = "PyCQA";
+    repo = "pycodestyle";
+    rev = version;
+    hash = "sha256-jpF0/sVzRjot8KRdXqvhWpdafzC/Fska6jmG3s2U6Wk=";
   };
 
-  # https://github.com/PyCQA/pycodestyle/blob/2.9.1/tox.ini#L13
-  checkPhase = ''
-    ${python.interpreter} -m pycodestyle --statistics pycodestyle.py
-    ${python.interpreter} -m pycodestyle --max-doc-length=72 --testsuite testsuite
-    ${python.interpreter} -m pycodestyle --max-doc-length=72 --doctest
-    ${python.interpreter} -m unittest discover testsuite -vv
-  '';
+  build-system = [ setuptools ];
 
   pythonImportsCheck = [ "pycodestyle" ];
 
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  # https://github.com/PyCQA/pycodestyle/blob/2.13.0/tox.ini#L16
+  postCheck = ''
+    ${python.interpreter} -m pycodestyle --statistics pycodestyle.py
+  '';
+
   meta = with lib; {
+    changelog = "https://github.com/PyCQA/pycodestyle/blob/${version}/CHANGES.txt";
     description = "Python style guide checker";
+    mainProgram = "pycodestyle";
     homepage = "https://pycodestyle.pycqa.org/";
     license = licenses.mit;
-    maintainers = with maintainers; [
-      kamadorueda
-    ];
+    maintainers = with maintainers; [ kamadorueda ];
   };
 }

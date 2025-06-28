@@ -1,10 +1,20 @@
-{ lib, stdenv, fetchurl, autoconf, automake, allegro }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  autoconf,
+  automake,
+  allegro,
+}:
 
 stdenv.mkDerivation rec {
   pname = "garden-of-coloured-lights";
   version = "1.0.9";
 
-  nativeBuildInputs = [ autoconf automake ];
+  nativeBuildInputs = [
+    autoconf
+    automake
+  ];
   buildInputs = [ allegro ];
 
   prePatch = ''
@@ -21,12 +31,13 @@ stdenv.mkDerivation rec {
   # Workaround build failure on -fno-common toolchains:
   #   ld: main.o:src/main.c:58: multiple definition of
   #     `eclass'; eclass.o:src/eclass.c:21: first defined here
-  NIX_CFLAGS_COMPILE = "-fcommon";
+  env.NIX_CFLAGS_COMPILE = "-fcommon";
 
   meta = with lib; {
     description = "Old-school vertical shoot-em-up / bullet hell";
-    homepage = "http://garden.sourceforge.net/drupal/";
-    maintainers = with maintainers; [ Profpatsch ];
+    mainProgram = "garden";
+    homepage = "https://sourceforge.net/projects/garden/";
+    maintainers = [ ];
     license = licenses.gpl3;
   };
 

@@ -1,66 +1,76 @@
-{ lib
-, aiohttp
-, aresponses
-, async-timeout
-, backoff
-, buildPythonPackage
-, fetchFromGitHub
-, poetry-core
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  aresponses,
+  async-timeout,
+  backoff,
+  buildPythonPackage,
+  fetchFromGitHub,
+  poetry-core,
+  pytest-asyncio,
+  pytestCheckHook,
+  pythonOlder,
+  sigstore,
 }:
 
 buildPythonPackage rec {
   pname = "aiogithubapi";
-  version = "22.10.1";
-  format = "pyproject";
+  version = "25.5.0";
+  pyproject = true;
 
   disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "ludeeus";
-    repo = pname;
-    rev = version;
-    hash = "sha256-ceBuqaMqqL6qwN52765MG4sLt+08hx2G9rUVNC7x6ik=";
+    repo = "aiogithubapi";
+    tag = version;
+    hash = "sha256-zl9QpFpkvSTs0BUDMBmwTeLY1YvNRSqbkIZ5LDUP3zw=";
   };
+
+  __darwinAllowLocalNetworking = true;
+
+  pythonRelaxDeps = [ "async-timeout" ];
 
   postPatch = ''
     # Upstream is releasing with the help of a CI to PyPI, GitHub releases
     # are not in their focus
     substituteInPlace pyproject.toml \
-      --replace 'version = "0"' 'version = "${version}"' \
-      --replace 'backoff = "^1.10.0"' 'backoff = "*"'
+      --replace-fail 'version = "0"' 'version = "${version}"'
   '';
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  build-system = [ poetry-core ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     aiohttp
     async-timeout
     backoff
   ];
 
-  checkInputs = [
+  # Optional dependencies for deprecated-verify are not added
+  # Only sigstore < 2 is supported
+
+  nativeCheckInputs = [
     aresponses
     pytest-asyncio
     pytestCheckHook
   ];
 
-  pytestFlagsArray = [
-    "--asyncio-mode=legacy"
-  ];
+  pytestFlagsArray = [ "--asyncio-mode=auto" ];
 
-  pythonImportsCheck = [
-    "aiogithubapi"
-  ];
+  preCheck = ''
+    export HOME=$(mktemp -d)
 
-  meta = with lib; {
+    # Need sigstore is an optional dependencies and need <2
+    rm -rf tests/test_helper.py
+  '';
+
+  pythonImportsCheck = [ "aiogithubapi" ];
+
+  meta = {
     description = "Python client for the GitHub API";
     homepage = "https://github.com/ludeeus/aiogithubapi";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/ludeeus/aiogithubapi/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

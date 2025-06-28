@@ -1,28 +1,43 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, extra-cmake-modules
-, fcitx5
-, fcitx5-qt
-, gettext
-, wrapQtAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  extra-cmake-modules,
+  fcitx5,
+  fcitx5-qt,
+  gettext,
+  qtbase,
 }:
 
 stdenv.mkDerivation rec {
   pname = "fcitx5-unikey";
-  version = "5.0.11";
+  version = "5.1.6";
 
   src = fetchFromGitHub {
     owner = "fcitx";
     repo = "fcitx5-unikey";
     rev = version;
-    sha256 = "sha256-pFFxTk97m/ThSrJglY+tSjjKCzXbj2EukdPg8fckoDU=";
+    hash = "sha256-hx3GXoloO3eQP9yhLY8v1ahwvOTCe5XcBey+ZbReRjE=";
   };
 
-  nativeBuildInputs = [ cmake extra-cmake-modules wrapQtAppsHook ];
+  nativeBuildInputs = [
+    cmake
+    extra-cmake-modules
+    gettext # msgfmt
+  ];
 
-  buildInputs = [ fcitx5 fcitx5-qt gettext ];
+  buildInputs = [
+    qtbase
+    fcitx5
+    fcitx5-qt
+  ];
+
+  cmakeFlags = [
+    (lib.cmakeBool "USE_QT6" (lib.versions.major qtbase.version == "6"))
+  ];
+
+  dontWrapQtApps = true;
 
   meta = with lib; {
     description = "Unikey engine support for Fcitx5";

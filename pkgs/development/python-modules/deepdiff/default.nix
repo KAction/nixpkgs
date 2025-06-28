@@ -1,64 +1,95 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, click
-, ordered-set
-, clevercsv
-, jsonpickle
-, numpy
-, pytestCheckHook
-, pyyaml
-, toml
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  stdenv,
+
+  # build-system
+  flit-core,
+
+  # dependencies
+  orderly-set,
+
+  # optional-dependencies
+  click,
+  orjson,
+  pyyaml,
+
+  # tests
+  jsonpickle,
+  numpy,
+  pytestCheckHook,
+  python-dateutil,
+  tomli-w,
+  polars,
+  pandas,
 }:
 
 buildPythonPackage rec {
   pname = "deepdiff";
-  version = "6.2.1";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "8.5.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "seperman";
     repo = "deepdiff";
-    rev = "refs/tags/${version}";
-    hash = "sha256-AKah3A9srKm/cFWM7IiZ7JxQ8s0KTuh8VLKOymsDgnA=";
+    tag = version;
+    hash = "sha256-JIxlWy2uVpI98BmpH2+EyOxfYBoO2G2S0D9krduVo08=";
   };
 
-  postPatch = ''
-    substituteInPlace tests/test_command.py \
-      --replace '/tmp/' "$TMPDIR/"
-  '';
-
-  propagatedBuildInputs = [
-    ordered-set
+  build-system = [
+    flit-core
   ];
 
-  passthru.optional-dependencies = {
+  dependencies = [
+    orderly-set
+  ];
+
+  optional-dependencies = {
     cli = [
-      clevercsv
       click
       pyyaml
-      toml
+    ];
+    optimize = [
+      orjson
     ];
   };
 
-  checkInputs = [
+  nativeCheckInputs = [
     jsonpickle
     numpy
     pytestCheckHook
-  ] ++ passthru.optional-dependencies.cli;
+    python-dateutil
+    tomli-w
+    polars
+    pandas
+  ] ++ lib.flatten (lib.attrValues optional-dependencies);
 
-  pythonImportsCheck = [
-    "deepdiff"
-  ];
+  disabledTests =
+    [
+      # not compatible with pydantic 2.x
+      "test_pydantic1"
+      "test_pydantic2"
+      # Require pytest-benchmark
+      "test_cache_deeply_nested_a1"
+      "test_lfu"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      # Times out on darwin in Hydra
+      "test_repeated_timer"
+    ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "deepdiff" ];
+
+  meta = {
     description = "Deep Difference and Search of any Python object/data";
+    mainProgram = "deep";
     homepage = "https://github.com/seperman/deepdiff";
-    changelog = "https://github.com/seperman/deepdiff/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ mic92 ];
+    changelog = "https://github.com/seperman/deepdiff/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      mic92
+      doronbehar
+    ];
   };
 }

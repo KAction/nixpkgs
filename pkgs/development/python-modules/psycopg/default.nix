@@ -1,56 +1,58 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchFromGitHub
-, fetchurl
-, pythonOlder
-, substituteAll
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchurl,
+  pythonOlder,
+  replaceVars,
 
-# build
-, postgresql
-, setuptools
+  # build
+  libpq,
+  setuptools,
 
-# propagates
-, backports-zoneinfo
-, typing-extensions
+  # propagates
+  typing-extensions,
 
-# psycopg-c
-, cython_3
+  # psycopg-c
+  cython,
+  tomli,
 
-# docs
-, furo
-, shapely
-, sphinxHook
-, sphinx-autodoc-typehints
+  # docs
+  furo,
+  shapely,
+  sphinxHook,
+  sphinx-autodoc-typehints,
 
-# tests
-, pproxy
-, pytest-asyncio
-, pytest-randomly
-, pytestCheckHook
+  # tests
+  anyio,
+  pproxy,
+  pytest-randomly,
+  pytestCheckHook,
+  postgresql,
+  postgresqlTestHook,
 }:
 
 let
   pname = "psycopg";
-  version = "3.1.3";
+  version = "3.2.9";
 
   src = fetchFromGitHub {
     owner = "psycopg";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    hash = "sha256-cAfFxUDgfI3KTlBU9wV/vQkPun4cR3se8eSIHHcEr4g=";
+    repo = "psycopg";
+    tag = version;
+    hash = "sha256-mMhfULdvqphwdEqynLNq+7XCNmqmf+zi1SGumC/6qAc=";
   };
 
   patches = [
-    (substituteAll {
-      src = ./ctypes.patch;
-      libpq = "${postgresql.lib}/lib/libpq${stdenv.hostPlatform.extensions.sharedLibrary}";
+    (replaceVars ./ctypes.patch {
+      libpq = "${libpq}/lib/libpq${stdenv.hostPlatform.extensions.sharedLibrary}";
       libc = "${stdenv.cc.libc}/lib/libc.so.6";
     })
   ];
 
   baseMeta = {
-    changelog = "https://github.com/psycopg/psycopg/blob/master/docs/news.rst";
+    changelog = "https://github.com/psycopg/psycopg/blob/${version}/docs/news.rst#current-release";
     homepage = "https://github.com/psycopg/psycopg";
     license = lib.licenses.lgpl3Plus;
     maintainers = with lib.maintainers; [ hexa ];
@@ -70,9 +72,14 @@ let
     '';
 
     nativeBuildInputs = [
+      cython
+      libpq.pg_config
       setuptools
-      cython_3
-      postgresql
+      tomli
+    ];
+
+    buildInputs = [
+      libpq
     ];
 
     # tested in psycopg
@@ -96,9 +103,7 @@ let
       cd psycopg_pool
     '';
 
-    propagatedBuildInputs = lib.optionals (pythonOlder "3.10") [
-      typing-extensions
-    ];
+    propagatedBuildInputs = [ typing-extensions ];
 
     # tested in psycopg
     doCheck = false;
@@ -107,7 +112,6 @@ let
       description = "Connection Pool for Psycopg";
     };
   };
-
 in
 
 buildPythonPackage rec {
@@ -116,17 +120,20 @@ buildPythonPackage rec {
 
   disabled = pythonOlder "3.7";
 
-  outputs = [
-    "out"
-    "doc"
-  ];
+  outputs =
+    [
+      "out"
+    ]
+    ++ lib.optionals (stdenv.hostPlatform == stdenv.buildPlatform) [
+      "doc"
+    ];
 
   sphinxRoot = "../docs";
 
   # Introduce this file necessary for the docs build via environment var
   LIBPQ_DOCS_FILE = fetchurl {
-    url = "https://raw.githubusercontent.com/postgres/postgres/REL_14_STABLE/doc/src/sgml/libpq.sgml";
-    hash = "sha256-yn09fR9+7zQni8SvTG7BUmYRD7MK7u2arVAznWz2oAw=";
+    url = "https://raw.githubusercontent.com/postgres/postgres/496a1dc44bf1261053da9b3f7e430769754298b4/doc/src/sgml/libpq.sgml";
+    hash = "sha256-JwtCngkoi9pb0pqIdNgukY8GbG5pUDZvrGAHZqjFOw4";
   };
 
   inherit patches;
@@ -136,20 +143,22 @@ buildPythonPackage rec {
     cd psycopg
   '';
 
-  nativeBuildInputs = [
-    furo
-    setuptools
-    shapely
-    sphinx-autodoc-typehints
-    sphinxHook
-  ];
+  nativeBuildInputs =
+    [
+      furo
+      setuptools
+      shapely
+    ]
+    # building the docs fails with the following error when cross compiling
+    #  AttributeError: module 'psycopg_c.pq' has no attribute '__impl__'
+    ++ lib.optionals (stdenv.hostPlatform == stdenv.buildPlatform) [
+      sphinx-autodoc-typehints
+      sphinxHook
+    ];
 
   propagatedBuildInputs = [
     psycopg-c
-  ] ++ lib.optionals (pythonOlder "3.11") [
     typing-extensions
-  ] ++ lib.optionals (pythonOlder "3.9") [
-    backports-zoneinfo
   ];
 
   pythonImportsCheck = [
@@ -158,33 +167,43 @@ buildPythonPackage rec {
     "psycopg_pool"
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     c = [ psycopg-c ];
     pool = [ psycopg-pool ];
   };
 
-  preCheck = ''
-    cd ..
-  '';
+  nativeCheckInputs =
+    [
+      anyio
+      pproxy
+      pytest-randomly
+      pytestCheckHook
+      postgresql
+    ]
+    ++ lib.optional stdenv.hostPlatform.isLinux postgresqlTestHook
+    ++ optional-dependencies.c
+    ++ optional-dependencies.pool;
 
-  checkInputs = [
-    pproxy
-    pytest-asyncio
-    pytest-randomly
-    pytestCheckHook
-    postgresql
-  ]
-  ++ passthru.optional-dependencies.c
-  ++ passthru.optional-dependencies.pool;
+  env = {
+    postgresqlEnableTCP = 1;
+    PGUSER = "psycopg";
+    PGDATABASE = "psycopg";
+  };
+
+  preCheck =
+    ''
+      cd ..
+    ''
+    + lib.optionalString stdenv.hostPlatform.isLinux ''
+      export PSYCOPG_TEST_DSN="host=/build/run/postgresql user=$PGUSER"
+    '';
 
   disabledTests = [
     # don't depend on mypy for tests
     "test_version"
     "test_package_version"
-  ] ++ lib.optionals (stdenv.isDarwin) [
-    # racy test
-    "test_sched"
-    "test_sched_error"
+    # expects timeout, but we have no route in the sandbox
+    "test_connect_error_multi_hosts_each_message_preserved"
   ];
 
   disabledTestPaths = [
@@ -194,14 +213,19 @@ buildPythonPackage rec {
     # Mypy typing test
     "tests/test_typing.py"
     "tests/crdb/test_typing.py"
+    # https://github.com/psycopg/psycopg/pull/915
+    "tests/test_notify.py"
+    "tests/test_notify_async.py"
   ];
 
   pytestFlagsArray = [
-    "-o cache_dir=$TMPDIR"
+    "-o cache_dir=.cache"
+    "-m"
+    "'not refcount and not timing and not flakey'"
   ];
 
   postCheck = ''
-    cd ${pname}
+    cd psycopg
   '';
 
   passthru = {

@@ -1,68 +1,106 @@
-{ lib
-, symlinkJoin
-, buildPythonPackage
-, fetchFromGitHub
-, ninja
-, which
-, libjpeg_turbo
-, libpng
-, numpy
-, scipy
-, pillow
-, torch
-, pytest
-, cudaSupport ? torch.cudaSupport or false # by default uses the value from torch
+{
+  lib,
+  stdenv,
+  torch,
+  apple-sdk_13,
+  buildPythonPackage,
+  darwinMinVersionHook,
+  fetchFromGitHub,
+
+  # nativeBuildInputs
+  libpng,
+  ninja,
+  which,
+
+  # buildInputs
+  libjpeg_turbo,
+
+  # dependencies
+  numpy,
+  pillow,
+  scipy,
+
+  # tests
+  pytest,
+  writableTmpDirAsHomeHook,
 }:
 
 let
-  inherit (torch.cudaPackages) cudatoolkit cudnn;
+  inherit (torch) cudaCapabilities cudaPackages cudaSupport;
 
-  cudatoolkit_joined = symlinkJoin {
-    name = "${cudatoolkit.name}-unsplit";
-    paths = [ cudatoolkit.out cudatoolkit.lib ];
-  };
-  cudaArchStr = lib.optionalString cudaSupport lib.strings.concatStringsSep ";" torch.cudaArchList;
-in buildPythonPackage rec {
   pname = "torchvision";
-  version = "0.13.1";
+  version = "0.22.1";
+in
+buildPythonPackage {
+  inherit pname version;
+
+  stdenv = torch.stdenv;
 
   src = fetchFromGitHub {
     owner = "pytorch";
     repo = "vision";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-QlUAFAG6zEDCDSXR5n2CznspU3fT0kbqySzofGLPgK4=";
+    tag = "v${version}";
+    hash = "sha256-KYIhd0U2HdvNt/vjQ8wA/6l/ZCF8wBm4NrOMgBtoWG4=";
   };
 
-  nativeBuildInputs = [ libpng ninja which ]
-    ++ lib.optionals cudaSupport [ cudatoolkit_joined ];
+  nativeBuildInputs = [
+    libpng
+    ninja
+    which
+  ] ++ lib.optionals cudaSupport [ cudaPackages.cuda_nvcc ];
 
-  TORCHVISION_INCLUDE = "${libjpeg_turbo.dev}/include/";
-  TORCHVISION_LIBRARY = "${libjpeg_turbo}/lib/";
+  buildInputs =
+    [
+      libjpeg_turbo
+      libpng
+      torch.cxxdev
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      # This should match the SDK used by `torch` above
+      apple-sdk_13
 
-  buildInputs = [ libjpeg_turbo libpng ]
-    ++ lib.optionals cudaSupport [ cudnn ];
+      # error: unknown type name 'MPSGraphCompilationDescriptor'; did you mean 'MPSGraphExecutionDescriptor'?
+      # https://developer.apple.com/documentation/metalperformanceshadersgraph/mpsgraphcompilationdescriptor/
+      (darwinMinVersionHook "12.0")
+    ];
 
-  propagatedBuildInputs = [ numpy pillow torch scipy ];
+  dependencies = [
+    numpy
+    pillow
+    torch
+    scipy
+  ];
 
-  preBuild = lib.optionalString cudaSupport ''
-    export TORCH_CUDA_ARCH_LIST="${cudaArchStr}"
-    export FORCE_CUDA=1
-  '';
+  env =
+    {
+      TORCHVISION_INCLUDE = "${libjpeg_turbo.dev}/include/";
+      TORCHVISION_LIBRARY = "${libjpeg_turbo}/lib/";
+    }
+    // lib.optionalAttrs cudaSupport {
+      TORCH_CUDA_ARCH_LIST = "${lib.concatStringsSep ";" cudaCapabilities}";
+      FORCE_CUDA = 1;
+    };
 
-  # tries to download many datasets for tests
+  # tests download big datasets, models, require internet connection, etc.
   doCheck = false;
 
+  pythonImportsCheck = [ "torchvision" ];
+
+  nativeCheckInputs = [
+    pytest
+    writableTmpDirAsHomeHook
+  ];
+
   checkPhase = ''
-    HOME=$TMPDIR py.test test --ignore=test/test_datasets_download.py
+    py.test test --ignore=test/test_datasets_download.py
   '';
 
-  checkInputs = [ pytest ];
-
-  meta = with lib; {
+  meta = {
     description = "PyTorch vision library";
     homepage = "https://pytorch.org/";
-    license = licenses.bsd3;
-    platforms = with platforms; linux ++ lib.optionals (!cudaSupport) darwin;
-    maintainers = with maintainers; [ ericsagnes ];
+    changelog = "https://github.com/pytorch/vision/releases/tag/v${version}";
+    license = lib.licenses.bsd3;
+    platforms = with lib.platforms; linux ++ lib.optionals (!cudaSupport) darwin;
+    maintainers = with lib.maintainers; [ GaetanLepage ];
   };
 }

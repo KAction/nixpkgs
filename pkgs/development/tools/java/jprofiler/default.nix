@@ -1,63 +1,74 @@
-{ stdenv
-, lib
-, fetchurl
-, makeWrapper
-, makeDesktopItem
-, copyDesktopItems
-, undmg
-, jdk
+{
+  stdenv,
+  lib,
+  fetchurl,
+  makeWrapper,
+  makeDesktopItem,
+  copyDesktopItems,
+  _7zz,
+  jdk,
 }:
 
 let
-  inherit (stdenv.hostPlatform) system;
   pname = "jprofiler";
-
-  # 11.1.4 is the last version which can be unpacked by undmg
-  # See: https://github.com/matthewbauer/undmg/issues/9
-  version = if stdenv.isLinux then "13.0.2" else "11.1.4";
+  version = "14.0.5";
   nameApp = "JProfiler";
 
-  meta = with lib; {
+  meta = {
     description = "JProfiler's intuitive UI helps you resolve performance bottlenecks";
     longDescription = ''
       JProfiler's intuitive UI helps you resolve performance bottlenecks,
       pin down memory leaks and understand threading issues.
     '';
     homepage = "https://www.ej-technologies.com/products/jprofiler/overview.html";
-    license = licenses.unfree;
-    maintainers = with maintainers; [ catap ];
+    license = lib.licenses.unfree;
+    maintainers = [ ];
   };
 
-  src = if stdenv.isLinux then fetchurl {
-    url = "https://download-gcdn.ej-technologies.com/jprofiler/jprofiler_linux_${lib.replaceStrings ["."] ["_"]  version}.tar.gz";
-    sha256 = "sha256-x9I7l2ctquCqUymtlQpFXE6+u0Yg773qE6MvAxvCaEE=";
-  } else fetchurl {
-    url = "https://download-gcdn.ej-technologies.com/jprofiler/jprofiler_macos_${lib.replaceStrings ["."] ["_"]  version}.dmg";
-    sha256 = "sha256-WDMGrDsMdY1//WMHgr+/YKSxHWt6A1dD1Pd/MuDOaz8=";
-  };
+  src =
+    if stdenv.hostPlatform.isLinux then
+      fetchurl {
+        url = "https://download.ej-technologies.com/jprofiler/jprofiler_linux_${
+          lib.replaceStrings [ "." ] [ "_" ] version
+        }.tar.gz";
+        hash = "sha256-S7e2WurDJ0ePzpMg0YK94Mn0eHfb8/jNmf0kYts2Y0M=";
+      }
+    else
+      fetchurl {
+        url = "https://download-gcdn.ej-technologies.com/jprofiler/jprofiler_macos_${
+          lib.replaceStrings [ "." ] [ "_" ] version
+        }.dmg";
+        hash = "sha256-HPGh+dRfLuQprpgnu8oFboHUB1xvFqPblJcowqgZ5KA=";
+      };
 
-  srcIcon = fetchurl {
-    url = "https://www.ej-technologies.com/assets/content/header-product-jprofiler@2x-24bc4d84bd2a4eb641a5c8531758ff7c.png";
-    sha256 = "sha256-XUmuqhnNv7mZ3Gb4A0HLSlfiJd5xbCExVsw3hmXHeVE=";
-  };
-
-  desktopItems = makeDesktopItem {
-    name = pname;
-    exec = pname;
-    icon = pname;
-    comment = meta.description;
-    desktopName = nameApp;
-    genericName = "Java Profiler Tool";
-    categories = [ "Development" ];
-  };
+  desktopItems = [
+    (makeDesktopItem {
+      name = pname;
+      exec = pname;
+      icon = pname;
+      comment = meta.description;
+      desktopName = nameApp;
+      genericName = "Java Profiler Tool";
+      categories = [ "Development" ];
+    })
+  ];
 
   linux = stdenv.mkDerivation {
-    inherit pname version src desktopItems;
+    inherit
+      pname
+      version
+      src
+      desktopItems
+      ;
 
-    nativeBuildInputs = [ makeWrapper copyDesktopItems ];
+    nativeBuildInputs = [
+      makeWrapper
+      copyDesktopItems
+    ];
 
     installPhase = ''
       runHook preInstall
+
       cp -r . $out
 
       rm -f $out/bin/updater
@@ -69,31 +80,48 @@ let
         wrapProgram $f --set JAVA_HOME "${jdk.home}"
       done
 
-      install -Dm644 "${srcIcon}" \
+      install -Dm644 "./.install4j/i4j_extf_7_1u09tly_16qtnph.png" \
         "$out/share/icons/hicolor/scalable/apps/jprofiler.png"
+
       runHook postInstall
     '';
 
-    meta = meta // { platforms = lib.platforms.linux; };
+    meta = meta // {
+      platforms = lib.platforms.linux;
+    };
   };
 
   darwin = stdenv.mkDerivation {
     inherit pname version src;
 
-    # Archive extraction via undmg fails for this particular version.
-    nativeBuildInputs = [ makeWrapper undmg ];
+    nativeBuildInputs = [
+      makeWrapper
+      _7zz
+    ];
 
-    sourceRoot = "${nameApp}.app";
+    unpackPhase = ''
+      runHook preUnpack
+
+      7zz x $src -x!JProfiler/\[\]
+
+      runHook postUnpack
+    '';
+
+    sourceRoot = nameApp;
 
     installPhase = ''
       runHook preInstall
-      mkdir -p $out/{Applications/${nameApp}.app,bin}
-      cp -R . $out/Applications/${nameApp}.app
+
+      mkdir -p $out/{Applications,bin}
+      cp -R ${nameApp}.app $out/Applications/
       makeWrapper $out/Applications/${nameApp}.app/Contents/MacOS/JavaApplicationStub $out/bin/${pname}
+
       runHook postInstall
     '';
 
-    meta = meta // { platforms = lib.platforms.darwin; };
+    meta = meta // {
+      platforms = lib.platforms.darwin;
+    };
   };
 in
-if stdenv.isDarwin then darwin else linux
+if stdenv.hostPlatform.isDarwin then darwin else linux

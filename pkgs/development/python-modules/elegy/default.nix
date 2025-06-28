@@ -1,24 +1,26 @@
-{ lib
-, buildPythonPackage
-, cloudpickle
-, deepdish
-, deepmerge
-, dm-haiku
-, fetchFromGitHub
-, jaxlib
-, poetry
-, pytestCheckHook
-, pythonOlder
-, pyyaml
-, sh
-, tables
-, tabulate
-, tensorboardx
-, tensorflow
-, toolz
-, torch
-, treex
-, typing-extensions
+{
+  lib,
+  buildPythonPackage,
+  cloudpickle,
+  deepdish,
+  deepmerge,
+  dm-haiku,
+  fetchFromGitHub,
+  fetchpatch,
+  jaxlib,
+  poetry-core,
+  pytestCheckHook,
+  pythonOlder,
+  pyyaml,
+  sh,
+  tables,
+  tabulate,
+  tensorboardx,
+  tensorflow,
+  toolz,
+  torch,
+  treex,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
@@ -30,10 +32,18 @@ buildPythonPackage rec {
 
   src = fetchFromGitHub {
     owner = "poets-ai";
-    repo = pname;
-    rev = version;
+    repo = "elegy";
+    tag = version;
     hash = "sha256-FZmLriYhsX+zyQKCtCjbOy6MH+AvjzHRNUyaDSXGlLI=";
   };
+
+  patches = [
+    (fetchpatch {
+      name = "use-poetry-core.patch";
+      url = "https://github.com/poets-ai/elegy/commit/0ed472882f470ed9eb7a63b8a537ffabe7e19aa7.patch";
+      hash = "sha256-nO/imHo7tEsiZh+64CF/M4eXQ1so3IunVhv8CvYP1ks=";
+    })
+  ];
 
   # The cloudpickle constraint is too strict. wandb is marked as an optional
   # dependency but `buildPythonPackage` doesn't seem to respect that setting.
@@ -45,13 +55,9 @@ buildPythonPackage rec {
       --replace 'wandb = { version = "^0.12.10", optional = true }' ""
   '';
 
-  nativeBuildInputs = [
-    poetry
-  ];
+  nativeBuildInputs = [ poetry-core ];
 
-  buildInputs = [
-    jaxlib
-  ];
+  buildInputs = [ jaxlib ];
 
   propagatedBuildInputs = [
     cloudpickle
@@ -67,15 +73,13 @@ buildPythonPackage rec {
     typing-extensions
   ];
 
-  pythonImportsCheck = [
-    "elegy"
-  ];
+  pythonImportsCheck = [ "elegy" ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
-    torch
     sh
     tensorflow
+    torch
   ];
 
   disabledTests = [
@@ -89,6 +93,7 @@ buildPythonPackage rec {
   meta = with lib; {
     description = "Neural Networks framework based on Jax inspired by Keras and Haiku";
     homepage = "https://github.com/poets-ai/elegy";
+    changelog = "https://github.com/poets-ai/elegy/releases/tag/${version}";
     license = licenses.asl20;
     maintainers = with maintainers; [ ndl ];
   };

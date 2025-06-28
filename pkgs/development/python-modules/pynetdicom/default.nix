@@ -1,33 +1,31 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchFromGitHub
-, pydicom
-, pyfakefs
-, pytestCheckHook
-, sqlalchemy
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flit-core,
+  pydicom,
+  pyfakefs,
+  pytestCheckHook,
+  sqlalchemy,
 }:
 
 buildPythonPackage rec {
   pname = "pynetdicom";
-  version = "2.0.2";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "3.0.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pydicom";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-/JWQUtFBW4uqCbs/nUxj1pRBfTCXV4wcqTkqvzpdFrM=";
+    repo = "pynetdicom";
+    tag = "v${version}";
+    hash = "sha256-0ylx0EMPfvXxT7kQJYK+gsAFb/bkfRPDiC7Z7s/PvTk=";
   };
 
-  propagatedBuildInputs = [
-    pydicom
-  ];
+  build-system = [ flit-core ];
 
-  checkInputs = [
+  dependencies = [ pydicom ];
+
+  nativeCheckInputs = [
     pyfakefs
     pytestCheckHook
     sqlalchemy
@@ -65,16 +63,13 @@ buildPythonPackage rec {
     "pynetdicom/apps/tests/"
   ];
 
-  pythonImportsCheck = [
-    "pynetdicom"
-  ];
+  pythonImportsCheck = [ "pynetdicom" ];
 
   meta = with lib; {
     description = "Python implementation of the DICOM networking protocol";
     homepage = "https://github.com/pydicom/pynetdicom";
-    license = with licenses; [ mit ];
+    changelog = "https://github.com/pydicom/pynetdicom/releases/tag/${src.tag}";
+    license = licenses.mit;
     maintainers = with maintainers; [ fab ];
-    # Tests are not passing on Darwin/Aarch64, thus it's assumed that it doesn't work
-    broken = stdenv.isDarwin || stdenv.isAarch64;
   };
 }

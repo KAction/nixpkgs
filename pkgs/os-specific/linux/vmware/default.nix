@@ -1,14 +1,21 @@
-{ lib, stdenv, fetchFromGitHub, kernel, kmod, gnugrep, vmware-workstation }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  kernel,
+  kmod,
+  gnugrep,
+}:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "vmware-modules";
-  version = "${vmware-workstation.version}-${kernel.version}";
+  version = "workstation-17.6.3-20250608-${kernel.version}";
 
   src = fetchFromGitHub {
-    owner = "mkubecek";
+    owner = "philipl";
     repo = "vmware-host-modules";
-    rev = "w${vmware-workstation.version}-k5.18";
-    sha256 = "sha256-sAeCjaSrBXGP5szfCY5CpMrGwzCw4aM67EN+YfA3AWA=";
+    rev = "e08764f84df3bd14407291e02346b7c5c54d0bf6";
+    hash = "sha256-RDVKropC+VOv1uJijOGlLt6iqZI8Cm9aWlbmvZj2CSk=";
   };
 
   hardeningDisable = [ "pic" ];
@@ -20,14 +27,12 @@ stdenv.mkDerivation rec {
   postPatch = ''
     substituteInPlace Makefile \
       --replace '/lib/modules/$(VM_UNAME)/misc' "$out/lib/modules/${kernel.modDirVersion}/misc" \
-      --replace '$(shell uname -r)' "${kernel.modDirVersion}" \
       --replace /sbin/modinfo "${kmod}/bin/modinfo" \
       --replace 'test -z "$(DESTDIR)"' "0"
 
     for module in "vmmon-only" "vmnet-only"; do
       substituteInPlace "./$module/Makefile" \
         --replace '/lib/modules/' "${kernel.dev}/lib/modules/" \
-        --replace '$(shell uname -r)' "${kernel.modDirVersion}" \
         --replace /bin/grep "${gnugrep}/bin/grep"
     done
   '';
@@ -36,12 +41,15 @@ stdenv.mkDerivation rec {
     mkdir -p "$out/lib/modules/${kernel.modDirVersion}/misc"
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Kernel modules needed for VMware hypervisor";
     homepage = "https://github.com/mkubecek/vmware-host-modules";
-    license = licenses.gpl2Only;
+    license = lib.licenses.gpl2Only;
     platforms = [ "x86_64-linux" ];
-    broken = (kernel.kernelOlder "5.5" && kernel.isHardened) || kernel.kernelAtLeast "5.19";
-    maintainers = with maintainers; [ deinferno ];
+    broken = (kernel.kernelOlder "5.5" && kernel.isHardened);
+    maintainers = with lib.maintainers; [
+      deinferno
+      vifino
+    ];
   };
 }

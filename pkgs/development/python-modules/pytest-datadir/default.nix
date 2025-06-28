@@ -1,31 +1,40 @@
-{ lib, buildPythonPackage, fetchFromGitHub
-, setuptools-scm, pytest
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchFromGitHub,
+  setuptools,
+  setuptools-scm,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "pytest-datadir";
-  version = "1.3.1";
+  version = "1.6.1";
   format = "pyproject";
+
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "gabrielcnr";
-    repo = pname;
-    rev = version;
-    sha256 = "0kwgp6sqnqnmww5r0dkmyfpi0lmw0iwxz3fnwn2fs8w6bvixzznf";
+    repo = "pytest-datadir";
+    tag = "v${version}";
+    hash = "sha256-qyJlg9Ck128NpJhLw2x7LuNtdSx3AaTQEUQ7fb2Aglg=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
+  nativeBuildInputs = [
+    setuptools
+    setuptools-scm
+  ];
 
-  preBuild = ''
-    export SETUPTOOLS_SCM_PRETEND_VERSION="${version}"
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  checkInputs = [ pytest ];
-  checkPhase = "pytest";
+  pythonImportsCheck = [ "pytest_datadir" ];
 
   meta = with lib; {
+    description = "Pytest plugin for manipulating test data directories and files";
     homepage = "https://github.com/gabrielcnr/pytest-datadir";
-    description = "pytest plugin for manipulating test data directories and files";
+    changelog = "https://github.com/gabrielcnr/pytest-datadir/blob/${src.tag}/CHANGELOG.rst";
     license = licenses.mit;
     maintainers = with maintainers; [ kira-bruneau ];
   };

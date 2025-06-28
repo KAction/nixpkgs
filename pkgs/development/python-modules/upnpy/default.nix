@@ -1,15 +1,17 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
 }:
 
 buildPythonPackage rec {
   pname = "upnpy";
   version = "1.1.8";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "5kyc0d3r";
-    repo = pname;
+    repo = "upnpy";
     rev = "v${version}";
     sha256 = "17rqcmmwsl0m4722b1cr74f80kqwq7cgxsy7lq9c88zf6srcgjsf";
   };

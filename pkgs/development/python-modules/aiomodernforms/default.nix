@@ -1,24 +1,32 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, aiohttp
-, backoff
-, yarl
-, aresponses
-, pytest-asyncio
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  aiohttp,
+  backoff,
+  yarl,
+  aresponses,
+  pytest-asyncio,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "aiomodernforms";
   version = "0.1.8";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "wonderslug";
     repo = "aiomodernforms";
     rev = "v${version}";
-    sha256 = "sha256-Vx51WBjjNPIfLlwMnAuwHnGNljhnjKkU0tWB9M9rjsw=";
+    hash = "sha256-Vx51WBjjNPIfLlwMnAuwHnGNljhnjKkU0tWB9M9rjsw=";
   };
+
+  postPatch = ''
+    substituteInPlace aiomodernforms/modernforms.py --replace-fail \
+      "with async_timeout.timeout(self._request_timeout):" \
+      "async with async_timeout.timeout(self._request_timeout):"
+  '';
 
   propagatedBuildInputs = [
     aiohttp
@@ -26,10 +34,16 @@ buildPythonPackage rec {
     yarl
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     aresponses
     pytest-asyncio
     pytestCheckHook
+  ];
+
+  disabledTests = [
+    # https://github.com/wonderslug/aiomodernforms/issues/273
+    "test_connection_error"
+    "test_empty_response"
   ];
 
   pythonImportsCheck = [ "aiomodernforms" ];

@@ -1,32 +1,51 @@
-{ lib, stdenv, fetchFromGitHub, pkg-config, glib, mpv-unwrapped }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  gitUpdater,
+  pkg-config,
+  glib,
+  mpv-unwrapped,
+  ffmpeg,
+}:
 
 stdenv.mkDerivation rec {
   pname = "mpv-mpris";
-  version = "0.9";
+  version = "1.1";
 
   src = fetchFromGitHub {
     owner = "hoyon";
     repo = "mpv-mpris";
     rev = version;
-    sha256 = "sha256-leW7oCWTnJuprVnJJ+iXd3nuB2VXl3fw8FmPxv7d6rA=";
+    hash = "sha256-vZIO6ILatIWa9nJYOp4AMKwvaZLahqYWRLMDOizyBI0=";
   };
+  passthru.updateScript = gitUpdater { };
 
   nativeBuildInputs = [ pkg-config ];
 
-  buildInputs = [ glib mpv-unwrapped ];
+  buildInputs = [
+    glib
+    mpv-unwrapped
+    ffmpeg
+  ];
 
-  installFlags = [ "SCRIPTS_DIR=$(out)/share/mpv/scripts" ];
+  postPatch = ''
+    substituteInPlace Makefile --replace-fail 'PKG_CONFIG =' 'PKG_CONFIG ?='
+  '';
+
+  installFlags = [ "SCRIPTS_DIR=${placeholder "out"}/share/mpv/scripts" ];
 
   # Otherwise, the shared object isn't `strip`ped. See:
   # https://discourse.nixos.org/t/debug-why-a-derivation-has-a-reference-to-gcc/7009
   stripDebugList = [ "share/mpv/scripts" ];
   passthru.scriptName = "mpris.so";
 
-  meta = with lib; {
+  meta = {
     description = "MPRIS plugin for mpv";
     homepage = "https://github.com/hoyon/mpv-mpris";
-    license = licenses.mit;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ jfrankenau ];
+    license = lib.licenses.mit;
+    platforms = lib.platforms.linux;
+    maintainers = with lib.maintainers; [ ajs124 ];
+    changelog = "https://github.com/hoyon/mpv-mpris/releases/tag/${version}";
   };
 }

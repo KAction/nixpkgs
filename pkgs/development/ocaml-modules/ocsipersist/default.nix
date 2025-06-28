@@ -1,11 +1,14 @@
-{ buildDunePackage, ocsipersist-lib
-, ocsipersist-pgsql
-, ocsipersist-sqlite
+{
+  buildDunePackage,
+  ocsipersist-lib,
+  ocsipersist-pgsql,
+  ocsipersist-sqlite,
 }:
 
 buildDunePackage {
   pname = "ocsipersist";
-  inherit (ocsipersist-lib) src version useDune2;
+  inherit (ocsipersist-lib) src version;
+  duneVersion = "3";
 
   buildInputs = [
     ocsipersist-pgsql

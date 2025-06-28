@@ -1,11 +1,34 @@
 {
-  mkDerivation, lib,
-  extra-cmake-modules, kdoctools,
-  baloo, baloo-widgets, kactivities, kbookmarks, kcmutils,
-  kcompletion, kconfig, kcoreaddons, kdbusaddons,
-  kfilemetadata, ki18n, kiconthemes, kinit, kio, knewstuff, knotifications,
-  kparts, ktexteditor, kwindowsystem, phonon, solid,
-  wayland, qtbase, qtwayland
+  mkDerivation,
+  lib,
+  extra-cmake-modules,
+  kdoctools,
+  baloo,
+  baloo-widgets,
+  kactivities,
+  kbookmarks,
+  kcmutils,
+  kcompletion,
+  kconfig,
+  kcoreaddons,
+  kdbusaddons,
+  kfilemetadata,
+  ki18n,
+  kiconthemes,
+  kinit,
+  kio,
+  knewstuff,
+  knotifications,
+  kparts,
+  ktexteditor,
+  kwindowsystem,
+  phonon,
+  solid,
+  kuserfeedback,
+  wayland,
+  qtwayland,
+  qtx11extras,
+  qtimageformats,
 }:
 
 mkDerivation {
@@ -13,18 +36,47 @@ mkDerivation {
   meta = {
     homepage = "https://apps.kde.org/dolphin/";
     description = "KDE file manager";
-    license = with lib.licenses; [ gpl2 fdl12 ];
+    license = with lib.licenses; [
+      gpl2Plus
+      fdl12Plus
+    ];
     maintainers = [ lib.maintainers.ttuegel ];
-    broken = lib.versionOlder qtbase.version "5.14";
   };
-  nativeBuildInputs = [ extra-cmake-modules kdoctools ];
+  nativeBuildInputs = [
+    extra-cmake-modules
+    kdoctools
+  ];
   propagatedUserEnvPkgs = [ baloo ];
   propagatedBuildInputs = [
-    baloo baloo-widgets kactivities kbookmarks kcmutils kcompletion kconfig
-    kcoreaddons kdbusaddons kfilemetadata ki18n kiconthemes
-    kinit kio knewstuff knotifications kparts ktexteditor kwindowsystem
-    phonon solid
-    wayland qtwayland
+    baloo
+    baloo-widgets
+    kactivities
+    kbookmarks
+    kcmutils
+    kcompletion
+    kconfig
+    kcoreaddons
+    kdbusaddons
+    kfilemetadata
+    ki18n
+    kiconthemes
+    kinit
+    kio
+    knewstuff
+    knotifications
+    kparts
+    ktexteditor
+    kwindowsystem
+    phonon
+    solid
+    kuserfeedback
+    wayland
+    qtwayland
+    qtx11extras
+    qtimageformats
   ];
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 }

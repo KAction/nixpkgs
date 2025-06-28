@@ -1,32 +1,29 @@
-{ lib
-, mkDerivation
-, gcc11Stdenv
-, srcs
+{
+  lib,
+  mkDerivation,
 
-, cmake
-, extra-cmake-modules
-, wrapQtAppsHook
+  cmake,
+  extra-cmake-modules,
+  wrapQtAppsHook,
 
-, c-ares
-, curl
-, kcontacts
-, ki18n
-, kio
-, kirigami2
-, knotifications
-, kpeople
-, libphonenumber
-, libqofono
-, modemmanager-qt
-, protobuf
-, qcoro
-, qtquickcontrols2
+  c-ares,
+  curl,
+  kcontacts,
+  ki18n,
+  kio,
+  kirigami-addons,
+  kirigami2,
+  knotifications,
+  kpeople,
+  libphonenumber,
+  modemmanager-qt,
+  protobuf,
+  qcoro,
+  qtquickcontrols2,
 }:
 
-# Workaround for AArch64 not using GCC11 yet.
-gcc11Stdenv.mkDerivation rec {
+mkDerivation {
   pname = "spacebar";
-  inherit (srcs.spacebar) version src;
 
   nativeBuildInputs = [
     cmake
@@ -40,6 +37,7 @@ gcc11Stdenv.mkDerivation rec {
     kcontacts
     ki18n
     kio
+    kirigami-addons
     kirigami2
     knotifications
     kpeople
@@ -52,8 +50,9 @@ gcc11Stdenv.mkDerivation rec {
 
   meta = with lib; {
     description = "SMS application for Plasma Mobile";
+    mainProgram = "spacebar";
     homepage = "https://invent.kde.org/plasma-mobile/spacebar";
     license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ samueldr ];
+    maintainers = [ ];
   };
 }

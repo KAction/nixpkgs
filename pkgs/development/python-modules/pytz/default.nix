@@ -1,21 +1,34 @@
-{ lib, buildPythonPackage, fetchPypi, unittestCheckHook }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  unittestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "pytz";
-  version = "2022.2.1";
+  version = "2025.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-zqIhQXIE8tGiqgPdrj6GeSGXHQ128U2Hq7RBRBW73PU=";
+    hash = "sha256-NguePbtJognCGtYYCcf7RTZD4EiziSTHZYE1RnRugcM=";
   };
 
-  checkInputs = [ unittestCheckHook ];
+  build-system = [ setuptools ];
 
-  unittestFlagsArray = [ "-s" "pytz/tests" ];
+  nativeCheckInputs = [ unittestCheckHook ];
+
+  unittestFlagsArray = [
+    "-s"
+    "pytz/tests"
+  ];
 
   pythonImportsCheck = [ "pytz" ];
 
   meta = with lib; {
+    changelog = "https://launchpad.net/pytz/+announcements";
     description = "World timezone definitions, modern and historical";
     homepage = "https://pythonhosted.org/pytz";
     license = licenses.mit;

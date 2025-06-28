@@ -1,25 +1,31 @@
-{ lib, stdenv
-, build2
-, fetchurl
-, git
-, libbpkg
-, libbutl
-, libodb
-, libodb-sqlite
-, openssl
-, enableShared ? !stdenv.hostPlatform.isStatic
-, enableStatic ? !enableShared
+{
+  lib,
+  stdenv,
+  build2,
+  fetchurl,
+  git,
+  libbpkg,
+  libbutl,
+  libodb,
+  libodb-sqlite,
+  openssl,
+  enableShared ? !stdenv.hostPlatform.isStatic,
+  enableStatic ? !enableShared,
 }:
 
 stdenv.mkDerivation rec {
   pname = "bpkg";
-  version = "0.15.0";
+  version = "0.17.0";
 
-  outputs = [ "out" "doc" "man" ];
+  outputs = [
+    "out"
+    "doc"
+    "man"
+  ];
 
   src = fetchurl {
     url = "https://pkg.cppget.org/1/alpha/build2/bpkg-${version}.tar.gz";
-    sha256 = "sha256-3F4Pv8YX++cNa6aKhPM67mrt/5oE1IeoZUSmljHqBfI=";
+    hash = "sha256-Yw6wvTqO+VfCo91B2BUT0A8OIN0MVhGK1USYM7hgGMs=";
   };
 
   strictDeps = true;
@@ -33,12 +39,12 @@ stdenv.mkDerivation rec {
     libodb
     libodb-sqlite
   ];
-  checkInputs = [
+  nativeCheckInputs = [
     git
     openssl
   ];
 
-  doCheck = !stdenv.isDarwin; # tests hang
+  doCheck = !stdenv.hostPlatform.isDarwin; # tests hang
 
   # Failing test
   postPatch = ''
@@ -49,12 +55,13 @@ stdenv.mkDerivation rec {
     "config.bin.lib=${build2.configSharedStatic enableShared enableStatic}"
   ];
 
-  postInstall = lib.optionalString stdenv.isDarwin ''
+  postInstall = lib.optionalString stdenv.hostPlatform.isDarwin ''
     install_name_tool -add_rpath '${lib.getLib build2}/lib' "''${!outputBin}/bin/bpkg"
   '';
 
   meta = with lib; {
     description = "build2 package dependency manager";
+    mainProgram = "bpkg";
     # https://build2.org/bpkg/doc/bpkg.xhtml
     longDescription = ''
       The build2 package dependency manager is used to manipulate build

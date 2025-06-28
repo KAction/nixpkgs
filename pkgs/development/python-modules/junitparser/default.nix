@@ -1,31 +1,35 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, future
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  glibcLocales,
+  lxml,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "junitparser";
-  version = "1.4.1";
+  version = "3.2.0";
+  format = "setuptools";
 
   src = fetchFromGitHub {
-    owner = "gastlygem";
-    repo = pname;
+    owner = "weiwei";
+    repo = "junitparser";
     rev = version;
-    sha256 = "16xwayr0rbp7xdg7bzmyf8s7al0dhkbmkcnil66ax7r8bznp5lmp";
+    hash = "sha256-efP9t5eto6bcjk33wpJmunLlPH7wUwAa6/OjjYG/fgM=";
   };
 
-  propagatedBuildInputs = [ future ];
-
-  checkPhase = ''
-    ${python.interpreter} test.py
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+    lxml
+    glibcLocales
+  ];
 
   meta = with lib; {
-    description = "A JUnit/xUnit Result XML Parser";
+    description = "Manipulates JUnit/xUnit Result XML files";
+    mainProgram = "junitparser";
     license = licenses.asl20;
-    homepage = "https://github.com/gastlygem/junitparser";
+    homepage = "https://github.com/weiwei/junitparser";
     maintainers = with maintainers; [ multun ];
   };
 }

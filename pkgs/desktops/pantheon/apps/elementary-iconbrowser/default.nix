@@ -1,37 +1,36 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, meson
-, ninja
-, pkg-config
-, python3
-, vala
-, wrapGAppsHook4
-, elementary-gtk-theme
-, elementary-icon-theme
-, glib
-, granite7
-, gtk4
-, gtksourceview5
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  wrapGAppsHook4,
+  elementary-gtk-theme,
+  elementary-icon-theme,
+  glib,
+  granite7,
+  gtk4,
+  gtksourceview5,
 }:
 
 stdenv.mkDerivation rec {
   pname = "elementary-iconbrowser";
-  version = "2.0.0";
+  version = "8.0.0";
 
   src = fetchFromGitHub {
     owner = "elementary";
     repo = "iconbrowser";
     rev = version;
-    sha256 = "sha256-aXFgL5l9jnOZJJgMOYwiE7W//1sq23CbLEDmhYFJT38=";
+    sha256 = "sha256-T0VCpk3pdq+2gr/UblLu8mRX7TKJrAtyyFk4i+tAVfI=";
   };
 
   nativeBuildInputs = [
     meson
     ninja
     pkg-config
-    python3
     vala
     wrapGAppsHook4
   ];
@@ -44,11 +43,6 @@ stdenv.mkDerivation rec {
     gtksourceview5
   ];
 
-  postPatch = ''
-    chmod +x meson/post_install.py
-    patchShebangs meson/post_install.py
-  '';
-
   preFixup = ''
     gappsWrapperArgs+=(
       # The GTK theme is hardcoded.
@@ -59,9 +53,7 @@ stdenv.mkDerivation rec {
   '';
 
   passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    updateScript = nix-update-script { };
   };
 
   meta = with lib; {
@@ -69,7 +61,7 @@ stdenv.mkDerivation rec {
     description = "Browse and find system icons";
     license = licenses.gpl3Plus;
     platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    teams = [ teams.pantheon ];
     mainProgram = "io.elementary.iconbrowser";
   };
 }

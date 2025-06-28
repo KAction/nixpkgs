@@ -1,50 +1,59 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, ecdsa
-, rsa
-, pycrypto
-, pyasn1
-, pycryptodome
-, cryptography
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  cryptography,
+  ecdsa,
+  fetchFromGitHub,
+  pyasn1,
+  pycrypto,
+  pycryptodome,
+  pytestCheckHook,
+  rsa,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "python-jose";
-  version = "3.3.0";
+  version = "3.5.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "mpdavis";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-6VGC6M5oyGCOiXcYp6mpyhL+JlcYZKIqOQU9Sm/TkKM=";
+    repo = "python-jose";
+    tag = version;
+    hash = "sha256-8DQ0RBQ4ZgEIwcosgX3dzr928cYIQoH0obIOgk0+Ozs=";
   };
 
-  propagatedBuildInputs = [
-    cryptography
+  pythonRelaxDeps = [
+    # https://github.com/mpdavis/python-jose/pull/376
+    "pyasn1"
+  ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     ecdsa
     pyasn1
-    pycrypto
-    pycryptodome
     rsa
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  optional-dependencies = {
+    cryptography = [ cryptography ];
+    pycrypto = [ pycrypto ];
+    pycryptodome = [ pycryptodome ];
+  };
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace '"pytest-runner",' ""
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+  ] ++ lib.flatten (lib.attrValues optional-dependencies);
 
   pythonImportsCheck = [ "jose" ];
 
   meta = with lib; {
+    description = "JOSE implementation in Python";
     homepage = "https://github.com/mpdavis/python-jose";
-    description = "A JOSE implementation in Python";
+    changelog = "https://github.com/mpdavis/python-jose/releases/tag/${src.tag}";
     license = licenses.mit;
-    maintainers = with maintainers; [ jhhuh ];
+    maintainers = [ ];
   };
 }

@@ -1,63 +1,56 @@
-{ lib
-, aiohttp
-, attrs
-, backoff
-, boto3
-, buildPythonPackage
-, fetchFromGitHub
-, poetry-core
-, pyhumps
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, warrant-lite
+{
+  lib,
+  aiohttp,
+  attrs,
+  backoff,
+  boto3,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  pyhumps,
+  pytest-asyncio,
+  pytestCheckHook,
+  pythonOlder,
+  warrant-lite,
 }:
 
 buildPythonPackage rec {
   pname = "pyoverkiz";
-  version = "1.5.6";
-  format = "pyproject";
+  version = "1.18.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.11";
 
   src = fetchFromGitHub {
     owner = "iMicknl";
     repo = "python-overkiz-api";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-8Xzrnt5W3kQf+kHHiAWimyw4uHc3UL9BsZePcAYKHNk=";
+    tag = "v${version}";
+    hash = "sha256-u3dWpXz9Dp7NMUiQ6J26Na03Whq5GtwA5BqLZTOuwgY=";
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'pyhumps = "^3.0.2,!=3.7.3"' 'pyhumps = "^3.0.2"'
-  '';
+  build-system = [ hatchling ];
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
-
-  propagatedBuildInputs = [
-    attrs
+  dependencies = [
     aiohttp
+    attrs
     backoff
-    pyhumps
     boto3
+    pyhumps
     warrant-lite
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-asyncio
     pytestCheckHook
   ];
 
-  pythonImportsCheck = [
-    "pyoverkiz"
-  ];
+  pythonImportsCheck = [ "pyoverkiz" ];
 
   meta = with lib; {
     description = "Module to interact with the Somfy TaHoma API or other OverKiz APIs";
     homepage = "https://github.com/iMicknl/python-overkiz-api";
-    license = with licenses; [ mit ];
+    changelog = "https://github.com/iMicknl/python-overkiz-api/releases/tag/${src.tag}";
+    license = licenses.mit;
     maintainers = with maintainers; [ fab ];
   };
 }

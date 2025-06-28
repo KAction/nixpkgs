@@ -1,32 +1,39 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, cmake
-, cfitsio
-, libusb1
-, zlib
-, boost
-, libev
-, libnova
-, curl
-, libjpeg
-, gsl
-, fftw
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  bash,
+  cmake,
+  cfitsio,
+  libusb1,
+  kmod,
+  zlib,
+  boost,
+  libev,
+  libnova,
+  curl,
+  libjpeg,
+  gsl,
+  fftw,
+  gtest,
+  udevCheckHook,
+  indi-full,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "indilib";
-  version = "1.9.8";
+  version = "2.1.4";
 
   src = fetchFromGitHub {
     owner = "indilib";
     repo = "indi";
-    rev = "v${version}";
-    sha256 = "sha256-+KFuZgM/Bl6Oezq3WXjWCHefc1wvR3wOKXejmT0pw1U=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-ceDuWnIeHTpXyQRXDEQxCDM1pdfz5rEDMyJIcCu6OaM=";
   };
 
   nativeBuildInputs = [
     cmake
+    udevCheckHook
   ];
 
   buildInputs = [
@@ -42,17 +49,49 @@ stdenv.mkDerivation rec {
     fftw
   ];
 
-  cmakeFlags = [
-    "-DCMAKE_INSTALL_LIBDIR=lib"
-    "-DUDEVRULES_INSTALL_DIR=lib/udev/rules.d"
-  ];
+  cmakeFlags =
+    [
+      "-DCMAKE_INSTALL_LIBDIR=lib"
+      "-DUDEVRULES_INSTALL_DIR=lib/udev/rules.d"
+    ]
+    ++ lib.optional finalAttrs.finalPackage.doCheck [
+      "-DINDI_BUILD_UNITTESTS=ON"
+      "-DINDI_BUILD_INTEGTESTS=ON"
+    ];
+
+  checkInputs = [ gtest ];
+
+  doCheck = true;
+  doInstallCheck = true;
+
+  # Socket address collisions between tests
+  enableParallelChecking = false;
+
+  postFixup = lib.optionalString stdenv.hostPlatform.isLinux ''
+    for f in $out/lib/udev/rules.d/*.rules
+    do
+      substituteInPlace $f --replace-quiet "/bin/sh" "${bash}/bin/sh" \
+                           --replace-quiet "/sbin/modprobe" "${kmod}/sbin/modprobe"
+    done
+  '';
+
+  passthru.tests = {
+    # make sure 3rd party drivers compile with this indilib
+    indi-full = indi-full.override {
+      indilib = finalAttrs.finalPackage;
+    };
+  };
 
   meta = with lib; {
     homepage = "https://www.indilib.org/";
     description = "Implementation of the INDI protocol for POSIX operating systems";
-    changelog = "https://github.com/indilib/indi/releases/tag/v${version}";
+    changelog = "https://github.com/indilib/indi/releases/tag/v${finalAttrs.version}";
     license = licenses.lgpl2Plus;
-    maintainers = with maintainers; [ hjones2199 ];
-    platforms = platforms.linux;
+    maintainers = with maintainers; [
+      hjones2199
+      sheepforce
+      returntoreality
+    ];
+    platforms = platforms.unix;
   };
-}
+})

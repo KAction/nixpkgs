@@ -1,24 +1,49 @@
-{ lib, buildPythonPackage, fetchPypi, numpy, future }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+
+  # dependencies
+  numpy,
+
+  # tests
+  pytest-cov,
+  pytest-xdist,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "autograd";
-  version = "1.5";
+  version = "1.8.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-2AvSJRVNHbE8tOrM96GMNYvnIJJkG2hxf5b88dFqzQs=";
+  src = fetchFromGitHub {
+    owner = "HIPS";
+    repo = "autograd";
+    tag = "v${version}";
+    hash = "sha256-k4rcalwznKS2QvmyTLra+ciWFifnILW/DDdB8D+clxQ=";
   };
 
-  propagatedBuildInputs = [ numpy future ];
+  build-system = [ hatchling ];
 
-  # Currently, the PyPI tarball doesn't contain the tests. When that has been
-  # fixed, enable testing. See: https://github.com/HIPS/autograd/issues/404
-  doCheck = false;
+  dependencies = [ numpy ];
 
-  meta = with lib; {
-    homepage = "https://github.com/HIPS/autograd";
+  nativeCheckInputs = [
+    pytest-cov
+    pytest-xdist
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "autograd" ];
+
+  meta = {
     description = "Compute derivatives of NumPy code efficiently";
-    license = licenses.mit;
-    maintainers = with maintainers; [ jluttine ];
+    homepage = "https://github.com/HIPS/autograd";
+    changelog = "https://github.com/HIPS/autograd/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ jluttine ];
   };
 }

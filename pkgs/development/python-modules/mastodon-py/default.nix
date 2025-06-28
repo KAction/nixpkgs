@@ -1,58 +1,71 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, blurhash
-, cryptography
-, decorator
-, http-ece
-, python-dateutil
-, python-magic
-, pytz
-, requests
-, six
-, pytestCheckHook
-, pytest-mock
-, pytest-vcr
-, requests-mock
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  blurhash,
+  cryptography,
+  decorator,
+  http-ece,
+  python-dateutil,
+  python-magic,
+  requests,
+  pytestCheckHook,
+  pytest-cov-stub,
+  pytest-mock,
+  pytest-vcr,
+  requests-mock,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "mastodon-py";
-  version = "1.5.1";
+  version = "2.0.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "halcy";
     repo = "Mastodon.py";
-    rev = version;
-    sha256 = "044iqydw69a6xpz2hdjv1fc6a9b7bqdpnh3b33xqbks9d2415ddm";
+    tag = "v${version}";
+    hash = "sha256-Sqvn7IIzkGnIjMGek1QS4pLXI+LoKykJsVnr/X1QH7U=";
   };
 
-  postPatch = ''
-    sed -i '/^addopts/d' setup.cfg
-  '';
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     blurhash
-    cryptography
     decorator
-    http-ece
     python-dateutil
     python-magic
-    pytz
     requests
-    six
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    blurhash = [ blurhash ];
+    webpush = [
+      http-ece
+      cryptography
+    ];
+  };
+
+  nativeCheckInputs = [
     pytestCheckHook
+    pytest-cov-stub
     pytest-mock
     pytest-vcr
     requests-mock
+  ] ++ lib.flatten (builtins.attrValues optional-dependencies);
+
+  disabledTests = [
+    "test_notifications_dismiss_pre_2_9_2"
+    "test_status_card_pre_2_9_2"
+    "test_stream_user_direct"
+    "test_stream_user_local"
   ];
 
   pythonImportsCheck = [ "mastodon" ];
 
   meta = with lib; {
+    changelog = "https://github.com/halcy/Mastodon.py/blob/${src.tag}/CHANGELOG.rst";
     description = "Python wrapper for the Mastodon API";
     homepage = "https://github.com/halcy/Mastodon.py";
     license = licenses.mit;

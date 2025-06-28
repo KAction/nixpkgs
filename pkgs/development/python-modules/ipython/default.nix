@@ -1,102 +1,110 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, fetchpatch
-, pythonOlder
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  pythonAtLeast,
+  pythonOlder,
 
-# Build dependencies
-, setuptools
+  # Build dependencies
+  setuptools,
 
-# Runtime dependencies
-, appnope
-, backcall
-, decorator
-, jedi
-, matplotlib-inline
-, pexpect
-, pickleshare
-, prompt-toolkit
-, pygments
-, stack-data
-, traitlets
+  # Runtime dependencies
+  decorator,
+  ipython-pygments-lexers,
+  jedi,
+  matplotlib-inline,
+  pexpect,
+  prompt-toolkit,
+  pygments,
+  stack-data,
+  traitlets,
+  typing-extensions,
 
-# Test dependencies
-, pytestCheckHook
-, testpath
+  # Optional dependencies
+  matplotlib,
+
+  # Reverse dependency
+  sage,
+
+  # Test dependencies
+  pickleshare,
+  pytest-asyncio,
+  pytestCheckHook,
+  testpath,
 }:
 
 buildPythonPackage rec {
   pname = "ipython";
-  version = "8.4.0";
-  format = "pyproject";
-  disabled = pythonOlder "3.8";
+  version = "9.2.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "f2db3a10254241d9b447232cec8b424847f338d9d36f9a577a6192c332a46abd";
+    hash = "sha256-Yqk3PbwS8o+f6vRwDQUhlb+JgGJ5/IyhHz9UAX0EdRs=";
   };
 
-  patches = [
-    (fetchpatch {
-      # The original URL might not be very stable, so let's prefer a copy.
-      urls = [
-        "https://raw.githubusercontent.com/bmwiedemann/openSUSE/9b35e4405a44aa737dda623a7dabe5384172744c/packages/p/python-ipython/ipython-pr13714-xxlimited.patch"
-        "https://github.com/ipython/ipython/pull/13714.diff"
-      ];
-      sha256 = "XPOcBo3p8mzMnP0iydns9hX8qCQXTmRgRD0TM+FESCI=";
-    })
-  ];
+  build-system = [ setuptools ];
 
-  nativeBuildInputs = [
-    setuptools
-  ];
-
-  propagatedBuildInputs = [
-    backcall
+  dependencies = [
     decorator
+    ipython-pygments-lexers
     jedi
     matplotlib-inline
     pexpect
-    pickleshare
     prompt-toolkit
     pygments
     stack-data
     traitlets
-  ] ++ lib.optionals stdenv.isDarwin [
-    appnope
-  ];
+  ] ++ lib.optionals (pythonOlder "3.12") [ typing-extensions ];
 
-  pythonImportsCheck = [
-    "IPython"
-  ];
+  optional-dependencies = {
+    matplotlib = [ matplotlib ];
+  };
+
+  pythonImportsCheck = [ "IPython" ];
 
   preCheck = ''
     export HOME=$TMPDIR
 
     # doctests try to fetch an image from the internet
-    substituteInPlace pytest.ini \
-      --replace "--ipdoctest-modules" "--ipdoctest-modules --ignore=IPython/core/display.py"
+    substituteInPlace pyproject.toml \
+      --replace-fail '"--ipdoctest-modules",' '"--ipdoctest-modules", "--ignore=IPython/core/display.py",'
   '';
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pickleshare
+    pytest-asyncio
     pytestCheckHook
     testpath
   ];
 
-  disabledTests = [
-    # UnboundLocalError: local variable 'child' referenced before assignment
-    "test_system_interrupt"
-  ] ++ lib.optionals (stdenv.isDarwin) [
-    # FileNotFoundError: [Errno 2] No such file or directory: 'pbpaste'
-    "test_clipboard_get"
-  ];
+  disabledTests =
+    [
+      # UnboundLocalError: local variable 'child' referenced before assignment
+      "test_system_interrupt"
+    ]
+    ++ lib.optionals (pythonAtLeast "3.13") [
+      # AttributeError: 'Pdb' object has no attribute 'curframe'. Did you mean: 'botframe'?
+      "test_run_debug_twice"
+      "test_run_debug_twice_with_breakpoint"
+    ]
+    ++ lib.optionals (stdenv.hostPlatform.isDarwin) [
+      # FileNotFoundError: [Errno 2] No such file or directory: 'pbpaste'
+      "test_clipboard_get"
+    ];
 
-  meta = with lib; {
+  passthru.tests = {
+    inherit sage;
+  };
+
+  meta = {
     description = "IPython: Productive Interactive Computing";
-    homepage = "https://ipython.org/";
+    downloadPage = "https://github.com/ipython/ipython/";
+    homepage = "https://ipython.readthedocs.io/en/stable/";
     changelog = "https://github.com/ipython/ipython/blob/${version}/docs/source/whatsnew/version${lib.versions.major version}.rst";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ bjornfor fridh ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ bjornfor ];
+    teams = [ lib.teams.jupyter ];
   };
 }

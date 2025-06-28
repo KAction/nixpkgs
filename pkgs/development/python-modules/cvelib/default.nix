@@ -1,32 +1,57 @@
-{ buildPythonPackage
-, fetchFromGitHub
-, requests
-, click
-, lib
+{
+  lib,
+  buildPythonPackage,
+  click,
+  cve,
+  fetchFromGitHub,
+  jsonschema,
+  pytestCheckHook,
+  pythonOlder,
+  requests,
+  setuptools,
+  testers,
 }:
 
 buildPythonPackage rec {
   pname = "cvelib";
-  version = "1.0.0";
+  version = "1.7.1";
+  pyproject = true;
+
+  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "RedHatProductSecurity";
     repo = "cvelib";
-    rev = "tags/${version}";
-    sha256 = "sha256-KUj9Cnvl7r8NMmZvVj5CB0uZvLNK5aHcLc+NzxFrv0I=";
+    tag = version;
+    hash = "sha256-AhA+2lEI/hsbIVCfSWO0vI6eWkObjsq5xYOSqVvUPkU=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = "v${version}";
-  propagatedBuildInputs = [ requests click ];
+  postPatch = ''
+    # collective.checkdocs is unmaintained for over 10 years
+    substituteInPlace pyproject.toml \
+      --replace-fail '"collective.checkdocs",' ""
+  '';
 
-  pythonImportsCheck = [
-    "cvelib"
+  build-system = [ setuptools ];
+
+  dependencies = [
+    click
+    jsonschema
+    requests
   ];
 
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "cvelib" ];
+
+  passthru.tests.version = testers.testVersion { package = cve; };
+
   meta = with lib; {
-    description = "A library and a command line interface for the CVE Services API";
+    description = "Library and a command line interface for the CVE Services API";
     homepage = "https://github.com/RedHatProductSecurity/cvelib";
+    changelog = "https://github.com/RedHatProductSecurity/cvelib/blob/${version}/CHANGELOG.md";
     license = licenses.mit;
     maintainers = with maintainers; [ raboof ];
+    mainProgram = "cve";
   };
 }

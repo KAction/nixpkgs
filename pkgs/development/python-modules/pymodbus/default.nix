@@ -1,53 +1,74 @@
-{ lib
-, aiohttp
-, asynctest
-, buildPythonPackage
-, click
-, fetchFromGitHub
-, mock
-, prompt-toolkit
-, pygments
-, pyserial
-, pyserial-asyncio
-, pytestCheckHook
-, redis
-, sqlalchemy
-, tornado
-, twisted
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  click,
+  fetchFromGitHub,
+  prompt-toolkit,
+  pygments,
+  pymodbus-repl,
+  pyserial,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytest-xdist,
+  pytestCheckHook,
+  redis,
+  setuptools,
+  sqlalchemy,
+  twisted,
+  typer,
 }:
 
 buildPythonPackage rec {
   pname = "pymodbus";
-  version = "2.5.3";
+  version = "3.9.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "riptideio";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-pf1TU/imBqNVYdG4XX8fnma8O8kQHuOHu6DT3E/PUk4=";
+    owner = "pymodbus-dev";
+    repo = "pymodbus";
+    tag = "v${version}";
+    hash = "sha256-nzaIE8ZBIwo6ZChYBzQzMndCM/hOwCVKepkUACn8e80=";
   };
 
-  # Twisted asynchronous version is not supported due to a missing dependency
-  propagatedBuildInputs = [
-    aiohttp
-    click
-    prompt-toolkit
-    pygments
-    pyserial
-    pyserial-asyncio
-    tornado
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    asynctest
-    mock
+  optional-dependencies = {
+    repl = [ pymodbus-repl ];
+    serial = [ pyserial ];
+    simulator = [ aiohttp ];
+  };
+
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytest-cov-stub
+    pytest-xdist
     pytestCheckHook
     redis
     sqlalchemy
     twisted
-  ];
+  ] ++ lib.flatten (builtins.attrValues optional-dependencies);
+
+  preCheck = ''
+    pushd test
+  '';
+
+  postCheck = ''
+    popd
+  '';
 
   pythonImportsCheck = [ "pymodbus" ];
+
+  disabledTests =
+    [
+      # Tests often hang
+      "test_connected"
+    ]
+    ++ lib.optionals (lib.versionAtLeast aiohttp.version "3.9.0") [
+      "test_split_serial_packet"
+      "test_serial_poll"
+      "test_simulator"
+    ];
 
   meta = with lib; {
     description = "Python implementation of the Modbus protocol";
@@ -57,8 +78,10 @@ buildPythonPackage rec {
       also be used without any third party dependencies if a more
       lightweight project is needed.
     '';
-    homepage = "https://github.com/riptideio/pymodbus";
+    homepage = "https://github.com/pymodbus-dev/pymodbus";
+    changelog = "https://github.com/pymodbus-dev/pymodbus/releases/tag/v${version}";
     license = with licenses; [ bsd3 ];
     maintainers = with maintainers; [ fab ];
+    mainProgram = "pymodbus.simulator";
   };
 }

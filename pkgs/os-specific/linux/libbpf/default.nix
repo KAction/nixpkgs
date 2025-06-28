@@ -1,31 +1,45 @@
-{ fetchFromGitHub
-, elfutils
-, pkg-config
-, stdenv
-, zlib
-, lib
-, nixosTests
+{
+  fetchFromGitHub,
+  elfutils,
+  pkg-config,
+  stdenv,
+  zlib,
+  lib,
+
+  # for passthru.tests
+  knot-dns,
+  nixosTests,
+  systemd,
+  tracee,
 }:
 
 stdenv.mkDerivation rec {
   pname = "libbpf";
-  version = "1.0.1";
+  version = "1.5.1";
 
   src = fetchFromGitHub {
     owner = "libbpf";
     repo = "libbpf";
     rev = "v${version}";
-    sha256 = "sha256-2rzVah+CxCztKnlEWMIQrUS2JJTLiWscfIA1aOBtIzs=";
+    hash = "sha256-bTT7ehTHVaqkT27hJrH2YQBrVU6uo2gkgHE1AJtDKKY=";
   };
 
   nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ elfutils zlib ];
+  buildInputs = [
+    elfutils
+    zlib
+  ];
 
   enableParallelBuilding = true;
-  makeFlags = [ "PREFIX=$(out)" "-C src" ];
+  makeFlags = [
+    "PREFIX=$(out)"
+    "-C src"
+  ];
 
   passthru.tests = {
+    inherit knot-dns tracee;
     bpf = nixosTests.bpf;
+    systemd = systemd.override { withLibBPF = true; };
   };
 
   postInstall = ''
@@ -40,10 +54,18 @@ stdenv.mkDerivation rec {
   # outputs = [ "out" "dev" ];
 
   meta = with lib; {
-    description = "Upstream mirror of libbpf";
+    description = "Library for loading eBPF programs and reading and manipulating eBPF objects from user-space";
     homepage = "https://github.com/libbpf/libbpf";
-    license = with licenses; [ lgpl21 /* or */ bsd2 ];
-    maintainers = with maintainers; [ thoughtpolice vcunat saschagrunert martinetd ];
+    license = with licenses; [
+      lgpl21 # or
+      bsd2
+    ];
+    maintainers = with maintainers; [
+      thoughtpolice
+      vcunat
+      saschagrunert
+      martinetd
+    ];
     platforms = platforms.linux;
   };
 }

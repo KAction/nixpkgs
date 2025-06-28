@@ -1,30 +1,50 @@
-{ lib, fetchFromGitHub, buildDunePackage, ocaml
-, dune-configurator
-, either, seq
-, gen, iter, qcheck-core, uutf, yojson
+{
+  lib,
+  fetchFromGitHub,
+  buildDunePackage,
+  ocaml,
+  dune-configurator,
+  either,
+  seq,
+  gen,
+  iter,
+  qcheck-core,
+  uutf,
+  yojson,
 }:
 
 buildDunePackage rec {
-  version = "3.9";
+  version = "3.16";
   pname = "containers";
+
+  minimalOCamlVersion = "4.08";
 
   src = fetchFromGitHub {
     owner = "c-cube";
     repo = "ocaml-containers";
     rev = "v${version}";
-    sha256 = "sha256-uQyKBSXgf3kGx5HvS2VQrrkh0WqNZfxr5j8tTRjeTX4=";
+    hash = "sha256-WaHAZRLjaEJUba/I2r3Yof/iUqA3PFUuVbzm88izG1k=";
   };
 
   buildInputs = [ dune-configurator ];
-  propagatedBuildInputs = [ either seq ];
+  propagatedBuildInputs = [
+    either
+    seq
+  ];
 
-  checkInputs = [ gen iter qcheck-core uutf yojson ];
+  checkInputs = [
+    gen
+    iter
+    qcheck-core
+    uutf
+    yojson
+  ];
 
   doCheck = lib.versionAtLeast ocaml.version "4.08";
 
   meta = {
     homepage = "https://github.com/c-cube/ocaml-containers";
-    description = "A modular standard library focused on data structures";
+    description = "Modular standard library focused on data structures";
     longDescription = ''
       Containers is a standard library (BSD license) focused on data structures,
       combinators and iterators, without dependencies on unix. Every module is

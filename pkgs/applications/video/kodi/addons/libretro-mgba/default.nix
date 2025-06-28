@@ -1,15 +1,21 @@
-{ lib, rel, buildKodiBinaryAddon, fetchFromGitHub, libretro, mgba }:
+{
+  lib,
+  buildKodiBinaryAddon,
+  fetchFromGitHub,
+  libretro,
+  mgba,
+}:
 
 buildKodiBinaryAddon rec {
   pname = "kodi-libretro-mgba";
   namespace = "game.libretro.mgba";
-  version = "0.9.2.31";
+  version = "0.10.0.35";
 
   src = fetchFromGitHub {
     owner = "kodi-game";
     repo = "game.libretro.mgba";
-    rev = "${version}-${rel}";
-    sha256 = "sha256-eZLuNhLwMTtzpLGkymc9cLC83FQJWZ2ZT0iyz4sY4EA=";
+    rev = "${version}-Matrix";
+    sha256 = "sha256-lxpj6Y34apYcE22q4W3Anhigp79r4RgiJ36DbES1kzU=";
   };
 
   extraCMakeFlags = [
@@ -26,6 +32,6 @@ buildKodiBinaryAddon rec {
     description = "mGBA for Kodi";
     platforms = platforms.all;
     license = licenses.gpl2Only;
-    maintainers = teams.kodi.members;
+    teams = [ teams.kodi ];
   };
 }

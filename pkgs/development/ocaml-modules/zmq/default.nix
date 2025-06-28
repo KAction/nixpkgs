@@ -1,23 +1,28 @@
-{ lib, fetchurl, buildDunePackage, dune-configurator, czmq, stdint }:
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+  dune-configurator,
+  czmq,
+}:
 
 buildDunePackage rec {
   pname = "zmq";
-  version = "5.1.5";
-
-  duneVersion = "3";
+  version = "5.3.0";
 
   src = fetchurl {
-    url = "https://github.com/issuu/ocaml-zmq/releases/download/${version}/zmq-lwt-${version}.tbz";
-    sha256 = "sha256-mUfRPatLPFeSzWDwCIoFaVl85VkvDch4i6pOn3Kme1Y=";
+    url = "https://github.com/issuu/ocaml-zmq/releases/download/${version}/zmq-${version}.tbz";
+    hash = "sha256-tetCmVg27/WHZ+HMwKZVHCrHTzWAlKwkAjNDibB1+6g=";
   };
 
-  buildInputs = [ czmq dune-configurator ];
-
-  propagatedBuildInputs = [ stdint ];
+  buildInputs = [
+    czmq
+    dune-configurator
+  ];
 
   meta = {
     description = "ZeroMQ bindings for OCaml";
-    license     = lib.licenses.mit;
+    license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ akavel ];
     homepage = "https://engineering.issuu.com/ocaml-zmq/";
   };

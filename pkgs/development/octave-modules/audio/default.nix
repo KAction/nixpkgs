@@ -1,19 +1,20 @@
-{ buildOctavePackage
-, lib
-, fetchurl
-, jack2
-, alsa-lib
-, rtmidi
-, pkg-config
+{
+  buildOctavePackage,
+  lib,
+  fetchurl,
+  jack2,
+  alsa-lib,
+  rtmidi,
+  pkg-config,
 }:
 
 buildOctavePackage rec {
   pname = "audio";
-  version = "2.0.3";
+  version = "2.0.5";
 
   src = fetchurl {
     url = "mirror://sourceforge/octave/${pname}-${version}.tar.gz";
-    sha256 = "1431pf7mhxsrnzrx8r3hsy537kha7jhaligmp2rghwyxhq25hs0r";
+    sha256 = "sha256-/4akeeOQnvTlk9ah+e8RJfwJG2Eq2HAGOCejhiIUjF4=";
   };
 
   nativeBuildInputs = [
@@ -26,11 +27,11 @@ buildOctavePackage rec {
     rtmidi
   ];
 
-  meta = with lib; {
-    homepage = "https://octave.sourceforge.io/audio/index.html";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ KarlJoad ];
+  meta = {
+    homepage = "https://gnu-octave.github.io/packages/audio/";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ KarlJoad ];
     description = "Audio and MIDI Toolbox for GNU Octave";
-    platforms = platforms.linux; # Because of run-time dependency on jack2 and alsa-lib
+    platforms = lib.platforms.linux; # Because of run-time dependency on jack2 and alsa-lib
   };
 }

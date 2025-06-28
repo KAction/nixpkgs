@@ -1,9 +1,14 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+}:
 
 buildPythonPackage rec {
   pname = "shippai";
   # Please make sure that vdirsyncer still builds if you update this package.
   version = "0.3.2";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
@@ -14,6 +19,6 @@ buildPythonPackage rec {
     description = "Use Rust failures as Python exceptions";
     homepage = "https://github.com/untitaker/shippai";
     license = licenses.mit;
-    maintainers = with maintainers; [ gebner ];
+    maintainers = with maintainers; [ ];
   };
 }

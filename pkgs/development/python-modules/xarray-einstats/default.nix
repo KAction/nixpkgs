@@ -1,53 +1,51 @@
-{ lib
-, buildPythonPackage
-, einops
-, fetchFromGitHub
-, flit-core
-, numba
-, numpy
-, pandas
-, pytestCheckHook
-, pythonOlder
-, scipy
-, xarray
+{
+  lib,
+  buildPythonPackage,
+  einops,
+  fetchFromGitHub,
+  flit-core,
+  numba,
+  numpy,
+  pytestCheckHook,
+  pythonOlder,
+  scipy,
+  xarray,
 }:
 
 buildPythonPackage rec {
   pname = "xarray-einstats";
-  version = "0.3.0";
-  format = "pyproject";
+  version = "0.9.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.10";
 
   src = fetchFromGitHub {
     owner = "arviz-devs";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    hash = "sha256-N8ievasPaqusx51FCxcl1FGIjXooyBsRqsuRU73puRM=";
+    repo = "xarray-einstats";
+    tag = "v${version}";
+    hash = "sha256-CgyMc2Yvut+1LfH9F2FAd62HuLu+58Xr50txbWj4mYU=";
   };
 
-  nativeBuildInputs = [
-    flit-core
-  ];
+  build-system = [ flit-core ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     numpy
     scipy
     xarray
   ];
 
-  checkInputs = [
-    einops
-    numba
-    pytestCheckHook
-  ];
+  optional-dependencies = {
+    einops = [ einops ];
+    numba = [ numba ];
+  };
 
-  pythonImportsCheck = [
-    "xarray_einstats"
-  ];
+  nativeCheckInputs = [ pytestCheckHook ] ++ lib.flatten (builtins.attrValues optional-dependencies);
 
-  pytestFlagsArray = [
-    "src/xarray_einstats/tests/"
+  pythonImportsCheck = [ "xarray_einstats" ];
+
+  disabledTests = [
+    # TypeError
+    "test_pinv"
   ];
 
   meta = with lib; {

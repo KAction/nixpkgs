@@ -1,37 +1,44 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pyjwt
-, pytestCheckHook
-, python-dateutil
-, pythonOlder
-, requests
-, responses
-, tox
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pyjwt,
+  pytestCheckHook,
+  python-dateutil,
+  pythonAtLeast,
+  pythonOlder,
+  requests,
+  responses,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "ibm-cloud-sdk-core";
-  version = "3.16.0";
-  format = "setuptools";
+  version = "3.22.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.9";
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-MfWZGWbU0k586EYY0uhHHo2LuhQSmCfgs9Lz50Ds5Hc=";
+  src = fetchFromGitHub {
+    owner = "IBM";
+    repo = "python-sdk-core";
+    tag = "v${version}";
+    hash = "sha256-wXffw+/esHvWxrNdlnYLTPflgOaRyIdf0hxI4M12Xdc=";
   };
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [ "requests" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     pyjwt
     python-dateutil
     requests
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     responses
-    tox
   ];
 
   disabledTests = [
@@ -47,17 +54,19 @@ buildPythonPackage rec {
     "test_iam"
     "test_read_external_sources_2"
     "test_retry_config_external"
-    # assertion error due to requests brotli support
-    "test_http_client"
+    # Tests require network access
+    "test_tls_v1_2"
   ];
 
   disabledTestPaths = [
-    "test/test_container_token_manager.py"
+    # Tests require credentials
+    "test_integration/"
   ];
 
   meta = with lib; {
     description = "Client library for the IBM Cloud services";
     homepage = "https://github.com/IBM/python-sdk-core";
+    changelog = "https://github.com/IBM/python-sdk-core/blob/v${version}/CHANGELOG.md";
     license = licenses.asl20;
     maintainers = with maintainers; [ globin ];
   };

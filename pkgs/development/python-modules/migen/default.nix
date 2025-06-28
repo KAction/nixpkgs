@@ -1,32 +1,39 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, colorama
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  colorama,
+  pytestCheckHook,
+  unstableGitUpdater,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "migen";
-  version = "unstable-2021-09-14";
-  disabled = pythonOlder "3.3";
+  version = "0.9.2-unstable-2025-06-10";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "m-labs";
     repo = "migen";
-    rev = "a5bc262560238f93ceaad423820eb06843326274";
-    sha256 = "32UjaIam/B7Gx6XbPcR067LcXfokJH2mATG9mU38a6o=";
+    rev = "6e3a9e150fb006dabc4b55043d3af18dbfecd7e8";
+    hash = "sha256-NshlPiORBHWljSUP5bB7YBxe7k8dW0t8UXOsIq2EK8I=";
   };
 
-  propagatedBuildInputs = [
-    colorama
-  ];
+  nativeBuildInputs = [ setuptools ];
+
+  propagatedBuildInputs = [ colorama ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "migen" ];
 
-  meta = with lib; {
+  passthru.updateScript = unstableGitUpdater { };
+
+  meta = {
     description = " A Python toolbox for building complex digital hardware";
     homepage = "https://m-labs.hk/migen";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ l-as ];
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ l-as ];
   };
 }

@@ -1,27 +1,29 @@
-{ lib
-, requests
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, requests-mock
+{
+  lib,
+  requests,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  pythonOlder,
+  requests-mock,
 }:
 
 buildPythonPackage rec {
   pname = "simplehound";
   version = "0.6";
+  format = "setuptools";
   disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "robmarkcole";
-    repo = pname;
+    repo = "simplehound";
     rev = "v${version}";
     sha256 = "1b5m3xjmk0l6ynf0yvarplsfsslgklalfcib7sikxg3v5hiv9qwh";
   };
 
   propagatedBuildInputs = [ requests ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     requests-mock
     pytestCheckHook
   ];

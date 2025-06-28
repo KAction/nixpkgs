@@ -1,38 +1,41 @@
-{ lib
-, buildPythonPackage
-, dataclasses
-, fetchPypi
-, jedi
-, pygments
-, urwid
-, urwid-readline
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  hatchling,
+  fetchPypi,
+  jedi,
+  packaging,
+  pygments,
+  urwid,
+  urwid-readline,
+  pytest-mock,
+  pytestCheckHook,
+  pythonOlder,
 }:
 
 buildPythonPackage rec {
   pname = "pudb";
-  version = "2022.1.2";
-  format = "setuptools";
+  version = "2024.1.3";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-a4OrgFvdtTcQEJaQoiN+mL+DwLOgADPFF8319qj6Rw0=";
+    hash = "sha256-Jk8jngU45S6D09AgFDEAsxccrhcidnS7G5+LB180hJw=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ hatchling ];
+
+  dependencies = [
     jedi
+    packaging
     pygments
     urwid
     urwid-readline
-  ] ++ lib.optionals (pythonOlder "3.7") [
-    dataclasses
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-mock
     pytestCheckHook
   ];
@@ -41,14 +44,14 @@ buildPythonPackage rec {
     export HOME=$TMPDIR
   '';
 
-  pythonImportsCheck = [
-    "pudb"
-  ];
+  pythonImportsCheck = [ "pudb" ];
 
   meta = with lib; {
-    description = "A full-screen, console-based Python debugger";
+    description = "Full-screen, console-based Python debugger";
+    mainProgram = "pudb";
     homepage = "https://github.com/inducer/pudb";
+    changelog = "https://github.com/inducer/pudb/releases/tag/v${version}";
     license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    maintainers = [ ];
   };
 }

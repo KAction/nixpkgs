@@ -1,5 +1,10 @@
-{ buildDunePackage, fetchurl, lib
-, zarith, digestif, fmt
+{
+  buildDunePackage,
+  fetchurl,
+  lib,
+  zarith,
+  digestif,
+  fmt,
 }:
 
 buildDunePackage rec {
@@ -12,9 +17,12 @@ buildDunePackage rec {
   };
 
   minimalOCamlVersion = "4.08";
+  duneVersion = "3";
 
   propagatedBuildInputs = [
-    zarith digestif fmt
+    zarith
+    digestif
+    fmt
   ];
 
   meta = with lib; {

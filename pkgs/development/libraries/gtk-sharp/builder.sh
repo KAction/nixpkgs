@@ -1,5 +1,3 @@
-source $stdenv/setup
-
 genericBuild
 
 # !!! hack

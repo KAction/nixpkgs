@@ -1,40 +1,44 @@
-{ lib
-, buildPythonPackage
-, cachelib
-, cryptography
-, fetchFromGitHub
-, flask
-, flask-sqlalchemy
-, httpx
-, mock
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, requests
-, starlette
-, werkzeug
+{
+  lib,
+  buildPythonPackage,
+  cacert,
+  cachelib,
+  cryptography,
+  fetchFromGitHub,
+  flask,
+  flask-sqlalchemy,
+  httpx,
+  mock,
+  pytest-asyncio,
+  pytestCheckHook,
+  pythonOlder,
+  requests,
+  setuptools,
+  starlette,
+  werkzeug,
 }:
 
 buildPythonPackage rec {
   pname = "authlib";
-  version = "1.1.0";
-  format = "setuptools";
+  version = "1.6.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "lepture";
     repo = "authlib";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-UTsQRAgmYu4BwT0WWE6XOjTYyGWZIt8bMH9qJ8KLOWA=";
+    tag = "v${version}";
+    hash = "sha256-USZc+IKcg0+aEG2ISx29jTwm8BBuzNqFoZLBpZ7K2DU=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     cryptography
-    requests
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     cachelib
     flask
     flask-sqlalchemy
@@ -42,13 +46,13 @@ buildPythonPackage rec {
     mock
     pytest-asyncio
     pytestCheckHook
+    requests
     starlette
     werkzeug
   ];
 
-  pythonImportsCheck = [
-    "authlib"
-  ];
+  pythonImportsCheck = [ "authlib" ];
+
   disabledTestPaths = [
     # Django tests require a running instance
     "tests/django/"
@@ -60,6 +64,7 @@ buildPythonPackage rec {
   meta = with lib; {
     description = "Library for building OAuth and OpenID Connect servers";
     homepage = "https://github.com/lepture/authlib";
+    changelog = "https://github.com/lepture/authlib/blob/${src.tag}/docs/changelog.rst";
     license = licenses.bsd3;
     maintainers = with maintainers; [ flokli ];
   };

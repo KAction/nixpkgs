@@ -1,74 +1,75 @@
-{ lib
-, stdenv
-, anyio
-, buildPythonPackage
-, fetchFromGitHub
-, rustPlatform
-, setuptools-rust
-, pythonOlder
-, dirty-equals
-, pytest-mock
-, pytest-timeout
-, pytestCheckHook
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  rustPlatform,
+  anyio,
+
+  # tests
+  dirty-equals,
+  pytest-mock,
+  pytest-timeout,
+  pytestCheckHook,
+  versionCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "watchfiles";
-  version = "0.18.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "1.0.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "samuelcolvin";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    hash = "sha256-biGGn0YAUbSO1hCJ4kU0ZWlqlXl/HRrBS3iIA3myRI8=";
+    repo = "watchfiles";
+    tag = "v${version}";
+    hash = "sha256-a6SHqYRNMGXNkVvwj9RpLj449dAQtWXO44v1ko5suaw=";
   };
 
-  cargoDeps = rustPlatform.fetchCargoTarball {
-    inherit src;
-    name = "${pname}-${version}";
-    hash = "sha256-nmkIKA4EDMOeppOxKwLSh3oREInlDIcFzE7/EYZRGKY=";
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit pname src version;
+    hash = "sha256-2RMWxeOjitbEqer9+ETpMX9WxHEiPzVmEv7LpSiaRVg=";
   };
 
   nativeBuildInputs = [
-  ] ++ (with rustPlatform; [
-    cargoSetupHook
-    maturinBuildHook
-    rust.cargo
-    rust.rustc
-  ]);
+    rustPlatform.cargoSetupHook
+    rustPlatform.maturinBuildHook
+  ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     anyio
   ];
 
-  checkInputs = [
+  # Tests need these permissions in order to use the FSEvents API on macOS.
+  sandboxProfile = ''
+    (allow mach-lookup (global-name "com.apple.FSEvents"))
+  '';
+
+  nativeCheckInputs = [
     dirty-equals
     pytest-mock
     pytest-timeout
     pytestCheckHook
+    versionCheckHook
   ];
-
-  postPatch = ''
-    sed -i "/^requires-python =.*/a version = '${version}'" pyproject.toml
-  '';
+  versionCheckProgramArg = "--version";
 
   preCheck = ''
     rm -rf watchfiles
   '';
 
-  pythonImportsCheck = [
-    "watchfiles"
+  disabledTests = [
+    #  BaseExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    "test_awatch_interrupt_raise"
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "watchfiles" ];
+
+  meta = {
     description = "File watching and code reload";
     homepage = "https://watchfiles.helpmanual.io/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
-    broken = stdenv.isDarwin;
+    changelog = "https://github.com/samuelcolvin/watchfiles/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "watchfiles";
   };
 }

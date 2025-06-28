@@ -1,38 +1,69 @@
-{ stdenv
-, buildPythonPackage
-, lib
-, python
-, systemd
-, pytest
-, mock
-, pkg-config }:
+{
+  buildPythonPackage,
+  lib,
+  fetchPypi,
+  setuptools,
+  systemd,
+  lxml,
+  psutil,
+  pytest,
+  mock,
+  pkg-config,
+  cython,
+}:
 
 buildPythonPackage rec {
   pname = "pystemd";
-  version = "0.10.0";
-  src = python.pkgs.fetchPypi {
+  version = "0.13.2";
+  pyproject = true;
+
+  src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-10qBS/2gEIXbGorZC+PLJ9ryOlGrawPn4p7IEfoq6Fk=";
+    hash = "sha256-Tc+ksTpVaFxJ09F8EGMeyhjDN3D2Yxb47yM3uJUcwUQ=";
   };
 
-  disabled = python.pythonOlder "3.4";
+  postPatch = ''
+    # remove cythonized sources, build them anew to support more python version
+    rm pystemd/*.c
+  '';
 
   buildInputs = [ systemd ];
 
-  nativeBuildInputs = [ pkg-config ];
+  build-system = [
+    setuptools
+    cython
+  ];
 
-  checkInputs = [ pytest mock ];
+  nativeBuildInputs = [
+    pkg-config
+  ];
 
-  checkPhase = "pytest tests";
+  propagatedBuildInputs = [
+    lxml
+    psutil
+  ];
 
-  meta = with lib; {
-    broken = (stdenv.isLinux && stdenv.isAarch64);
+  nativeCheckInputs = [
+    mock
+    pytest
+  ];
+
+  checkPhase = ''
+    runHook preCheck
+    # pytestCheckHook doesn't work
+    pytest tests
+    runHook postCheck
+  '';
+
+  pythonImportsCheck = [ "pystemd" ];
+
+  meta = {
     description = ''
       Thin Cython-based wrapper on top of libsystemd, focused on exposing the
       dbus API via sd-bus in an automated and easy to consume way
     '';
     homepage = "https://github.com/facebookincubator/pystemd/";
-    license = licenses.lgpl21Plus;
-    maintainers = with maintainers; [ flokli ];
+    license = lib.licenses.lgpl21Plus;
+    maintainers = with lib.maintainers; [ flokli ];
   };
 }

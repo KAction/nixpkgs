@@ -1,14 +1,20 @@
-{ lib, buildPythonPackage, fetchFromGitHub }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonAtLeast,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "assay";
-  version = "unstable-2022-01-19";
+  version = "0-unstable-2024-05-09";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "brandon-rhodes";
-    repo = pname;
-    rev = "bb62d1f7d51d798b05a88045fff3a2ff92c299c3";
-    sha256 = "sha256-FuAD74mFJ9F9AMgB3vPmODAlZKgPR7FQ4yn7HEBS5Rw=";
+    repo = "assay";
+    rev = "74617d70e77afa09f58b3169cf496679ac5d5621";
+    hash = "sha256-zYpLtcXZ16EJWKSCqxFkSz/G9PwIZEQGBrYiJKuqnc4=";
   };
 
   pythonImportsCheck = [ "assay" ];

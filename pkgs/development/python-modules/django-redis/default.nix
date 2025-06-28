@@ -1,86 +1,83 @@
-{ lib
-, fetchFromGitHub
-, pythonOlder
-, buildPythonPackage
+{
+  lib,
+  fetchFromGitHub,
+  pythonOlder,
+  buildPythonPackage,
+  setuptools,
 
-# propagated
-, django
-, hiredis
-, lz4
-, msgpack
-, redis
+  # propagated
+  django,
+  lz4,
+  msgpack,
+  pyzstd,
+  redis,
 
-# testing
-, pkgs
-, pytest-django
-, pytest-mock
-, pytestCheckHook
+  # testing
+  pytest-cov-stub,
+  pytest-django,
+  pytest-mock,
+  pytest-xdist,
+  pytestCheckHook,
+  redisTestHook,
 }:
 
-let
+buildPythonPackage rec {
   pname = "django-redis";
-  version = "5.2.0";
-in
-buildPythonPackage {
-  inherit pname version;
-  format = "setuptools";
+  version = "6.0.0";
+  pyproject = true;
+
   disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "jazzband";
     repo = "django-redis";
-    rev = version;
-    sha256 = "sha256-e8wCgfxBT+WKFY4H83CTMirTpQym3QAoeWnXbRCDO90=";
+    tag = version;
+    hash = "sha256-QfiyeeDQSRp/TkOun/HAQaPbIUY9yKPoOOEhKBX9Tec=";
   };
 
-  postPatch = ''
-    sed -i '/-cov/d' setup.cfg
-  '';
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     django
-    hiredis
     lz4
     msgpack
+    pyzstd
     redis
   ];
 
-  pythonImportsCheck = [
-    "django_redis"
-  ];
+  optional-dependencies = {
+    hiredis = [ redis ] ++ redis.optional-dependencies.hiredis;
+  };
 
-  DJANGO_SETTINGS_MODULE = "tests.settings.sqlite";
+  pythonImportsCheck = [ "django_redis" ];
 
   preCheck = ''
-    ${pkgs.redis}/bin/redis-server &
-    REDIS_PID=$!
+    export DJANGO_SETTINGS_MODULE=tests.settings.sqlite
   '';
 
-  postCheck = ''
-    kill $REDIS_PID
-  '';
-
-  checkInputs = [
+  nativeCheckInputs = [
+    pytest-cov-stub
     pytest-django
     pytest-mock
+    pytest-xdist
     pytestCheckHook
-  ];
+    redisTestHook
+  ] ++ lib.flatten (lib.attrValues optional-dependencies);
+
+  # https://github.com/jazzband/django-redis/issues/777
+  dontUsePytestXdist = true;
 
   disabledTests = [
-    # ModuleNotFoundError: No module named 'test_cache_options'
-    "test_custom_key_function"
-    # ModuleNotFoundError: No module named 'test_client'
-    "test_delete_pattern_calls_get_client_given_no_client"
-    "test_delete_pattern_calls_make_pattern"
-    "test_delete_pattern_calls_scan_iter_with_count_if_itersize_given"
-    "test_delete_pattern_calls_scan_iter_with_count_if_itersize_given"
-    "test_delete_pattern_calls_scan_iter"
-    "test_delete_pattern_calls_delete_for_given_keys"
+    # AttributeError: <asgiref.local._CVar object at 0x7ffff57ed950> object has no attribute 'default'
+    "test_delete_pattern_with_settings_default_scan_count"
   ];
+
+  __darwinAllowLocalNetworking = true;
 
   meta = with lib; {
     description = "Full featured redis cache backend for Django";
     homepage = "https://github.com/jazzband/django-redis";
+    changelog = "https://github.com/jazzband/django-redis/releases/tag/${version}";
     license = licenses.bsd3;
     maintainers = with maintainers; [ hexa ];
   };

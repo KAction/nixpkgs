@@ -1,83 +1,92 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, certifi
-, fastimport
-, fetchPypi
-, gevent
-, geventhttpclient
-, git
-, glibcLocales
-, gnupg
-, gpgme
-, mock
-, urllib3
-, paramiko
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fastimport,
+  fetchFromGitHub,
+  gevent,
+  geventhttpclient,
+  git,
+  glibcLocales,
+  gnupg,
+  gpgme,
+  paramiko,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
+  setuptools-rust,
+  urllib3,
 }:
 
 buildPythonPackage rec {
-  version = "0.20.50";
   pname = "dulwich";
-  format = "setuptools";
+  version = "0.22.8";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  disabled = pythonOlder "3.9";
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-UKlBeWssZ1vjm+co1UDBa1t853654bP4VWUOzmgy0r4=";
+  src = fetchFromGitHub {
+    owner = "jelmer";
+    repo = "dulwich";
+    tag = "dulwich-${version}";
+    hash = "sha256-T0Tmu5sblTkqiak9U4ltkGbWw8ZE91pTlhPVMRi5Pxk=";
   };
 
-  LC_ALL = "en_US.UTF-8";
+  build-system = [
+    setuptools
+    setuptools-rust
+  ];
 
   propagatedBuildInputs = [
-    certifi
     urllib3
   ];
 
-  checkInputs = [
-    fastimport
+  optional-dependencies = {
+    fastimport = [ fastimport ];
+    https = [ urllib3 ];
+    pgp = [
+      gpgme
+      gnupg
+    ];
+    paramiko = [ paramiko ];
+  };
+
+  nativeCheckInputs = [
     gevent
     geventhttpclient
     git
     glibcLocales
-    gpgme
-    gnupg
-    mock
-    paramiko
     pytestCheckHook
-  ];
+  ] ++ lib.flatten (lib.attrValues optional-dependencies);
 
-  doCheck = !stdenv.isDarwin;
+  pytestFlagsArray = [ "tests" ];
 
   disabledTests = [
-    # OSError: [Errno 84] Invalid or incomplete multibyte or wide character: b'/build/tmpsqwlbpd1/\xc0'
-    "test_no_decode_encode"
-    # OSError: [Errno 84] Invalid or incomplete multibyte or wide character: b'/build/tmpwmtfyvo2/refs.git/refs/heads/\xcd\xee\xe2\xe0\xff\xe2\xe5\xf2\xea\xe01'
-    "test_cyrillic"
-    # OSError: [Errno 84] Invalid or incomplete multibyte or wide character: b'/build/tmpfseetobk/test/\xc0'
-    "test_commit_no_encode_decode"
+    # AssertionError: 'C:\\\\foo.bar\\\\baz' != 'C:\\foo.bar\\baz'
+    "test_file_win"
   ];
 
   disabledTestPaths = [
-    # missing test inputs
-    "dulwich/contrib/test_swift_smoke.py"
+    # requires swift config file
+    "tests/contrib/test_swift_smoke.py"
   ];
 
-  pythonImportsCheck = [
-    "dulwich"
-  ];
+  doCheck = !stdenv.hostPlatform.isDarwin;
+
+  pythonImportsCheck = [ "dulwich" ];
 
   meta = with lib; {
-    description = "Simple Python implementation of the Git file formats and protocols";
+    description = "Implementation of the Git file formats and protocols";
     longDescription = ''
       Dulwich is a Python implementation of the Git file formats and protocols, which
       does not depend on Git itself. All functionality is available in pure Python.
     '';
     homepage = "https://www.dulwich.io/";
-    changelog = "https://github.com/dulwich/dulwich/blob/dulwich-${version}/NEWS";
-    license = with licenses; [ asl20 gpl2Plus ];
+    changelog = "https://github.com/jelmer/dulwich/blob/dulwich-${src.tag}/NEWS";
+    license = with licenses; [
+      asl20
+      gpl2Plus
+    ];
     maintainers = with maintainers; [ koral ];
   };
 }

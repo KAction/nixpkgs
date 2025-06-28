@@ -1,33 +1,49 @@
-{ mkDerivation, fetchurl, makeWrapper, lib, php }:
+{
+  lib,
+  fetchurl,
+  fetchFromGitHub,
+  php,
+  versionCheckHook,
+  runCommand,
+}:
+
 let
-  pname = "psalm";
-  version = "4.29.0";
-in
-mkDerivation {
-  inherit pname version;
+  version = "6.8.6";
 
-  src = fetchurl {
+  # The PHAR file is only required to get the `composer.lock` file
+  psalm-phar = fetchurl {
     url = "https://github.com/vimeo/psalm/releases/download/${version}/psalm.phar";
-    sha256 = "q+OjEPNAPwSjtnbfBynbbJy3WDITr01ci8O74BMO0Og=";
+    hash = "sha256-nPvA/pxBMJe4Ux4NmFOdrEmKqRqmwz8gFlCgsB0GbPI=";
+  };
+in
+php.buildComposerProject2 (finalAttrs: {
+  pname = "psalm";
+  inherit version;
+
+  src = fetchFromGitHub {
+    owner = "vimeo";
+    repo = "psalm";
+    tag = finalAttrs.version;
+    hash = "sha256-CewFeIUG+/5QCRpoPSOv1gqwBL9voBf4zgIzdnhk2t8=";
   };
 
-  dontUnpack = true;
-
-  nativeBuildInputs = [ makeWrapper ];
-
-  installPhase = ''
-    runHook preInstall
-    mkdir -p $out/bin
-    install -D $src $out/libexec/psalm/psalm.phar
-    makeWrapper ${php}/bin/php $out/bin/psalm \
-      --add-flags "$out/libexec/psalm/psalm.phar"
-    runHook postInstall
+  composerLock = runCommand "composer.lock" { } ''
+    ${lib.getExe php} -r '$phar = new Phar("${psalm-phar}"); $phar->extractTo(".", "composer.lock");'
+    cp composer.lock $out
   '';
+  vendorHash = "sha256-QObqXzazypumDnFtfNiFSZdpZ7PbsBZZBUsS3fseZok=";
 
-  meta = with lib; {
-    description = "A static analysis tool for finding errors in PHP applications";
-    license = licenses.mit;
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgramArg = "--version";
+
+  meta = {
+    broken = lib.versionOlder php.version "8.2";
+    changelog = "https://github.com/vimeo/psalm/releases/tag/${finalAttrs.version}";
+    description = "Static analysis tool for finding errors in PHP applications";
     homepage = "https://github.com/vimeo/psalm";
-    maintainers = teams.php.members;
+    license = lib.licenses.mit;
+    mainProgram = "psalm";
+    teams = [ lib.teams.php ];
   };
-}
+})

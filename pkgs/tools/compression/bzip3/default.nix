@@ -1,26 +1,35 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, autoreconfHook
-, pkg-config
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  autoreconfHook,
+  pkg-config,
+  testers,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "bzip3";
-  version = "1.1.8";
+  version = "1.5.2";
 
-  outputs = [ "bin" "dev" "out" ];
+  outputs = [
+    "bin"
+    "dev"
+    "out"
+  ];
 
   src = fetchFromGitHub {
     owner = "kspalaiologos";
     repo = "bzip3";
-    rev = version;
-    hash = "sha256-ok5LwarXVe2gwwfIWVSfHHY0lt1IfGtkLPlVo757G6g=";
+    rev = finalAttrs.version;
+    hash = "sha256-mu95ZYkD0isDuHdHcU4zhWxCTlaYXoM85j76IGwVAak=";
   };
 
   postPatch = ''
-    echo -n "${version}" > .tarball-version
+    echo -n "${finalAttrs.version}" > .tarball-version
     patchShebangs build-aux
+
+    # build-aux/ax_subst_man_date.m4 calls git if the file exists
+    rm .gitignore
   '';
 
   nativeBuildInputs = [
@@ -30,14 +39,17 @@ stdenv.mkDerivation rec {
 
   configureFlags = [
     "--disable-arch-native"
-  ] ++ lib.optionals stdenv.isDarwin [ "--disable-link-time-optimization" ];
+  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ "--disable-link-time-optimization" ];
+
+  passthru.tests.pkg-config = testers.testMetaPkgConfig finalAttrs.finalPackage;
 
   meta = {
-    description = "A better and stronger spiritual successor to BZip2";
+    description = "Better and stronger spiritual successor to BZip2";
     homepage = "https://github.com/kspalaiologos/bzip3";
-    changelog = "https://github.com/kspalaiologos/bzip3/blob/${src.rev}/NEWS";
+    changelog = "https://github.com/kspalaiologos/bzip3/blob/${finalAttrs.src.rev}/NEWS";
     license = lib.licenses.lgpl3Plus;
     maintainers = with lib.maintainers; [ dotlambda ];
+    pkgConfigModules = [ "bzip3" ];
     platforms = lib.platforms.unix;
   };
-}
+})

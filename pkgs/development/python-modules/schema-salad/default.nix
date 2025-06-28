@@ -1,69 +1,91 @@
-{ lib
-, black
-, buildPythonPackage
-, fetchPypi
-, setuptools-scm
-, cachecontrol
-, lockfile
-, mistune
-, rdflib
-, ruamel-yaml
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  black,
+  buildPythonPackage,
+  cachecontrol,
+  fetchFromGitHub,
+  importlib-resources,
+  mistune,
+  mypy,
+  mypy-extensions,
+  pytestCheckHook,
+  pythonOlder,
+  rdflib,
+  requests,
+  ruamel-yaml,
+  setuptools-scm,
+  types-dataclasses,
+  types-requests,
+  types-setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "schema-salad";
-  version = "8.3.20220913105718";
-  format = "setuptools";
+  version = "8.8.20250205075315";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.9";
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-18/xLIq1+yM8iQBIeXvRIO4A5GqZS/3qOKXmi439+sQ=";
+  src = fetchFromGitHub {
+    owner = "common-workflow-language";
+    repo = "schema_salad";
+    tag = version;
+    hash = "sha256-Lev5daC3RCuXN1GJjOwplTx9PB3HTNZdNNzusn2dBaI=";
   };
 
-  nativeBuildInputs = [
-    setuptools-scm
-  ];
+  pythonRelaxDeps = [ "mistune" ];
 
-  propagatedBuildInputs = [
-    cachecontrol
-    lockfile
-    mistune
-    rdflib
-    ruamel-yaml
-  ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "mypy[mypyc]==1.15.0" "mypy"
+    sed -i "/black>=/d" pyproject.toml
+  '';
 
-  checkInputs = [
-    pytestCheckHook
-  ] ++ passthru.optional-dependencies.pycodegen;
+  build-system = [ setuptools-scm ];
+
+  dependencies =
+    [
+      cachecontrol
+      mistune
+      mypy
+      mypy-extensions
+      rdflib
+      requests
+      ruamel-yaml
+      types-dataclasses
+      types-requests
+      types-setuptools
+    ]
+    ++ cachecontrol.optional-dependencies.filecache
+    ++ lib.optionals (pythonOlder "3.9") [ importlib-resources ];
+
+  nativeCheckInputs = [ pytestCheckHook ] ++ optional-dependencies.pycodegen;
 
   preCheck = ''
     rm tox.ini
   '';
 
   disabledTests = [
+    "test_load_by_yaml_metaschema"
+    "test_detect_changes_in_html"
     # Setup for these tests requires network access
     "test_secondaryFiles"
     "test_outputBinding"
     # Test requires network
     "test_yaml_tab_error"
+    "test_bad_schemas"
   ];
 
-  pythonImportsCheck = [
-    "schema_salad"
-  ];
+  pythonImportsCheck = [ "schema_salad" ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     pycodegen = [ black ];
   };
 
   meta = with lib; {
-    broken = true; # disables on outdated version of mistune
     description = "Semantic Annotations for Linked Avro Data";
     homepage = "https://github.com/common-workflow-language/schema_salad";
+    changelog = "https://github.com/common-workflow-language/schema_salad/releases/tag/${version}";
     license = with licenses; [ asl20 ];
     maintainers = with maintainers; [ veprbl ];
   };

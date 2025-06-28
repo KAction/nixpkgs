@@ -1,80 +1,96 @@
-{ lib
-, buildPythonPackage
-, fetchpatch
-, fetchFromGitHub
-, protobuf
-, dill
-, grpcio
-, pulumi-bin
-, isPy27
-, semver
-, pyyaml
-, six
-
-
-# for tests
-, go
-, pulumictl
-, pylint
-, pytest
-, pytest-timeout
-, wheel
-, pytest-asyncio
-
-, mypy
+{
+  lib,
+  pkgs,
+  pulumiPackages,
+  buildPythonPackage,
+  pythonOlder,
+  hatchling,
+  protobuf,
+  grpcio,
+  dill,
+  six,
+  semver,
+  pyyaml,
+  debugpy,
+  pip,
+  pytest,
+  pytest-asyncio,
+  pytest-timeout,
+  python,
 }:
 let
-  data = import ./data.nix {};
+  inherit (pkgs.pulumi) pname version src;
+  inherit (pulumiPackages) pulumi-python;
+  sourceRoot = "${src.name}/sdk/python";
 in
-buildPythonPackage rec {
-  pname = "pulumi";
-  version = pulumi-bin.version;
-  disabled = isPy27;
+buildPythonPackage {
+  inherit
+    pname
+    version
+    src
+    sourceRoot
+    ;
 
-  src = fetchFromGitHub {
-    owner = "pulumi";
-    repo = "pulumi";
-    rev = "v${pulumi-bin.version}";
-    sha256 = "sha256-vqEZEHTpJV65a3leWwYhyi3dzAsN67BXOvk5hnTPeuI=";
-  };
+  outputs = [
+    "out"
+    "dev"
+  ];
 
-  propagatedBuildInputs = [
-    semver
+  pyproject = true;
+
+  disabled = pythonOlder "3.9";
+
+  build-system = [ hatchling ];
+
+  dependencies = [
     protobuf
-    dill
     grpcio
-    pyyaml
+    dill
     six
+    semver
+    pyyaml
+    debugpy
+    pip
   ];
 
-  checkInputs = [
-    pulumi-bin
-    pulumictl
-    mypy
-    go
+  pythonRelaxDeps = [
+    "grpcio"
+    "pip"
+    "semver"
+  ];
+
+  nativeCheckInputs = [
     pytest
-    pytest-timeout
     pytest-asyncio
-    wheel
+    pytest-timeout
+    pulumi-python
   ];
 
-  sourceRoot="source/sdk/python/lib";
-  # we apply the modifications done in the pulumi/sdk/python/Makefile
-  # but without the venv code
-  postPatch = ''
-    cp ../../README.md .
-    sed -i "s/\''${VERSION}/${version}/g" setup.py
+  # https://github.com/pulumi/pulumi/blob/0acaf8060640fdd892abccf1ce7435cd6aae69fe/sdk/python/scripts/test_fast.sh#L10-L11
+  # https://github.com/pulumi/pulumi/blob/0acaf8060640fdd892abccf1ce7435cd6aae69fe/sdk/python/scripts/test_fast.sh#L16
+  installCheckPhase = ''
+    runHook preInstallCheck
+    ${python.executable} -m pytest --junit-xml= --ignore=lib/test/automation lib/test
+    pushd lib/test_with_mocks
+    ${python.executable} -m pytest --junit-xml=
+    popd
+    runHook postInstallCheck
   '';
 
-  # disabled because tests try to fetch go packages from the net
-  doCheck = false;
+  # Allow local networking in tests on Darwin
+  __darwinAllowLocalNetworking = true;
 
-  pythonImportsCheck = ["pulumi"];
+  pythonImportsCheck = [ "pulumi" ];
 
-  meta = with lib; {
+  meta = {
     description = "Modern Infrastructure as Code. Any cloud, any language";
-    homepage = "https://github.com/pulumi/pulumi";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ teto ];
+    homepage = "https://www.pulumi.com";
+    license = lib.licenses.asl20;
+    # https://github.com/pulumi/pulumi/issues/16828
+    broken = lib.versionAtLeast protobuf.version "5";
+    maintainers = with lib.maintainers; [
+      teto
+      tie
+    ];
   };
 }

@@ -1,41 +1,58 @@
-{ stdenv
-, fetchurl
-, nixosTests
-, fixDarwinDylibNames
-, meson
-, ninja
-, pkg-config
-, gettext
-, python3
-, docutils
-, gi-docgen
-, glib
-, libtiff
-, libjpeg
-, libpng
-, gnome
-, gobject-introspection
-, buildPackages
-, doCheck ? false
-, makeWrapper
-, lib
+{
+  stdenv,
+  fetchurl,
+  nixosTests,
+  fixDarwinDylibNames,
+  meson,
+  ninja,
+  pkg-config,
+  gettext,
+  python3,
+  docutils,
+  gi-docgen,
+  glib,
+  libtiff,
+  libjpeg,
+  libpng,
+  gnome,
+  doCheck ? false,
+  makeWrapper,
+  lib,
+  testers,
+  buildPackages,
+  withIntrospection ?
+    lib.meta.availableOn stdenv.hostPlatform gobject-introspection
+    && stdenv.hostPlatform.emulatorAvailable buildPackages,
+  gobject-introspection,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "gdk-pixbuf";
-  version = "2.42.10";
+  version = "2.42.12";
 
-  outputs = [ "out" "dev" "man" "devdoc" ]
+  outputs =
+    [
+      "out"
+      "dev"
+      "man"
+    ]
+    ++ lib.optional withIntrospection "devdoc"
     ++ lib.optional (stdenv.buildPlatform == stdenv.hostPlatform) "installedTests";
 
-  src = fetchurl {
-    url = "mirror://gnome/sources/${pname}/${lib.versions.majorMinor version}/${pname}-${version}.tar.xz";
-    sha256 = "7ptsddE7oJaQei48aye2G80X9cfr6rWltDnS8uOf5Es=";
-  };
+  src =
+    let
+      inherit (finalAttrs) pname version;
+    in
+    fetchurl {
+      url = "mirror://gnome/sources/${pname}/${lib.versions.majorMinor version}/${pname}-${version}.tar.xz";
+      hash = "sha256-uVBbNEW5p+SM7TR2DDvLc+lm3zrJTJWhSMtmmrdI48c=";
+    };
 
   patches = [
     # Move installed tests to a separate output
     ./installed-tests-path.patch
+
+    ./static-deps.patch
   ];
 
   # gdk-pixbuf-thumbnailer is not wrapped therefore strictDeps will work
@@ -45,24 +62,26 @@ stdenv.mkDerivation rec {
     pkg-config
   ];
 
-  nativeBuildInputs = [
-    meson
-    ninja
-    pkg-config
-    gettext
-    python3
-    makeWrapper
-    glib
-    gi-docgen
-    gobject-introspection
+  nativeBuildInputs =
+    [
+      meson
+      ninja
+      pkg-config
+      gettext
+      python3
+      makeWrapper
+      glib
 
-    # for man pages
-    docutils
-  ] ++ lib.optionals stdenv.isDarwin [
-    fixDarwinDylibNames
-  ];
-
-  buildInputs = [ gobject-introspection ];
+      # for man pages
+      docutils
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      fixDarwinDylibNames
+    ]
+    ++ lib.optionals withIntrospection [
+      gi-docgen
+      gobject-introspection
+    ];
 
   propagatedBuildInputs = [
     glib
@@ -71,10 +90,16 @@ stdenv.mkDerivation rec {
     libpng
   ];
 
-  mesonFlags = [
-    "-Dgio_sniffing=false"
-    "-Dgtk_doc=true"
-  ];
+  mesonFlags =
+    [
+      "-Dgio_sniffing=false"
+      (lib.mesonBool "gtk_doc" withIntrospection)
+      (lib.mesonEnable "introspection" withIntrospection)
+      (lib.mesonEnable "others" true)
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isStatic [
+      "-Dbuiltin_loaders=all"
+    ];
 
   postPatch = ''
     chmod +x build-aux/* # patchShebangs only applies to executables
@@ -88,6 +113,9 @@ stdenv.mkDerivation rec {
     substituteInPlace docs/meson.build \
       --replace "dependency('gi-docgen'," "dependency('gi-docgen', native:true," \
       --replace "'gi-docgen', req" "'gi-docgen', native:true, req"
+
+    # Remove 'ani' loader until proper fix for CVE-2022-48622
+    substituteInPlace meson.build --replace-fail "'ani'," ""
   '';
 
   postInstall =
@@ -96,26 +124,28 @@ stdenv.mkDerivation rec {
       moveToOutput "bin" "$dev"
       moveToOutput "bin/gdk-pixbuf-thumbnailer" "$out"
 
-    '' + lib.optionalString stdenv.isDarwin ''
+    ''
+    + lib.optionalString stdenv.hostPlatform.isDarwin ''
       # meson erroneously installs loaders with .dylib extension on Darwin.
       # Their @rpath has to be replaced before gdk-pixbuf-query-loaders looks at them.
-      for f in $out/${passthru.moduleDir}/*.dylib; do
+      for f in $out/${finalAttrs.passthru.moduleDir}/*.dylib; do
           install_name_tool -change @rpath/libgdk_pixbuf-2.0.0.dylib $out/lib/libgdk_pixbuf-2.0.0.dylib $f
           mv $f ''${f%.dylib}.so
       done
-    '' + ''
+    ''
+    + lib.optionalString withIntrospection ''
       # We need to install 'loaders.cache' in lib/gdk-pixbuf-2.0/2.10.0/
       ${stdenv.hostPlatform.emulator buildPackages} $dev/bin/gdk-pixbuf-query-loaders --update-cache
     '';
 
   # The fixDarwinDylibNames hook doesn't patch binaries.
-  preFixup = lib.optionalString stdenv.isDarwin ''
+  preFixup = lib.optionalString stdenv.hostPlatform.isDarwin ''
     for f in $out/bin/* $dev/bin/*; do
         install_name_tool -change @rpath/libgdk_pixbuf-2.0.0.dylib $out/lib/libgdk_pixbuf-2.0.0.dylib $f
     done
   '';
 
-  postFixup = ''
+  postFixup = lib.optionalString withIntrospection ''
     # Cannot be in postInstall, otherwise _multioutDocs hook in preFixup will move right back.
     moveToOutput "share/doc" "$devdoc"
   '';
@@ -125,28 +155,31 @@ stdenv.mkDerivation rec {
 
   setupHook = ./setup-hook.sh;
 
-  separateDebugInfo = stdenv.isLinux;
+  separateDebugInfo = stdenv.hostPlatform.isLinux;
 
   passthru = {
     updateScript = gnome.updateScript {
-      packageName = pname;
+      packageName = finalAttrs.pname;
       versionPolicy = "odd-unstable";
     };
 
     tests = {
       installedTests = nixosTests.installed-tests.gdk-pixbuf;
+      pkg-config = testers.testMetaPkgConfig finalAttrs.finalPackage;
     };
 
-    # gdk_pixbuf_moduledir variable from gdk-pixbuf-2.0.pc
-    moduleDir = "lib/gdk-pixbuf-2.0/2.10.0/loaders";
+    # gdk_pixbuf_binarydir and gdk_pixbuf_moduledir variables from gdk-pixbuf-2.0.pc
+    binaryDir = "lib/gdk-pixbuf-2.0/2.10.0";
+    moduleDir = "${finalAttrs.passthru.binaryDir}/loaders";
   };
 
   meta = with lib; {
-    description = "A library for image loading and manipulation";
+    description = "Library for image loading and manipulation";
     homepage = "https://gitlab.gnome.org/GNOME/gdk-pixbuf";
     license = licenses.lgpl21Plus;
-    maintainers = [ maintainers.eelco ] ++ teams.gnome.members;
+    teams = [ teams.gnome ];
     mainProgram = "gdk-pixbuf-thumbnailer";
+    pkgConfigModules = [ "gdk-pixbuf-2.0" ];
     platforms = platforms.unix;
   };
-}
+})

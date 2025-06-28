@@ -1,94 +1,96 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, runCommand
-, rustPlatform
-, openssl
-, zlib
-, zstd
-, pkg-config
-, python3
-, xorg
-, libiconv
-, AppKit
-, Foundation
-, Security
-# darwin.apple_sdk.sdk
-, sdk
-, nghttp2
-, libgit2
-, withExtraFeatures ? true
-, testers
-, nushell
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  rustPlatform,
+  openssl,
+  zlib,
+  zstd,
+  pkg-config,
+  python3,
+  xorg,
+  nghttp2,
+  libgit2,
+  withDefaultFeatures ? true,
+  additionalFeatures ? (p: p),
+  testers,
+  nushell,
+  nix-update-script,
+  curlMinimal,
 }:
 
-rustPlatform.buildRustPackage rec {
+let
+  version = "0.105.1";
+in
+rustPlatform.buildRustPackage {
   pname = "nushell";
-  version = "0.70.0";
+  inherit version;
 
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-krsycaqT+MmpWEVNVqQQO2zrO9ymZIskgGgrzEMFP1s=";
+    owner = "nushell";
+    repo = "nushell";
+    tag = version;
+    hash = "sha256-UcIcCzfe2C7qFJKLo3WxwXyGI1rBBrhQHtrglKNp6ck=";
   };
 
-  cargoSha256 = "sha256-Etw8F5alUNMlH0cvREPk2LdBQKl70dj6JklFZWInvow=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-v3BtcEd1eMtHlDLsu0Y4i6CWA47G0CMOyVlMchj7EJo=";
 
-  # enable pkg-config feature of zstd
-  cargoPatches = [ ./zstd-pkg-config.patch ];
+  nativeBuildInputs =
+    [ pkg-config ]
+    ++ lib.optionals (withDefaultFeatures && stdenv.hostPlatform.isLinux) [ python3 ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [ rustPlatform.bindgenHook ];
 
-  nativeBuildInputs = [ pkg-config ]
-    ++ lib.optionals (withExtraFeatures && stdenv.isLinux) [ python3 ]
-    ++ lib.optionals stdenv.isDarwin [ rustPlatform.bindgenHook ];
+  buildInputs =
+    [ zstd ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [ zlib ]
+    ++ lib.optionals (withDefaultFeatures && stdenv.hostPlatform.isLinux) [ xorg.libX11 ]
+    ++ lib.optionals (withDefaultFeatures && stdenv.hostPlatform.isDarwin) [
+      nghttp2
+      libgit2
+    ];
 
-  buildInputs = [ openssl zstd ]
-    ++ lib.optionals stdenv.isDarwin [ zlib libiconv Security ]
-    ++ lib.optionals (stdenv.isDarwin && stdenv.isx86_64) [
-    Foundation
-    (
-      # Pull a header that contains a definition of proc_pid_rusage().
-      # (We pick just that one because using the other headers from `sdk` is not
-      # compatible with our C++ standard library. This header is already in
-      # the standard library on aarch64)
-      # See also:
-      # https://github.com/shanesveller/nixpkgs/tree/90ed23b1b23c8ee67928937bdec7ddcd1a0050f5/pkgs/development/libraries/webkitgtk/default.nix
-      # https://github.com/shanesveller/nixpkgs/blob/90ed23b1b23c8ee67928937bdec7ddcd1a0050f5/pkgs/tools/system/btop/default.nix#L32-L38
-      runCommand "${pname}_headers" { } ''
-        install -Dm444 "${lib.getDev sdk}"/include/libproc.h "$out"/include/libproc.h
-      ''
-    )
-  ] ++ lib.optionals (withExtraFeatures && stdenv.isLinux) [ xorg.libX11 ]
-    ++ lib.optionals (withExtraFeatures && stdenv.isDarwin) [ AppKit nghttp2 libgit2 ];
-
-  buildFeatures = lib.optional withExtraFeatures "extra";
-
-  # TODO investigate why tests are broken on darwin
-  # failures show that tests try to write to paths
-  # outside of TMPDIR
-  # doCheck = ! stdenv.isDarwin;
-  # TODO tests are not guaranteed while package is in beta
-  doCheck = false;
+  buildNoDefaultFeatures = !withDefaultFeatures;
+  buildFeatures = additionalFeatures [ ];
 
   checkPhase = ''
     runHook preCheck
-    echo "Running cargo test"
-    HOME=$TMPDIR cargo test
+    (
+      # The skipped tests all fail in the sandbox because in the nushell test playground,
+      # the tmp $HOME is not set, so nu falls back to looking up the passwd dir of the build
+      # user (/var/empty). The assertions however do respect the set $HOME.
+      set -x
+      HOME=$(mktemp -d) cargo test -j $NIX_BUILD_CORES --offline -- \
+        --test-threads=$NIX_BUILD_CORES \
+        --skip=repl::test_config_path::test_default_config_path \
+        --skip=repl::test_config_path::test_xdg_config_bad \
+        --skip=repl::test_config_path::test_xdg_config_empty
+    )
     runHook postCheck
   '';
 
-  meta = with lib; {
-    description = "A modern shell written in Rust";
-    homepage = "https://www.nushell.sh/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ Br1ght0ne johntitor marsam ];
-    mainProgram = "nu";
-  };
+  checkInputs =
+    lib.optionals stdenv.hostPlatform.isDarwin [ curlMinimal ]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [ openssl ];
 
   passthru = {
     shellPath = "/bin/nu";
     tests.version = testers.testVersion {
       package = nushell;
     };
+    updateScript = nix-update-script { };
+  };
+
+  meta = with lib; {
+    description = "Modern shell written in Rust";
+    homepage = "https://www.nushell.sh/";
+    license = licenses.mit;
+    maintainers = with maintainers; [
+      Br1ght0ne
+      johntitor
+      joaquintrinanes
+      ryan4yin
+    ];
+    mainProgram = "nu";
   };
 }

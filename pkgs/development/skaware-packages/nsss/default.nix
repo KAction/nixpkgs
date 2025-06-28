@@ -1,13 +1,11 @@
-{ skawarePackages }:
+{ skawarePackages, skalibs }:
 
-with skawarePackages;
-
-buildPackage {
+skawarePackages.buildPackage {
   pname = "nsss";
-  version = "0.2.0.1";
-  sha256 = "0nqjnfqvzzn4i45h849b3n8qwcrzd5wlrwlvkmjdga5k4yk4x63x";
+  version = "0.2.1.0";
+  sha256 = "sha256-8iGjHBzuiB6ZKobf4pYzIlPHqfxl9g2IgpzI6JSEIPQ=";
 
-  description = "An implementation of a subset of the pwd.h, group.h and shadow.h family of functions.";
+  description = "Implementation of a subset of the pwd.h, group.h and shadow.h family of functions";
 
   # TODO: nsss support
   configureFlags = [

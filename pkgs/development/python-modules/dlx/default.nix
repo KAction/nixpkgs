@@ -1,12 +1,14 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  python,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "dlx";
   version = "1.0.4";
+  format = "setuptools";
 
   # untagged releases
   src = fetchFromGitHub {

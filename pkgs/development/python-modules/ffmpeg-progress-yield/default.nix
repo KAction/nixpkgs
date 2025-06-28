@@ -1,24 +1,45 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, colorama
-, tqdm
-, pytestCheckHook
-, ffmpeg
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  tqdm,
+  pytestCheckHook,
+  pythonOlder,
+  ffmpeg,
+  procps,
 }:
 
 buildPythonPackage rec {
   pname = "ffmpeg-progress-yield";
-  version = "0.3.0";
+  version = "0.11.3";
+  format = "setuptools";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-/FkVzssJZYafn3MlN8bODd7kA917x9oW0JivIOWxl+8=";
+  disabled = pythonOlder "3.8";
+
+  src = fetchFromGitHub {
+    owner = "slhck";
+    repo = "ffmpeg-progress-yield";
+    tag = "v${version}";
+    hash = "sha256-o5PlL6Ggo0Mrs/ujdnTV5GMAVeG2wpBoBDfxTVic3mA=";
   };
 
-  propagatedBuildInputs = [ colorama tqdm ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ pytestCheckHook ffmpeg ];
+  dependencies = [
+    tqdm
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    ffmpeg
+    procps
+  ];
+
+  disabledTests = [
+    "test_quit"
+    "test_quit_gracefully"
+  ];
 
   pytestFlagsArray = [ "test/test.py" ];
 
@@ -26,7 +47,9 @@ buildPythonPackage rec {
 
   meta = with lib; {
     description = "Run an ffmpeg command with progress";
+    mainProgram = "ffmpeg-progress-yield";
     homepage = "https://github.com/slhck/ffmpeg-progress-yield";
+    changelog = "https://github.com/slhck/ffmpeg-progress-yield/blob/v${version}/CHANGELOG.md";
     license = with licenses; [ mit ];
     maintainers = with maintainers; [ prusnak ];
   };

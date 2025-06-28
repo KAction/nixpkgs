@@ -1,28 +1,28 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, requests
-, pytestCheckHook
-, httpretty
-, responses
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  requests,
+  pytestCheckHook,
+  httpretty,
+  responses,
 }:
 
 buildPythonPackage rec {
   pname = "fixerio";
   version = "1.0.0-alpha";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "amatellanes";
-    repo = pname;
+    repo = "fixerio";
     rev = "v${version}";
     sha256 = "009h1mys175xdyznn5bl980vly40544s4ph1zcgqwg2i2ic93gvb";
   };
 
-  propagatedBuildInputs = [
-    requests
-  ];
+  propagatedBuildInputs = [ requests ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     httpretty
     pytestCheckHook
     responses

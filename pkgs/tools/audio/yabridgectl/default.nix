@@ -1,17 +1,20 @@
-{ lib
-, rustPlatform
-, yabridge
-, makeWrapper
-, wine
+{
+  lib,
+  rustPlatform,
+  yabridge,
+  makeWrapper,
+  wine,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage {
   pname = "yabridgectl";
   version = yabridge.version;
 
   src = yabridge.src;
-  sourceRoot = "source/tools/yabridgectl";
-  cargoSha256 = "sha256-09GsrQAI08Qih/TpbEAh4hn7IfvwyFdEoyzsSjcjGXY=";
+  sourceRoot = "${yabridge.src.name}/tools/yabridgectl";
+
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-VcBQxKjjs9ESJrE4F1kxEp4ah3j9jiNPq/Kdz/qPvro=";
 
   patches = [
     # Patch yabridgectl to search for the chainloader through NIX_PROFILES
@@ -27,16 +30,20 @@ rustPlatform.buildRustPackage rec {
 
   postFixup = ''
     wrapProgram "$out/bin/yabridgectl" \
-      --prefix PATH : ${lib.makeBinPath [
-        wine # winedump
-      ]}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          wine # winedump
+        ]
+      }
   '';
 
   meta = with lib; {
-    description = "A small, optional utility to help set up and update yabridge for several directories at once";
-    homepage = "${src.meta.homepage}/tree/${version}/tools/yabridgectl";
+    description = "Small, optional utility to help set up and update yabridge for several directories at once";
+    homepage = "${yabridge.src.meta.homepage}/tree/${yabridge.version}/tools/yabridgectl";
+    changelog = yabridge.meta.changelog;
     license = licenses.gpl3Plus;
     maintainers = with maintainers; [ kira-bruneau ];
     platforms = yabridge.meta.platforms;
+    mainProgram = "yabridgectl";
   };
 }

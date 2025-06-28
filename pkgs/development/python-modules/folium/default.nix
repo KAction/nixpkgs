@@ -1,74 +1,85 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, fetchpatch
-, pythonOlder
-, pytestCheckHook
-, branca
-, jinja2
-, nbconvert
-, numpy
-, pandas
-, pillow
-, requests
-, selenium
-, setuptools-scm
+{
+  lib,
+  branca,
+  buildPythonPackage,
+  fetchFromGitHub,
+  geodatasets,
+  geopandas,
+  jinja2,
+  nbconvert,
+  numpy,
+  pandas,
+  pillow,
+  pytestCheckHook,
+  pythonOlder,
+  requests,
+  selenium,
+  setuptools,
+  setuptools-scm,
+  xyzservices,
 }:
 
 buildPythonPackage rec {
   pname = "folium";
-  version = "0.12.1.post1";
+  version = "0.19.5";
+  pyproject = true;
 
-  disabled = pythonOlder "3.5";
+  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "python-visualization";
     repo = "folium";
-    rev = "v${version}";
-    sha256 = "sha256-4UseN/3ojZdDUopwZLpHZEBon1qDDvCWfdzxodi/BeA=";
+    tag = "v${version}";
+    hash = "sha256-jZrGJWSmQXQNlZYldeNSh5AhlTHow5gxCEkksEoKZ7E=";
   };
 
-  patches = [
-    # Fix test failures with latest branca
-    (fetchpatch {
-      url = "https://github.com/python-visualization/folium/commit/b410ab21cc46ec6756c2f755e5e81dcdca029c53.patch";
-      hash = "sha256-SVN4wKEep+VnAKnkJTf59rhnzHnbk6dV9XL5ntv4bog=";
-    })
-  ];
-
-  SETUPTOOLS_SCM_PRETEND_VERSION = "v${version}";
-
-  nativeBuildInputs = [
+  build-system = [
+    setuptools
     setuptools-scm
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     branca
     jinja2
     numpy
     requests
+    xyzservices
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    geodatasets
+    geopandas
     nbconvert
-    pytestCheckHook
     pandas
     pillow
-    selenium
+    pytestCheckHook
   ];
 
   disabledTests = [
-    # requires internet connection
+    # Tests require internet connection
+    "test__repr_png_is_bytes"
     "test_geojson"
     "test_heat_map_with_weights"
     "test_json_request"
     "test_notebook"
+    "test_valid_png_size"
+    "test_valid_png"
+    # pooch tries to write somewhere it can, and geodatasets does not give us an env var to customize this.
+    "test_timedynamic_geo_json"
   ];
+
+  disabledTestPaths = [
+    # Import issue with selenium.webdriver.common.fedcm
+    "tests/selenium"
+  ];
+
+  pythonImportsCheck = [ "folium" ];
 
   meta = {
     description = "Make beautiful maps with Leaflet.js & Python";
     homepage = "https://github.com/python-visualization/folium";
+    changelog = "https://github.com/python-visualization/folium/releases/tag/${src.tag}";
     license = with lib.licenses; [ mit ];
-    maintainers = with lib.maintainers; [ fridh ];
+    teams = [ lib.teams.geospatial ];
   };
 }

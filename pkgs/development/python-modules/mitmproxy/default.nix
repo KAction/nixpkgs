@@ -1,73 +1,70 @@
-{ lib
-, fetchFromGitHub
-, fetchpatch
-, buildPythonPackage
-, pythonOlder
-  # Mitmproxy requirements
-, asgiref
-, blinker
-, brotli
-, certifi
-, click
-, cryptography
-, flask
-, h11
-, h2
-, hyperframe
-, kaitaistruct
-, ldap3
-, msgpack
-, passlib
-, protobuf
-, publicsuffix2
-, pyopenssl
-, pyparsing
-, pyperclip
-, ruamel-yaml
-, setuptools
-, sortedcontainers
-, tornado
-, urwid
-, wsproto
-, zstandard
-  # Additional check requirements
-, hypothesis
-, parver
-, pytest-asyncio
-, pytest-timeout
-, pytest-xdist
-, pytestCheckHook
-, requests
+{
+  lib,
+  aioquic,
+  argon2-cffi,
+  asgiref,
+  brotli,
+  buildPythonPackage,
+  certifi,
+  cryptography,
+  fetchFromGitHub,
+  flask,
+  h11,
+  h2,
+  hyperframe,
+  hypothesis,
+  kaitaistruct,
+  ldap3,
+  mitmproxy-rs,
+  msgpack,
+  passlib,
+  publicsuffix2,
+  pyopenssl,
+  pyparsing,
+  pyperclip,
+  pytest-asyncio,
+  pytest-timeout,
+  pytest-xdist,
+  pytestCheckHook,
+  requests,
+  ruamel-yaml,
+  setuptools,
+  sortedcontainers,
+  tornado,
+  urwid,
+  wsproto,
+  zstandard,
 }:
 
 buildPythonPackage rec {
   pname = "mitmproxy";
-  version = "8.1.1";
-  disabled = pythonOlder "3.8";
+  version = "12.1.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-nW/WfiY6uF67qNa95tvNvSv/alP2WmzTk34LEBma/04=";
+    owner = "mitmproxy";
+    repo = "mitmproxy";
+    tag = "v${version}";
+    hash = "sha256-RTHL5+lbR+AbkiE4+z4ZbxZSV2E4NGTmShbMIMRKJPA=";
   };
 
-  patches = [
-    # Fix onboarding addon tests failing with Flask >= v2.2
-    (fetchpatch {
-      url = "https://github.com/mitmproxy/mitmproxy/commit/bc370276a19c1d1039e7a45ecdc23c362626c81a.patch";
-      hash = "sha256-Cp7RnYpZEuRhlWYOk8BOnAKBAUa7Vy296UmQi3/ufes=";
-    })
+  pythonRelaxDeps = [
+    "cryptography"
+    "flask"
+    "h2"
+    "passlib"
+    "pyopenssl"
+    "tornado"
   ];
 
-  propagatedBuildInputs = [
-    setuptools
-    # setup.py
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aioquic
+    argon2-cffi
     asgiref
-    blinker
     brotli
     certifi
-    click
     cryptography
     flask
     h11
@@ -75,9 +72,9 @@ buildPythonPackage rec {
     hyperframe
     kaitaistruct
     ldap3
+    mitmproxy-rs
     msgpack
     passlib
-    protobuf
     publicsuffix2
     pyopenssl
     pyparsing
@@ -90,9 +87,8 @@ buildPythonPackage rec {
     zstandard
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     hypothesis
-    parver
     pytest-asyncio
     pytest-timeout
     pytest-xdist
@@ -100,10 +96,7 @@ buildPythonPackage rec {
     requests
   ];
 
-  postPatch = ''
-    # remove dependency constraints
-    sed 's/>=\([0-9]\.\?\)\+\( \?, \?<\([0-9]\.\?\)\+\)\?\( \?, \?!=\([0-9]\.\?\)\+\)\?//' -i setup.py
-  '';
+  __darwinAllowLocalNetworking = true;
 
   preCheck = ''
     export HOME=$(mktemp -d)
@@ -114,12 +107,36 @@ buildPythonPackage rec {
     "test_get_version"
     # https://github.com/mitmproxy/mitmproxy/commit/36ebf11916704b3cdaf4be840eaafa66a115ac03
     # Tests require terminal
-    "test_integration"
+    "test_commands_exist"
     "test_contentview_flowview"
     "test_flowview"
-    # ValueError: Exceeds the limit (4300) for integer string conversion
-    "test_roundtrip_big_integer"
+    "test_get_hex_editor"
+    "test_integration"
+    "test_spawn_editor"
+    "test_statusbar"
+    # FileNotFoundError: [Errno 2] No such file or directory
+    # likely wireguard is also not working in the sandbox
+    "test_tun_mode"
+    "test_wireguard"
+    # test require a DNS server
+    # RuntimeError: failed to get dns servers: io error: entity not found
+    "test_errorcheck"
+    "test_errorcheck"
+    "test_dns"
+    "test_order"
   ];
+
+  disabledTestPaths = [
+    # test require a DNS server
+    # RuntimeError: failed to get dns servers: io error: entity not found
+    "test/mitmproxy/addons/test_dns_resolver.py"
+    "test/mitmproxy/tools/test_dump.py"
+    "test/mitmproxy/tools/test_main.py"
+    "test/mitmproxy/tools/web/test_app.py"
+    "test/mitmproxy/tools/web/test_app.py" # 2 out of 31 tests work
+    "test/mitmproxy/tools/web/test_master.py"
+  ];
+
   dontUsePytestXdist = true;
 
   pythonImportsCheck = [ "mitmproxy" ];
@@ -127,7 +144,8 @@ buildPythonPackage rec {
   meta = with lib; {
     description = "Man-in-the-middle proxy";
     homepage = "https://mitmproxy.org/";
+    changelog = "https://github.com/mitmproxy/mitmproxy/blob/${src.tag}/CHANGELOG.md";
     license = licenses.mit;
-    maintainers = with maintainers; [ kamilchm SuperSandro2000 ];
+    maintainers = with maintainers; [ SuperSandro2000 ];
   };
 }

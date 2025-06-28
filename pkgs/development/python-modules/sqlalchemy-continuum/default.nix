@@ -1,45 +1,74 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, flask
-, flask-login
-, flask-sqlalchemy
-, flexmock
-, pytestCheckHook
-, sqlalchemy
-, sqlalchemy-utils
-, sqlalchemy-i18n
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  flask,
+  flask-login,
+  flask-sqlalchemy,
+  psycopg2,
+  pymysql,
+  pytestCheckHook,
+  pythonOlder,
+  sqlalchemy,
+  sqlalchemy-i18n,
+  sqlalchemy-utils,
 }:
 
 buildPythonPackage rec {
-  pname = "SQLAlchemy-Continuum";
-  version = "1.3.13";
+  pname = "sqlalchemy-continuum";
+  version = "1.4.2";
+  pyproject = true;
+
+  disabled = pythonOlder "3.7";
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-JTqlHQmaVH2qKz7CFyCqpous3ecOpoFrxVlzasbc21I=";
+    pname = "sqlalchemy_continuum";
+    inherit version;
+    hash = "sha256-D9K+efcY7aR8IgaHnZLsTr8YiTZGN7PK8+5dNL0ZyOM=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     sqlalchemy
     sqlalchemy-utils
   ];
 
-  # indicate tests that we don't have a database server at hand
-  DB = "sqlite";
+  optional-dependencies = {
+    flask = [ flask ];
+    flask-login = [ flask-login ];
+    flask-sqlalchemy = [ flask-sqlalchemy ];
+    i18n = [ sqlalchemy-i18n ];
+  };
 
-  checkInputs = [
-    pytestCheckHook
-    sqlalchemy-i18n
-    flask
-    flask-login
-    flask-sqlalchemy
-    flexmock
+  nativeCheckInputs =
+    [
+      psycopg2
+      pymysql
+      pytestCheckHook
+    ]
+    ++ optional-dependencies.flask
+    ++ optional-dependencies.flask-login
+    ++ optional-dependencies.flask-sqlalchemy;
+
+  disabledTestPaths = [
+    # requires sqlalchemy-i18n, which is incompatible with sqlalchemy>=2
+    "tests/test_i18n.py"
   ];
 
+  preCheck = ''
+    # Indicate tests that we don't have a database server at hand
+    export DB=sqlite
+  '';
+
+  pythonImportsCheck = [ "sqlalchemy_continuum" ];
+
   meta = with lib; {
-    homepage = "https://github.com/kvesteri/sqlalchemy-continuum/";
     description = "Versioning and auditing extension for SQLAlchemy";
+    homepage = "https://github.com/kvesteri/sqlalchemy-continuum/";
+    changelog = "https://github.com/kvesteri/sqlalchemy-continuum/blob/${version}/CHANGES.rst";
     license = licenses.bsd3;
+    maintainers = [ ];
   };
 }

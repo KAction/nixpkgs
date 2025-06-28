@@ -1,30 +1,34 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, django
-, pytestCheckHook
-, pytest-django
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  django,
+  setuptools,
+  pytestCheckHook,
+  pytest-django,
 }:
 
 buildPythonPackage rec {
   pname = "django-crispy-forms";
-  version = "1.14.0";
+  version = "2.4";
+  format = "pyproject";
 
   src = fetchFromGitHub {
     owner = "django-crispy-forms";
     repo = "django-crispy-forms";
-    rev = version;
-    sha256 = "sha256-NZ2lWxsQHc7Qc4HDoWgjJTZ/bJHmjpBf3q1LVLtzA+8=";
+    tag = version;
+    hash = "sha256-YV7XUv5N2Xcf79/8EdI7XnVtpiX+yQBhQumSUbZmOfc=";
   };
 
   propagatedBuildInputs = [
     django
+    setuptools
   ];
 
   # FIXME: RuntimeError: Model class source.crispy_forms.tests.forms.CrispyTestModel doesn't declare an explicit app_label and isn't in an application in INSTALLED_APPS.
   doCheck = false;
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-django
     pytestCheckHook
   ];
@@ -37,7 +41,7 @@ buildPythonPackage rec {
   pythonImportsCheck = [ "crispy_forms" ];
 
   meta = with lib; {
-    description = "The best way to have DRY Django forms.";
+    description = "Best way to have DRY Django forms";
     homepage = "https://django-crispy-forms.readthedocs.io/en/latest/";
     license = licenses.mit;
     maintainers = with maintainers; [ ambroisie ];

@@ -1,29 +1,34 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchPypi
-, click
-, pip
-, setuptools
-, wheel
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  click,
+  pip,
+  setuptools,
+  wheel,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "shiv";
-  version = "1.0.2";
+  version = "1.0.8";
   format = "pyproject";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-BDSfgXSythWUrwVnsg27rHN0nsfumFdX/2e62h239UY=";
+    hash = "sha256-KmjWnpjOgctbj9r7/B4n76k+bYnKFL+uM0guQXb1YdY=";
   };
 
-  propagatedBuildInputs = [ click pip setuptools wheel ];
+  propagatedBuildInputs = [
+    click
+    pip
+    setuptools
+    wheel
+  ];
 
   pythonImportsCheck = [ "shiv" ];
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   disabledTests = [
     # AssertionError

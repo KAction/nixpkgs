@@ -1,18 +1,21 @@
-{ mkDerivation
-, lib
-, kirigami2
-, extra-cmake-modules
-, kitemmodels
-, qtgraphicaleffects
-, qtquickcontrols2
-, qttools
-, qtbase
+{
+  mkDerivation,
+  lib,
+  kirigami2,
+  extra-cmake-modules,
+  kitemmodels,
+  qtgraphicaleffects,
+  qtquickcontrols2,
+  qttools,
 }:
 
-mkDerivation rec {
+mkDerivation {
   pname = "kirigami-gallery";
 
-  nativeBuildInputs = [ extra-cmake-modules qttools ];
+  nativeBuildInputs = [
+    extra-cmake-modules
+    qttools
+  ];
 
   buildInputs = [
     qtgraphicaleffects
@@ -24,8 +27,8 @@ mkDerivation rec {
   meta = with lib; {
     homepage = "https://apps.kde.org/kirigami2.gallery/";
     description = "View examples of Kirigami components";
+    mainProgram = "kirigami2gallery";
     license = licenses.lgpl2;
     maintainers = with maintainers; [ shadowrz ];
-    broken = versionOlder qtbase.version "5.15";
   };
 }

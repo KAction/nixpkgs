@@ -1,30 +1,46 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
-, pytest-cov
-, pytest-asyncio
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "aiostream";
-  version = "0.4.5";
-  disabled = pythonOlder "3.6";
+  version = "0.6.4";
+  pyproject = true;
+
+  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "vxgmichel";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-WOtscg02Dq5YNSAfq4pIyH3oUP/5G+cjBwKB6c+SUVA=";
+    repo = "aiostream";
+    tag = "v${version}";
+    hash = "sha256-hRbPK1JsB/JQuSjj81YMUAI8eDUyXCOFhdW22ZJ47xU=";
   };
 
-  checkInputs = [ pytestCheckHook pytest-cov pytest-asyncio ];
+  build-system = [ setuptools ];
+
+  dependencies = [ typing-extensions ];
+
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytest-cov-stub
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "aiostream" ];
 
   meta = with lib; {
     description = "Generator-based operators for asynchronous iteration";
     homepage = "https://aiostream.readthedocs.io";
+    changelog = "https://github.com/vxgmichel/aiostream/releases/tag/v${version}";
     license = licenses.gpl3Only;
-    maintainers = [ maintainers.rmcgibbo ];
+    maintainers = with maintainers; [ rmcgibbo ];
   };
 }

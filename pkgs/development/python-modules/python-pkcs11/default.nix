@@ -1,24 +1,24 @@
-{ lib
-, asn1crypto
-, buildPythonPackage
-, cached-property
-, cython
-, fetchFromGitHub
-, setuptools-scm
+{
+  lib,
+  asn1crypto,
+  buildPythonPackage,
+  cached-property,
+  cython,
+  fetchFromGitHub,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "python-pkcs11";
   version = "0.7.0";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "danni";
-    repo = pname;
+    repo = "python-pkcs11";
     rev = "v${version}";
     sha256 = "0kncbipfpsb7m7mhv5s5b9wk604h1j08i2j26fn90pklgqll0xhv";
   };
-
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
 
   nativeBuildInputs = [
     cython

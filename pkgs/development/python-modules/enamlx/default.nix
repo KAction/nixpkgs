@@ -1,27 +1,33 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, enaml
-, pyqtgraph
-, pythonocc-core
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  enaml,
+  pyqtgraph,
+  pyqt5,
+  pythonocc-core,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "enamlx";
-  version = "0.6.2";
+  version = "0.6.4";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "frmdstryr";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-LHqOZ1uLWFbUeQAGKoMH9GljhRq1K4RTVWzgV/pt3g8=";
+    repo = "enamlx";
+    tag = "v${version}";
+    hash = "sha256-C3/G0bnu1EQh0elqdrpCwkFPZU4qmkUX7WRSRK9nkM4=";
   };
 
   propagatedBuildInputs = [
     enaml
     # Until https://github.com/inkcut/inkcut/issues/105 perhaps
     pyqtgraph
+    pyqt5
     pythonocc-core
+    typing-extensions
   ];
 
   # qt_occ_viewer test requires enaml.qt.QtOpenGL which got dropped somewhere

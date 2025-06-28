@@ -1,22 +1,24 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, extra-cmake-modules
-, gettext
-, fcitx5
-, libhangul
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  extra-cmake-modules,
+  gettext,
+  fcitx5,
+  libhangul,
+  nixosTests,
 }:
 
 stdenv.mkDerivation rec {
   pname = "fcitx5-hangul";
-  version = "5.0.10";
+  version = "5.1.6";
 
   src = fetchFromGitHub {
     owner = "fcitx";
     repo = pname;
     rev = version;
-    sha256 = "sha256-Hjnt9E24u1ycKreZf6Nb8cH7S3JKRlLSYAxhA11DMjs=";
+    hash = "sha256-WTTMW86KsrncfDHttri2eSA0bp/Vm4QVyl9tWkJn00E=";
   };
 
   nativeBuildInputs = [
@@ -29,6 +31,10 @@ stdenv.mkDerivation rec {
     fcitx5
     libhangul
   ];
+
+  passthru.tests = {
+    inherit (nixosTests) fcitx5;
+  };
 
   meta = with lib; {
     description = "Hangul wrapper for Fcitx5";

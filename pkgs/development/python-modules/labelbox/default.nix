@@ -1,68 +1,137 @@
-{ lib
-, backoff
-, backports-datetime-fromisoformat
-, buildPythonPackage
-, dataclasses
-, fetchFromGitHub
-, google-api-core
-, jinja2
-, ndjson
-, pillow
-, pydantic
-, pytest-cases
-, pytestCheckHook
-, pythonOlder
-, rasterio
-, requests
-, shapely
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  geojson,
+  google-api-core,
+  hatchling,
+  imagesize,
+  mypy,
+  nbconvert,
+  nbformat,
+  numpy,
+  opencv-python-headless,
+  pillow,
+  pydantic,
+  pyproj,
+  pytest-cov-stub,
+  pytest-order,
+  pytest-rerunfailures,
+  pytest-xdist,
+  pytestCheckHook,
+  python-dateutil,
+  requests,
+  shapely,
+  strenum,
+  tqdm,
+  typeguard,
+  typing-extensions,
 }:
 
-buildPythonPackage rec {
-  pname = "labelbox";
-  version = "3.24.1";
-  disabled = pythonOlder "3.6";
+let
+  version = "6.10.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Labelbox";
     repo = "labelbox-python";
-    rev = "refs/tags/v.${version}";
-    sha256 = "sha256-pcIbCtVOr6pwodgNv8aGZ+k2Z9cQPCQm1UBJWJAlj/o=";
+    tag = "v.${version}";
+    hash = "sha256-EstHsY9yFeUhQAx3pgvKk/o3EMkr3JeHDDg/p6meDIE=";
   };
 
-  propagatedBuildInputs = [
-    backoff
-    backports-datetime-fromisoformat
-    dataclasses
+  lbox-clients = buildPythonPackage {
+    inherit src version pyproject;
+
+    pname = "lbox-clients";
+
+    sourceRoot = "${src.name}/libs/lbox-clients";
+
+    build-system = [ hatchling ];
+
+    dependencies = [
+      google-api-core
+      requests
+    ];
+
+    nativeCheckInputs = [
+      pytestCheckHook
+      pytest-cov-stub
+    ];
+
+    doCheck = true;
+
+    __darwinAllowLocalNetworking = true;
+  };
+in
+buildPythonPackage rec {
+  inherit src version pyproject;
+
+  pname = "labelbox";
+
+  sourceRoot = "${src.name}/libs/labelbox";
+
+  pythonRelaxDeps = [
+    "mypy"
+    "python-dateutil"
+  ];
+
+  build-system = [ hatchling ];
+
+  dependencies = [
     google-api-core
-    jinja2
-    ndjson
-    pillow
+    lbox-clients
     pydantic
-    rasterio
+    python-dateutil
     requests
-    shapely
+    strenum
+    tqdm
+    geojson
+    mypy
   ];
 
-  postPatch = ''
-    substituteInPlace setup.py --replace "pydantic==1.8" "pydantic>=1.8"
-  '';
+  optional-dependencies = {
+    data = [
+      shapely
+      numpy
+      pillow
+      opencv-python-headless
+      typeguard
+      imagesize
+      pyproj
+      # pygeotile
+      typing-extensions
+    ];
+  };
 
-  checkInputs = [
-    pytest-cases
+  nativeCheckInputs = [
+    nbconvert
+    nbformat
+    pytest-cov-stub
+    pytest-order
+    pytest-rerunfailures
+    pytest-xdist
     pytestCheckHook
-  ];
+  ] ++ optional-dependencies.data;
 
   disabledTestPaths = [
     # Requires network access
     "tests/integration"
+    # Missing requirements
+    "tests/data"
+    "tests/unit/test_label_data_type.py"
   ];
+
+  doCheck = true;
+
+  __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [ "labelbox" ];
 
-  meta = with lib; {
+  meta = {
     description = "Platform API for LabelBox";
     homepage = "https://github.com/Labelbox/labelbox-python";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ rakesh4g ];
+    changelog = "https://github.com/Labelbox/labelbox-python/releases/tag/v.${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ rakesh4g ];
   };
 }

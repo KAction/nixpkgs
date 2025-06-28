@@ -1,30 +1,43 @@
-{ stdenv, lib, meson, ninja, fetchurl, cairo
-, girara
-, gtk-mac-integration
-, gumbo
-, jbig2dec
-, libjpeg
-, mupdf
-, openjpeg
-, pkg-config
-, zathura_core
-, tesseract
-, leptonica
-, mujs
+{
+  stdenv,
+  lib,
+  meson,
+  ninja,
+  fetchurl,
+  cairo,
+  girara,
+  gtk-mac-integration,
+  gumbo,
+  jbig2dec,
+  libjpeg,
+  mupdf,
+  openjpeg,
+  pkg-config,
+  zathura_core,
+  tesseract,
+  leptonica,
+  mujs,
+  desktop-file-utils,
+  appstream-glib,
+  gitUpdater,
 }:
 
-stdenv.mkDerivation rec {
-  version = "0.3.8";
+stdenv.mkDerivation (finalAttrs: {
+  version = "0.4.4";
   pname = "zathura-pdf-mupdf";
 
   src = fetchurl {
-    url = "https://pwmt.org/projects/${pname}/download/${pname}-${version}.tar.xz";
-    sha256 = "sha256-wgW0z1ANjP6ezqreVOX6jUzRKYzYXxem9QxkclkRYhc=";
+    url = "https://pwmt.org/projects/zathura-pdf-mupdf/download/zathura-pdf-mupdf-${finalAttrs.version}.tar.xz";
+    hash = "sha256-ASViSQHKvjov5jMVpG59lmoyPAKP9TiQ3694Vq2x9Pw=";
   };
 
-  patches = [ ./fix-mupdf-1.20.patch ];
-
-  nativeBuildInputs = [ meson ninja pkg-config ];
+  nativeBuildInputs = [
+    meson
+    ninja
+    pkg-config
+    desktop-file-utils
+    appstream-glib
+  ];
 
   buildInputs = [
     cairo
@@ -38,19 +51,25 @@ stdenv.mkDerivation rec {
     tesseract
     leptonica
     mujs
-  ] ++ lib.optional stdenv.isDarwin gtk-mac-integration;
+  ] ++ lib.optional stdenv.hostPlatform.isDarwin gtk-mac-integration;
 
-  PKG_CONFIG_ZATHURA_PLUGINDIR= "lib/zathura";
+  env.PKG_CONFIG_ZATHURA_PLUGINDIR = "lib/zathura";
 
-  meta = with lib; {
+  postPatch = ''
+    sed -i -e '/^mupdfthird =/d' -e 's/, mupdfthird//g' meson.build
+  '';
+
+  passthru.updateScript = gitUpdater { url = "https://git.pwmt.org/pwmt/zathura-pdf-mupdf.git"; };
+
+  meta = {
     homepage = "https://pwmt.org/projects/zathura-pdf-mupdf/";
-    description = "A zathura PDF plugin (mupdf)";
+    description = "Zathura PDF plugin (mupdf)";
     longDescription = ''
       The zathura-pdf-mupdf plugin adds PDF support to zathura by
       using the mupdf rendering library.
     '';
-    license = licenses.zlib;
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ cstrahan ];
+    license = lib.licenses.zlib;
+    platforms = lib.platforms.unix;
+    maintainers = [ ];
   };
-}
+})

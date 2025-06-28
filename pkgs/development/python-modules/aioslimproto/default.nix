@@ -1,41 +1,51 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  async-timeout,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pillow,
+  pythonOlder,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "aioslimproto";
-  version = "2.1.1";
-  format = "setuptools";
+  version = "3.1.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.9";
+  disabled = pythonOlder "3.11";
 
   src = fetchFromGitHub {
     owner = "home-assistant-libs";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    hash = "sha256-Er7UsJDBDXD8CQSkUIOeO78HQaCsrRycU18LOjBpv/w=";
+    repo = "aioslimproto";
+    tag = version;
+    hash = "sha256-3soqvZld92ohCEwTFaMIOC+cvOjBQyVQOoLmKr53aMA=";
   };
 
-  checkInputs = [
-    pytestCheckHook
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail 'version = "0.0.0"' 'version = "${version}"'
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aiohttp
+    async-timeout
+    pillow
   ];
 
-  disabledTests = [
-    # AssertionError: assert ['mixer', 'volume', '50'] == ['volume', '50']
-    "test_msg_instantiation"
-  ];
+  # Module has no tests
+  doCheck = false;
 
-  pythonImportsCheck = [
-    "aioslimproto"
-  ];
+  pythonImportsCheck = [ "aioslimproto" ];
 
   meta = with lib; {
     description = "Module to control Squeezebox players";
     homepage = "https://github.com/home-assistant-libs/aioslimproto";
-    license = with licenses; [ asl20 ];
+    changelog = "https://github.com/home-assistant-libs/aioslimproto/releases/tag/${version}";
+    license = licenses.asl20;
     maintainers = with maintainers; [ fab ];
   };
 }

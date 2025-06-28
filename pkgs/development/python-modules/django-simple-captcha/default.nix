@@ -1,39 +1,66 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, python
-, six
-, testfixtures
-, django
-, django-ranged-response
-, pillow
-, withTTS ? true
-, flite
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  django,
+  django-ranged-response,
+  pillow,
+
+  # tests
+  flite,
+  pytest-django,
+  pytestCheckHook,
+  testfixtures,
 }:
 
 buildPythonPackage rec {
   pname = "django-simple-captcha";
-  version = "0.5.14";
+  version = "0.6.2";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "84b5c188e6ae50e9ecec5e5d734c5bc4d2a50fbbca7f59d2c12da9a3bbee5051";
-    extension = "zip";
+  src = fetchFromGitHub {
+    owner = "mbi";
+    repo = "django-simple-captcha";
+    tag = "v${version}";
+    hash = "sha256-hOvZQCAAlMYaNpAN+junhfgWej92shto7ejhKUPqbX0=";
   };
 
-  checkInputs = [ testfixtures ];
+  build-system = [ setuptools ];
+
+  dependencies = [
+    django
+    pillow
+    django-ranged-response
+  ];
+
+  nativeCheckInputs = [
+    flite
+    pytest-django
+    pytestCheckHook
+    testfixtures
+  ];
+
   checkPhase = ''
-    cd testproject
-    ${python.interpreter} manage.py test captcha
+    runHook preCheck
+    pushd testproject
+    python manage.py test captcha
+    popd
+    runHook postCheck
   '';
 
-  propagatedBuildInputs = [ django django-ranged-response six pillow ]
-  ++ lib.optional withTTS flite;
-
   meta = with lib; {
-    description = "An extremely simple, yet highly customizable Django application to add captcha images to any Django form";
+    description = "Customizable Django application to add captcha images to any Django form";
     homepage = "https://github.com/mbi/django-simple-captcha";
+    changelog = "https://github.com/mbi/django-simple-captcha/blob/${src.tag}/CHANGES";
     license = licenses.mit;
-    maintainers = with maintainers; [ mrmebelman schmittlauch ];
+    maintainers = with maintainers; [
+      mrmebelman
+      schmittlauch
+    ];
   };
 }

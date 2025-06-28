@@ -1,22 +1,23 @@
-{ pkgs
-, lib
-, buildGoModule
-, fetchFromGitHub
-, nixosTests
+{
+  pkgs,
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  nixosTests,
 }:
 
 buildGoModule rec {
   pname = "kthxbye";
-  version = "0.15";
+  version = "0.16";
 
-  src = fetchFromGitHub rec {
+  src = fetchFromGitHub {
     owner = "prymitive";
     repo = "kthxbye";
     rev = "v${version}";
-    hash = "sha256-N1MzutjzLk9MnE1b7dKRsiS7LL4Nb61+NpmjTBPGohI=";
+    hash = "sha256-B6AgD79q0kA67iC9pIfv8PH8xejx2srpRccdds1GsZo=";
   };
 
-  vendorHash = "sha256-PtINxblqX/wxJyN42mS+hmwMy0lCd6FcQgmBnxTUdcc=";
+  vendorHash = "sha256-BS9+2w18tvrgmPzRMP0XyUlyPAR9AJMLXUd3GYEJr8E=";
 
   buildPhase = ''
     make -j$NIX_BUILD_CORES
@@ -32,6 +33,7 @@ buildGoModule rec {
 
   meta = with lib; {
     description = "Prometheus Alertmanager alert acknowledgement management daemon";
+    mainProgram = "kthxbye";
     homepage = "https://github.com/prymitive/kthxbye";
     license = licenses.asl20;
     maintainers = with maintainers; [ nukaduka ];

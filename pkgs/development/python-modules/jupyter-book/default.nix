@@ -1,60 +1,67 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, flit-core
-, click
-, docutils
-, jinja2
-, jsonschema
-, linkify-it-py
-, myst-nb
-, pyyaml
-, sphinx
-, sphinx-comments
-, sphinx-copybutton
-, sphinx-external-toc
-, sphinx-jupyterbook-latex
-, sphinx-design
-, sphinx-thebe
-, sphinx-book-theme
-, sphinx-togglebutton
-, sphinxcontrib-bibtex
-, sphinx-multitoc-numbering
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+
+  # dependencies
+  click,
+  jinja2,
+  jsonschema,
+  linkify-it-py,
+  myst-nb,
+  myst-parser,
+  pyyaml,
+  sphinx,
+  sphinx-comments,
+  sphinx-copybutton,
+  sphinx-external-toc,
+  sphinx-jupyterbook-latex,
+  sphinx-design,
+  sphinx-thebe,
+  sphinx-book-theme,
+  sphinx-togglebutton,
+  sphinxcontrib-bibtex,
+  sphinx-multitoc-numbering,
+
+  # tests
+  jupytext,
+  pytest-regressions,
+  pytest-xdist,
+  pytestCheckHook,
+  sphinx-inline-tabs,
+  texsoup,
+  writableTmpDirAsHomeHook,
 }:
 
 buildPythonPackage rec {
   pname = "jupyter-book";
-  version = "0.13.1";
+  version = "1.0.4";
+  pyproject = true;
 
-  format = "flit";
-
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-RgpC/H4J3kbdZsKuwYu7EOKCqcgM2v4uUsm6PVFknQE=";
+  src = fetchFromGitHub {
+    owner = "jupyter-book";
+    repo = "jupyter-book";
+    tag = "v${version}";
+    hash = "sha256-04I9mzJMXCpvMiOeMD/Bg8FiymkRgHf/Yo9C1VcyTsw=";
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace "jsonschema<4" "jsonschema" \
-      --replace "sphinx-external-toc~=0.2.3" "sphinx-external-toc" \
-      --replace "myst-nb~=0.13.1" "myst-nb" \
-      --replace "docutils>=0.15,<0.18" "docutils" \
-      --replace "sphinx-design~=0.1.0" "sphinx-design" \
-      --replace "linkify-it-py~=1.0.1" "linkify-it-py"
-  '';
+  build-system = [ hatchling ];
 
-  nativeBuildInputs = [ flit-core ];
+  pythonRelaxDeps = [
+    "myst-parser"
+    "sphinx"
+  ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     click
-    docutils
     jinja2
     jsonschema
     linkify-it-py
     myst-nb
+    myst-parser
     pyyaml
     sphinx
     sphinx-comments
@@ -69,12 +76,63 @@ buildPythonPackage rec {
     sphinx-multitoc-numbering
   ];
 
-  pythonImportsCheck = [ "jupyter_book" ];
+  pythonImportsCheck = [
+    "jupyter_book"
+    "jupyter_book.cli.main"
+  ];
 
-  meta = with lib; {
+  nativeCheckInputs = [
+    jupytext
+    pytest-regressions
+    pytest-xdist
+    pytestCheckHook
+    sphinx-inline-tabs
+    texsoup
+    writableTmpDirAsHomeHook
+  ];
+
+  disabledTests = [
+    # touch the network
+    "test_create_from_cookiecutter"
+
+    # flaky?
+    "test_execution_timeout"
+
+    # require texlive
+    "test_toc"
+    "test_toc_latex_parts"
+    "test_toc_latex_urllink"
+
+    # AssertionError: assert 'There was an error in building your book' in '1'
+    "test_build_errors"
+
+    # WARNING: Executing notebook failed: CellExecutionError [mystnb.exec]
+    "test_build_dirhtml_from_template"
+    "test_build_from_template"
+    "test_build_page"
+    "test_build_singlehtml_from_template"
+
+    # pytest.PytestUnraisableExceptionWarning: Exception ignored in: <sqlite3.Connection object at 0x115dcc9a0>
+    # ResourceWarning: unclosed database in <sqlite3.Connection object at 0x115dcc9a0>
+    "test_clean_book"
+    "test_clean_html"
+    "test_clean_html_latex"
+    "test_clean_latex"
+  ];
+
+  disabledTestPaths = [
+    # require texlive
+    "tests/test_pdf.py"
+  ];
+
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
     description = "Build a book with Jupyter Notebooks and Sphinx";
-    homepage = "https://executablebooks.org/";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ marsam ];
+    homepage = "https://jupyterbook.org/";
+    changelog = "https://github.com/jupyter-book/jupyter-book/blob/${src.rev}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    teams = [ lib.teams.jupyter ];
+    mainProgram = "jupyter-book";
   };
 }

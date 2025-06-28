@@ -1,21 +1,30 @@
-{ stdenv, lib, fetchFromGitHub, kernel }:
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  kernel,
+  kernelModuleMakeFlags,
+  unstableGitUpdater,
+}:
 
 let
   modDestDir = "$out/lib/modules/${kernel.modDirVersion}/kernel/drivers/net/wireless/realtek/rtw88";
 in
 stdenv.mkDerivation {
   pname = "rtw88";
-  version = "unstable-2022-06-03";
+  version = "0-unstable-2025-05-08";
 
   src = fetchFromGitHub {
     owner = "lwfinger";
     repo = "rtw88";
-    rev = "03da251c76ea1005b42625825c39181e12d75693";
-    sha256 = "0l5ysp4x5wzrn48sfjv3rciqhq5ldcmk86b9x6j9775zjj7yw8hw";
+    rev = "461b696b51317ba4ca585a4ddb32f2e72cd4efc9";
+    hash = "sha256-PBAON2s7gKvpO40vppahEtkWJ4HIjbOjfUz+fx87gIA=";
   };
 
   nativeBuildInputs = kernel.moduleBuildDependencies;
-  makeFlags = kernel.makeFlags ++ [ "KSRC=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build" ];
+  makeFlags = kernelModuleMakeFlags ++ [
+    "KSRC=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+  ];
 
   enableParallelBuilding = true;
 
@@ -29,13 +38,21 @@ stdenv.mkDerivation {
     runHook postInstall
   '';
 
+  passthru.updateScript = unstableGitUpdater { hardcodeZeroVersion = true; };
+
   meta = with lib; {
-    description = "The newest Realtek rtlwifi codes";
+    description = "Backport of the latest Realtek RTW88 driver from wireless-next for older kernels";
     homepage = "https://github.com/lwfinger/rtw88";
-    license = with licenses; [ bsd3 gpl2Only ];
-    maintainers = with maintainers; [ tvorog atila ];
+    license = with licenses; [
+      bsd3
+      gpl2Only
+    ];
+    maintainers = with maintainers; [
+      tvorog
+      atila
+    ];
     platforms = platforms.linux;
-    broken = kernel.kernelOlder "4.14";
+    broken = kernel.kernelOlder "4.20";
     priority = -1;
   };
 }

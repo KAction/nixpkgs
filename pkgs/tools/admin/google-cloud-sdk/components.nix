@@ -1,13 +1,16 @@
-{ stdenv
-, lib
-, google-cloud-sdk
-, system
-, snapshotPath
-, ...
+{
+  lib,
+  stdenv,
+  fetchurl,
+  system,
+  snapshotPath,
+  autoPatchelfHook,
+  python3,
+  libxcrypt-legacy,
 }:
 
 let
-  # Mapping from GCS component architecture names to Nix archictecture names
+  # Mapping from GCS component architecture names to Nix architecture names
   arches = {
     x86 = "i686";
     x86_64 = "x86_64";
@@ -23,7 +26,8 @@ let
   };
 
   # Convert an archicecture + OS to a Nix platform
-  toNixPlatform = arch: os:
+  toNixPlatform =
+    arch: os:
     let
       arch' = arches.${arch} or (throw "unsupported architecture '${arch}'");
       os' = oses.${os} or (throw "unsupported OS '${os}'");
@@ -35,17 +39,18 @@ let
 
   # A description of all available google-cloud-sdk components.
   # It's a JSON file with a list of components, along with some metadata
-  snapshot = builtins.fromJSON (builtins.readFile snapshotPath);
+  snapshot = lib.importJSON snapshotPath;
 
   # Generate a snapshot file for a single component.  It has the same format as
   # `snapshot`, but only contains a single component.  These files are
   # installed with google-cloud-sdk to let it know which components are
   # available.
   snapshotFromComponent =
-    { component
-    , revision
-    , schema_version
-    , version
+    {
+      component,
+      revision,
+      schema_version,
+      version,
     }:
     builtins.toJSON {
       components = [ component ];
@@ -54,21 +59,27 @@ let
 
   # Generate a set of components from a JSON file describing these components
   componentsFromSnapshot =
-    { components
-    , revision
-    , schema_version
-    , version
-    , ...
+    {
+      components,
+      revision,
+      schema_version,
+      version,
+      ...
     }:
     lib.fix (
       self:
       builtins.listToAttrs (
-        builtins.map
-          (component: {
-            name = component.id;
-            value = componentFromSnapshot self { inherit component revision schema_version version; };
-          })
-          components
+        builtins.map (component: {
+          name = component.id;
+          value = componentFromSnapshot self {
+            inherit
+              component
+              revision
+              schema_version
+              version
+              ;
+          };
+        }) components
       )
     );
 
@@ -78,72 +89,69 @@ let
     # Component derivations that can be used as dependencies
     components:
     # This component's snapshot
-    { component
-    , revision
-    , schema_version
-    , version
-    } @ attrs:
+    {
+      component,
+      revision,
+      schema_version,
+      version,
+    }@attrs:
     let
       baseUrl = builtins.dirOf schema_version.url;
       # Architectures supported by this component.  Defaults to all available
       # architectures.
-      architectures = builtins.filter
-        (arch: builtins.elem arch (builtins.attrNames arches))
-        (lib.attrByPath [ "platform" "architectures" ] allArches component);
+      architectures = builtins.filter (arch: builtins.elem arch (builtins.attrNames arches)) (
+        lib.attrByPath [ "platform" "architectures" ] allArches component
+      );
       # Operating systems supported by this component
-      operating_systems = builtins.filter
-        (os: builtins.elem os (builtins.attrNames oses))
-        component.platform.operating_systems;
+      operating_systems = builtins.filter (
+        os: builtins.elem os (builtins.attrNames oses)
+      ) component.platform.operating_systems;
     in
-    mkComponent
-      {
-        name = component.id;
-        version = component.version.version_string;
-        src =
-          if lib.hasAttrByPath [ "data" "source" ] component
-          then "${baseUrl}/${component.data.source}"
-          else "";
-        sha256 = lib.attrByPath [ "data" "checksum" ] "" component;
-        dependencies = builtins.map (dep: builtins.getAttr dep components) component.dependencies;
-        platforms =
-          if component.platform == { }
-          then lib.platforms.all
-          else
-            builtins.concatMap
-              (arch: builtins.map (os: toNixPlatform arch os) operating_systems)
-              architectures;
-        snapshot = snapshotFromComponent attrs;
-      };
+    mkComponent {
+      pname = component.id;
+      version = component.version.version_string;
+      src = lib.optionalString (lib.hasAttrByPath [
+        "data"
+        "source"
+      ] component) "${baseUrl}/${component.data.source}";
+      sha256 = lib.attrByPath [ "data" "checksum" ] "" component;
+      dependencies = builtins.map (dep: builtins.getAttr dep components) component.dependencies;
+      platforms =
+        if component.platform == { } then
+          lib.platforms.all
+        else
+          builtins.concatMap (arch: builtins.map (os: toNixPlatform arch os) operating_systems) architectures;
+      snapshot = snapshotFromComponent attrs;
+    };
 
   # Filter out dependencies not supported by current system
   filterForSystem = builtins.filter (drv: builtins.elem system drv.meta.platforms);
 
   # Make a google-cloud-sdk component
   mkComponent =
-    { name
-    , version
+    {
+      pname,
+      version,
       # Source tarball, if any
-    , src ? ""
+      src ? "",
       # Checksum for the source tarball, if there is a source
-    , sha256 ? ""
+      sha256 ? "",
       # Other components this one depends on
-    , dependencies ? [ ]
+      dependencies ? [ ],
       # Short text describing the component
-    , description ? ""
+      description ? "",
       # Platforms supported
-    , platforms ? lib.platforms.all
+      platforms ? lib.platforms.all,
       # The snapshot corresponding to this component
-    , snapshot
-    }: stdenv.mkDerivation {
-      inherit name version snapshot;
-      src =
-        if src != "" then
-          builtins.fetchurl
-            {
-              url = src;
-              inherit sha256;
-            } else "";
-      phases = [ "installPhase" "fixupPhase" ];
+      snapshot,
+    }:
+    stdenv.mkDerivation {
+      inherit pname version snapshot;
+      src = lib.optionalString (src != "") (fetchurl {
+        url = src;
+        inherit sha256;
+      });
+      dontUnpack = true;
       installPhase = ''
         mkdir -p $out/google-cloud-sdk/.install
 
@@ -159,8 +167,19 @@ let
         fi
 
         # Write the snapshot file to the `.install` folder
-        cp $snapshotPath $out/google-cloud-sdk/.install/${name}.snapshot.json
+        cp $snapshotPath $out/google-cloud-sdk/.install/${pname}.snapshot.json
       '';
+      nativeBuildInputs =
+        [
+          python3
+          stdenv.cc.cc
+        ]
+        ++ lib.optionals stdenv.hostPlatform.isLinux [
+          autoPatchelfHook
+        ];
+      buildInputs = [
+        libxcrypt-legacy
+      ];
       passthru = {
         dependencies = filterForSystem dependencies;
       };

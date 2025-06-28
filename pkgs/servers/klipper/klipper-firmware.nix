@@ -1,26 +1,26 @@
-{ stdenv
-, lib
-, pkg-config
-, pkgsCross
-, bintools-unwrapped
-, libffi
-, libusb1
-, wxGTK30-gtk3
-, python2
-, python3
-, gcc-arm-embedded
-, klipper
-, avrdude
-, stm32flash
-, mcu ? "mcu"
-, firmwareConfig ? ./simulator.cfg
-}: stdenv.mkDerivation rec {
+{
+  stdenv,
+  lib,
+  pkg-config,
+  pkgsCross,
+  bintools-unwrapped,
+  libffi,
+  libusb1,
+  wxGTK32,
+  python3,
+  gcc-arm-embedded,
+  klipper,
+  avrdude,
+  stm32flash,
+  mcu ? "mcu",
+  firmwareConfig ? ./simulator.cfg,
+}:
+stdenv.mkDerivation rec {
   name = "klipper-firmware-${mcu}-${version}";
   version = klipper.version;
   src = klipper.src;
 
   nativeBuildInputs = [
-    python2
     python3
     pkgsCross.avr.stdenv.cc
     gcc-arm-embedded
@@ -30,7 +30,7 @@
     avrdude
     stm32flash
     pkg-config
-    wxGTK30-gtk3 # Required for bossac
+    wxGTK32 # Required for bossac
   ];
 
   preBuild = "cp ${firmwareConfig} ./.config";
@@ -42,12 +42,15 @@
   makeFlags = [
     "V=1"
     "KCONFIG_CONFIG=${firmwareConfig}"
+    "WXVERSION=3.2"
   ];
 
   installPhase = ''
     mkdir -p $out
     cp ./.config $out/config
-    cp -r out/* $out
+    cp out/klipper.bin $out/ || true
+    cp out/klipper.elf $out/ || true
+    cp out/klipper.uf2 $out/ || true
   '';
 
   dontFixup = true;

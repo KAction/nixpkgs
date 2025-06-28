@@ -1,12 +1,16 @@
-{ lib, mkDiscoursePlugin, fetchFromGitHub }:
+{
+  lib,
+  mkDiscoursePlugin,
+  fetchFromGitHub,
+}:
 
 mkDiscoursePlugin {
   name = "discourse-spoiler-alert";
   src = fetchFromGitHub {
     owner = "discourse";
     repo = "discourse-spoiler-alert";
-    rev = "636245b0e63dd53271ba55144edb20f48822b59f";
-    sha256 = "sha256-WTY9wvCAyWa3VgfRclOm9mkVgDxZBojgCvJqjTga90o=";
+    rev = "42b77ec048b9b386a8b25a22bfec6472817da465";
+    sha256 = "sha256-BQeID+y9RvmcnuNsodOMXseVvre5QYxv+E/ul8bucUI=";
   };
   meta = with lib; {
     homepage = "https://github.com/discourse/discourse-spoiler-alert";

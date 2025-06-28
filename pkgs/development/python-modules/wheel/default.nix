@@ -1,44 +1,33 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, bootstrapped-pip
-, setuptools
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flit-core,
 }:
 
 buildPythonPackage rec {
   pname = "wheel";
-  version = "0.37.1";
-  format = "other";
+  version = "0.46.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pypa";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-JlTmUPY3yo/uROyd3nW1dJa23zbLhgQTwcmqZkPOrHs=";
-    name = "${pname}-${version}-source";
-    postFetch = ''
-      cd $out
-      mv tests/testdata/unicode.dist/unicodedist/åäö_日本語.py \
-        tests/testdata/unicode.dist/unicodedist/æɐø_日本價.py
-      patch -p1 < ${./0001-tests-Rename-a-a-o-_-.py-_-.py.patch}
-    '';
+    repo = "wheel";
+    tag = version;
+    hash = "sha256-tgueGEWByS5owdA5rhXGn3qh1Vtf0HGYC6+BHfrnGAs=";
   };
 
-  nativeBuildInputs = [
-    bootstrapped-pip
-    setuptools
-  ];
+  nativeBuildInputs = [ flit-core ];
 
   # No tests in archive
   doCheck = false;
-  pythonImportsCheck = [ "wheel" ];
 
-  # We add this flag to ignore the copy installed by bootstrapped-pip
-  pipInstallFlags = [ "--ignore-installed" ];
+  pythonImportsCheck = [ "wheel" ];
 
   meta = with lib; {
     homepage = "https://github.com/pypa/wheel";
-    description = "A built-package format for Python";
+    description = "Built-package format for Python";
+    mainProgram = "wheel";
     longDescription = ''
       This library is the reference implementation of the Python wheel packaging standard,
       as defined in PEP 427.

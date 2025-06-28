@@ -1,37 +1,38 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "brotli";
-  version = "1.0.9";
+  version = "1.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "google";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-tFnXSXv8t3l3HX6GwWLhEtgpqz0c7Yom5U3k47pWM7o=";
+    repo = "brotli";
+    tag = "v${version}";
+    hash = "sha256-U1vAupUthD5W0xvlOKdgm9MAVLqsVyZUaFdeLsDAbDM=";
     # .gitattributes is not correct or GitHub does not parse it correct and the archive is missing the test data
     forceFetchGit = true;
   };
 
+  build-system = [ setuptools ];
+
   # only returns information how to really build
   dontConfigure = true;
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pytestFlagsArray = [
-    "python/tests"
-  ];
+  pytestFlagsArray = [ "python/tests" ];
 
   meta = with lib; {
     homepage = "https://github.com/google/brotli";
     description = "Generic-purpose lossless compression algorithm";
     license = licenses.mit;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    maintainers = [ ];
   };
 }

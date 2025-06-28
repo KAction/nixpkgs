@@ -1,42 +1,61 @@
-{ lib, stdenv, fetchurl, pkg-config, intltool, xfce4-panel, libxfce4ui,
-  exo, gnutls, libgcrypt, gitUpdater }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  gettext,
+  meson,
+  ninja,
+  pkg-config,
+  xfce4-panel,
+  libxfce4ui,
+  libxfce4util,
+  exo,
+  glib,
+  gtk3,
+  gnutls,
+  libgcrypt,
+  gitUpdater,
+}:
 
-let
-  category = "panel-plugins";
-in
-
-stdenv.mkDerivation rec {
-  pname  = "xfce4-mailwatch-plugin";
-  version = "1.3.0";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "xfce4-mailwatch-plugin";
+  version = "1.4.0";
 
   src = fetchurl {
-    url = "mirror://xfce/src/${category}/${pname}/${lib.versions.majorMinor version}/${pname}-${version}.tar.bz2";
-    sha256 = "sha256-IPkevv0ogLJ/Qh93MRWzdA9n3iv2D+rOOEG/0aCcvi4=";
+    url = "mirror://xfce/src/panel-plugins/xfce4-mailwatch-plugin/${lib.versions.majorMinor finalAttrs.version}/xfce4-mailwatch-plugin-${finalAttrs.version}.tar.xz";
+    hash = "sha256-XCEQJdsQlmY/prjMQSE0ZKbXHyTnYyZJnYV/+B6jhh8=";
   };
 
+  strictDeps = true;
+
   nativeBuildInputs = [
-    intltool
+    gettext
+    meson
+    ninja
     pkg-config
   ];
 
   buildInputs = [
     libxfce4ui
+    libxfce4util
     xfce4-panel
     exo
+    glib
+    gtk3
     gnutls
     libgcrypt
   ];
 
   passthru.updateScript = gitUpdater {
-    url = "https://gitlab.xfce.org/panel-plugins/${pname}";
-    rev-prefix = "${pname}-";
+    url = "https://gitlab.xfce.org/panel-plugins/xfce4-mailwatch-plugin";
+    rev-prefix = "xfce4-mailwatch-plugin-";
   };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://docs.xfce.org/panel-plugins/xfce4-mailwatch-plugin";
     description = "Mail watcher plugin for Xfce panel";
-    license = licenses.gpl2Only;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ ] ++ teams.xfce.members;
+    license = lib.licenses.gpl2Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.xfce ];
   };
-}
+})

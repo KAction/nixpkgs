@@ -1,19 +1,28 @@
-{ lib, stdenv, fetchFromGitHub
-, fontconfig, freetype, libX11, libXext, libXt, xorgproto
-, Carbon, Cocoa, IOKit, Metal, QuartzCore, DarwinTools
-, perl # For building web manuals
-, which, ed
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fontconfig,
+  freetype,
+  libX11,
+  libXext,
+  libXt,
+  xorgproto,
+  perl, # For building web manuals
+  which,
+  ed,
+  DarwinTools, # For building on Darwin
 }:
 
 stdenv.mkDerivation rec {
   pname = "plan9port";
-  version = "2021-10-19";
+  version = "2025-01-29";
 
   src = fetchFromGitHub {
     owner = "9fans";
     repo = pname;
-    rev = "d0d440860f2000a1560abb3f593cdc325fcead4c";
-    hash = "sha256-2aYXqPGwrReyFPrLDtEjgQd/RJjpOfI3ge/tDocYpRQ=";
+    rev = "a5d6857a3b912b43c88ef298c28d13d4623f9ef0";
+    sha256 = "0c23z56zygrsyr96ml7907mpfgx80vnsy99nqr3nmfw1a045mjgv";
   };
 
   postPatch = ''
@@ -35,13 +44,26 @@ stdenv.mkDerivation rec {
   '';
 
   nativeBuildInputs = [ ed ];
-  buildInputs = [ perl which ] ++ (if !stdenv.isDarwin then [
-    fontconfig freetype # fontsrv uses these
-    libX11 libXext libXt xorgproto
-  ] else [
-    Carbon Cocoa IOKit Metal QuartzCore
-    DarwinTools
-  ]);
+  buildInputs =
+    [
+      perl
+      which
+    ]
+    ++ (
+      if !stdenv.hostPlatform.isDarwin then
+        [
+          fontconfig
+          freetype # fontsrv uses these
+          libX11
+          libXext
+          libXt
+          xorgproto
+        ]
+      else
+        [
+          DarwinTools
+        ]
+    );
 
   configurePhase = ''
     runHook preConfigure
@@ -49,7 +71,7 @@ stdenv.mkDerivation rec {
     CC9='$(command -v $CC)'
     CFLAGS='$NIX_CFLAGS_COMPILE'
     LDFLAGS='$(for f in $NIX_LDFLAGS; do echo "-Wl,$f"; done | xargs echo)'
-    ${lib.optionalString (!stdenv.isDarwin) "X11='${libXt.dev}/include'"}
+    ${lib.optionalString (!stdenv.hostPlatform.isDarwin) "X11='${libXt.dev}/include'"}
     EOF
 
     # make '9' available in the path so there's some way to find out $PLAN9
@@ -67,7 +89,7 @@ stdenv.mkDerivation rec {
 
   buildPhase = ''
     runHook preBuild
-    ./INSTALL -b
+    PLAN9_TARGET=$out/plan9 ./INSTALL -b
     runHook postBuild
   '';
 
@@ -113,12 +135,15 @@ stdenv.mkDerivation rec {
     '';
     license = licenses.mit;
     maintainers = with maintainers; [
-      AndersonTorres bbarker ehmry ftrvxmtrx kovirobi ylh
+      bbarker
+      ehmry
+      ftrvxmtrx
+      kovirobi
+      matthewdargan
+      ylh
     ];
     mainProgram = "9";
     platforms = platforms.unix;
-    # TODO: revisit this when the sdk situation on x86_64-darwin changes
-    broken = stdenv.isDarwin && stdenv.isx86_64;
   };
 }
 # TODO: investigate the mouse chording support patch

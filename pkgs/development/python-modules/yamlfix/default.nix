@@ -1,50 +1,77 @@
-{ lib
-, buildPythonPackage
-, click
-, fetchFromGitHub
-, pytest-xdist
-, pytestCheckHook
-, pythonOlder
-, ruyaml
+{
+  lib,
+  buildPythonPackage,
+  click,
+  fetchFromGitHub,
+  maison,
+  pdm-backend,
+  pytest-freezegun,
+  pytest-xdist,
+  pytestCheckHook,
+  pythonOlder,
+  ruyaml,
+  setuptools,
+  writableTmpDirAsHomeHook,
 }:
+let
+  maison143 = maison.overridePythonAttrs (old: rec {
+    version = "1.4.3";
+    src = fetchFromGitHub {
+      owner = "dbatten5";
+      repo = "maison";
+      tag = "v${version}";
+      hash = "sha256-2hUmk91wr5o2cV3un2nMoXDG+3GT7SaIOKY+QaZY3nw=";
+    };
+  });
+in
 
 buildPythonPackage rec {
   pname = "yamlfix";
-  version = "0.8.2";
-  format = "setuptools";
+  version = "1.16.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "lyz-code";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-YCC4xK1fB5Gyv32JhbSuejtzLNMRnH7iyUpzccVijS0=";
+    repo = "yamlfix";
+    tag = version;
+    hash = "sha256-RRpU6cxb3a3g6RrJbUCxY7YC87HHbGkhOFtE3hf8HdA=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [
+    setuptools
+    pdm-backend
+  ];
+
+  dependencies = [
     click
+    maison143
     ruyaml
   ];
 
-  checkInputs = [
+  pythonRelaxDeps = [ "maison" ];
+
+  nativeCheckInputs = [
+    pytest-freezegun
     pytest-xdist
     pytestCheckHook
+    writableTmpDirAsHomeHook
   ];
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'python_paths = "."' ""
-  '';
+  pythonImportsCheck = [ "yamlfix" ];
 
-  pythonImportsCheck = [
-    "yamlfix"
+  pytestFlagsArray = [
+    "-W"
+    "ignore::DeprecationWarning"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python YAML formatter that keeps your comments";
     homepage = "https://github.com/lyz-code/yamlfix";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ koozz ];
+    changelog = "https://github.com/lyz-code/yamlfix/blob/${version}/CHANGELOG.md";
+    mainProgram = "yamlfix";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ koozz ];
   };
 }

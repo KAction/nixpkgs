@@ -1,186 +1,268 @@
-{ stdenv
-, buildPythonApplication
-, lib
-, python
-, fetchurl
-, fetchFromGitHub
-, fetchpatch
-, lame
-, mpv-unwrapped
-, libpulseaudio
-, pyqtwebengine
-, decorator
-, beautifulsoup4
-, sqlalchemy
-, pyaudio
-, requests
-, markdown
-, matplotlib
-, pytest
-, glibcLocales
-, nose
-, jsonschema
-, setuptools
-, send2trash
-, CoreAudio
-  # This little flag adds a huge number of dependencies, but we assume that
-  # everyone wants Anki to draw plots with statistics by default.
-, plotsSupport ? true
-  # manual
-, asciidoc
+{
+  lib,
+  stdenv,
+
+  writableTmpDirAsHomeHook,
+  buildEnv,
+  cargo,
+  fetchFromGitHub,
+  installShellFiles,
+  lame,
+  mpv-unwrapped,
+  ninja,
+  callPackage,
+  nixosTests,
+  nodejs,
+  jq,
+  protobuf,
+  python3,
+  qt6,
+  rsync,
+  rustPlatform,
+  writeShellScriptBin,
+  yarn,
+  yarn-berry_4,
+
+  swift,
+
+  mesa,
 }:
 
 let
-  # when updating, also update rev-manual to a recent version of
-  # https://github.com/ankitects/anki-docs
-  # The manual is distributed independently of the software.
-  version = "2.1.15";
-  sha256-pkg = "12dvyf3j9df4nrhhnqbzd9b21rpzkh4i6yhhangn2zf7ch0pclss";
-  rev-manual = "8f6387867ac37ef3fe9d0b986e70f898d1a49139";
-  sha256-manual = "0pm5slxn78r44ggvbksz7rv9hmlnsvn9z811r6f63dsc8vm6mfml";
+  yarn-berry = yarn-berry_4;
 
-  manual = stdenv.mkDerivation {
-    pname = "anki-manual";
-    inherit version;
-    src = fetchFromGitHub {
-      owner = "ankitects";
-      repo = "anki-docs";
-      rev = rev-manual;
-      sha256 = sha256-manual;
-    };
-    dontInstall = true;
-    nativeBuildInputs = [ asciidoc ];
-    patchPhase = ''
-      # rsync isnt needed
-      # WEB is the PREFIX
-      # We remove any special ankiweb output generation
-      # and rename every .mako to .html
-      sed -e 's/rsync -a/cp -a/g' \
-          -e "s|\$(WEB)/docs|$out/share/doc/anki/html|" \
-          -e '/echo asciidoc/,/mv $@.tmp $@/c \\tasciidoc -b html5 -o $@ $<' \
-          -e 's/\.mako/.html/g' \
-          -i Makefile
-      # patch absolute links to the other language manuals
-      sed -e 's|https://apps.ankiweb.net/docs/|link:./|g' \
-          -i {manual.txt,manual.*.txt}
-      # there’s an artifact in most input files
-      sed -e '/<%def.*title.*/d' \
-          -i *.txt
-      mkdir -p $out/share/doc/anki/html
-    '';
-  };
-
-in
-buildPythonApplication rec {
   pname = "anki";
-  inherit version;
-  format = "other";
+  version = "25.02.5";
+  rev = "29192d156ae60d6ce35e80ccf815a8331c9db724";
 
-  src = fetchurl {
-    urls = [
-      "https://apps.ankiweb.net/downloads/current/${pname}-${version}-source.tgz"
-      # "https://apps.ankiweb.net/downloads/current/${name}-source.tgz"
-      # "http://ankisrs.net/download/mirror/${name}.tgz"
-      # "http://ankisrs.net/download/mirror/archive/${name}.tgz"
-    ];
-    sha256 = sha256-pkg;
+  srcHash = "sha256-lx3tK57gcQpwmiqUzO6iU7sE31LPFp6s80prYaB2jHE=";
+  cargoHash = "sha256-BPCfeUiZ23FdZaF+zDUrRZchauNZWQ3gSO+Uo9WRPes=";
+  yarnHash = "sha256-3G+9N3xOzog3XDCKDQJCY/6CB3i6oXixRgxEyv7OG3U=";
+
+  src = fetchFromGitHub {
+    owner = "ankitects";
+    repo = "anki";
+    rev = version;
+    hash = srcHash;
+    fetchSubmodules = true;
   };
 
-  outputs = [ "out" "doc" "man" ];
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit pname version src;
+    hash = cargoHash;
+  };
 
-  propagatedBuildInputs = [
-    pyqtwebengine
-    sqlalchemy
-    beautifulsoup4
-    send2trash
-    pyaudio
-    requests
-    decorator
-    markdown
-    jsonschema
-    setuptools
-  ]
-  ++ lib.optional plotsSupport matplotlib
-  ++ lib.optionals stdenv.isDarwin [ CoreAudio ]
-  ;
+  # a wrapper for yarn to skip 'install'
+  # We do this because we need to patchShebangs after install, so we do it
+  # ourselves beforehand.
+  # We also, confusingly, have to use yarn-berry to handle the lockfile (anki's
+  # lockfile is too new for yarn), but have to use 'yarn' here, because anki's
+  # build system uses yarn-1 style flags and such.
+  # I think what's going on here is that yarn-1 in anki's normal build system
+  # ends up noticing the yarn-file is too new and shelling out to yarn-berry
+  # itself.
+  noInstallYarn = writeShellScriptBin "yarn" ''
+    [[ "$1" == "install" ]] && exit 0
+    exec ${yarn}/bin/yarn "$@"
+  '';
 
-  checkInputs = [ pytest glibcLocales nose ];
+  anki-build-python = python3.withPackages (ps: with ps; [ mypy-protobuf ]);
 
-  nativeBuildInputs = [ pyqtwebengine.wrapQtAppsHook ];
-  buildInputs = [ lame mpv-unwrapped libpulseaudio ];
+  pyEnv = buildEnv {
+    name = "anki-pyenv-${version}";
+    paths = with python3.pkgs; [
+      pip
+      anki-build-python
+    ];
+    pathsToLink = [ "/bin" ];
+  };
+in
+python3.pkgs.buildPythonApplication rec {
+  inherit pname version;
 
-  patches = [
-    # Disable updated version check.
-    ./no-version-check.patch
-    (fetchpatch {
-      name = "fix-mpv-args.patch";
-      url = "https://sources.debian.org/data/main/a/anki/2.1.15+dfsg-3/debian/patches/fix-mpv-args.patch";
-      sha256 = "1dimnnawk64m5bbdbjrxw5k08q95l728n94cgkrrwxwavmmywaj2";
-    })
-    (fetchpatch {
-      name = "anki-2.1.15-unescape.patch";
-      url = "https://795309.bugs.gentoo.org/attachment.cgi?id=715200";
-      sha256 = "14rz864kdaba4fd1marwkyz9n1jiqnbjy4al8bvwlhpvp0rm1qk6";
-    })
+  outputs = [
+    "out"
+    "doc"
+    "man"
   ];
 
-  # Anki does not use setup.py
-  dontBuild = true;
+  inherit src;
 
-  postPatch = ''
-    # Remove QT translation files. We'll use the standard QT ones.
-    rm "locale/"*.qm
+  patches = [
+    ./patches/disable-auto-update.patch
+    ./patches/remove-the-gl-library-workaround.patch
+    ./patches/skip-formatting-python-code.patch
+    # Used in with-addons.nix
+    ./patches/allow-setting-addons-folder.patch
+  ];
 
-    # hitting F1 should open the local manual
-    substituteInPlace anki/consts.py \
-      --replace 'HELP_SITE="http://ankisrs.net/docs/manual.html"' \
-                'HELP_SITE="${manual}/share/doc/anki/html/manual.html"'
-  '';
+  inherit cargoDeps;
 
-  # UTF-8 locale needed for testing
-  LC_ALL = "en_US.UTF-8";
+  missingHashes = ./missing-hashes.json;
+  yarnOfflineCache = yarn-berry.fetchYarnBerryDeps {
+    inherit missingHashes;
+    yarnLock = "${src}/yarn.lock";
+    hash = yarnHash;
+  };
 
-  # tests fail with to many open files
-  doCheck = !stdenv.isDarwin;
+  nativeBuildInputs = [
+    cargo
+    installShellFiles
+    jq
+    ninja
+    nodejs
+    qt6.wrapQtAppsHook
+    rsync
+    rustPlatform.cargoSetupHook
+    writableTmpDirAsHomeHook
+    yarn-berry_4.yarnBerryConfigHook
+  ] ++ lib.optional stdenv.hostPlatform.isDarwin swift;
 
-  # - Anki writes some files to $HOME during tests
-  # - Skip tests using network
-  checkPhase = ''
-    HOME=$TMP pytest --ignore tests/test_sync.py
-  '';
+  buildInputs = [
+    qt6.qtbase
+    qt6.qtsvg
+  ] ++ lib.optional stdenv.hostPlatform.isLinux qt6.qtwayland;
 
-  installPhase = ''
-    pp=$out/lib/${python.libPrefix}/site-packages
+  propagatedBuildInputs = with python3.pkgs; [
+    # This rather long list came from running:
+    #    grep --no-filename -oE "^[^ =]*" python/{requirements.base.txt,requirements.bundle.txt,requirements.qt6_lin.txt} | \
+    #      sort | uniq | grep -v "^#$"
+    # in their repo at the git tag for this version
+    # There's probably a more elegant way, but the above extracted all the
+    # names, without version numbers, of their python dependencies. The hope is
+    # that nixpkgs versions are "close enough"
+    # I then removed the ones the check phase failed on (pythonCatchConflictsPhase)
+    attrs
+    beautifulsoup4
+    blinker
+    build
+    certifi
+    charset-normalizer
+    click
+    colorama
+    decorator
+    flask
+    flask-cors
+    google-api-python-client
+    idna
+    importlib-metadata
+    itsdangerous
+    jinja2
+    jsonschema
+    markdown
+    markupsafe
+    orjson
+    packaging
+    pip
+    pip-system-certs
+    pip-tools
+    protobuf
+    pyproject-hooks
+    pyqt6
+    pyqt6-sip
+    pyqt6-webengine
+    pyrsistent
+    pysocks
+    requests
+    send2trash
+    setuptools
+    soupsieve
+    tomli
+    urllib3
+    waitress
+    werkzeug
+    wheel
+    wrapt
+    zipp
+  ];
 
-    mkdir -p $out/bin
-    mkdir -p $out/share/applications
-    mkdir -p $doc/share/doc/anki
-    mkdir -p $man/share/man/man1
-    mkdir -p $out/share/mime/packages
-    mkdir -p $out/share/pixmaps
-    mkdir -p $pp
+  nativeCheckInputs = with python3.pkgs; [
+    pytest
+    mock
+    astroid
+  ];
 
-    cat > $out/bin/anki <<EOF
-    #!${python}/bin/python
-    import aqt
-    aqt.run()
-    EOF
-    chmod 755 $out/bin/anki
+  # tests fail with too many open files
+  # TODO: verify if this is still true (I can't, no mac)
+  doCheck = !stdenv.hostPlatform.isDarwin;
 
-    cp -v anki.desktop $out/share/applications/
-    cp -v README* LICENSE* $doc/share/doc/anki/
-    cp -v anki.1 $man/share/man/man1/
-    cp -v anki.xml $out/share/mime/packages/
-    cp -v anki.{png,xpm} $out/share/pixmaps/
-    cp -rv locale $out/share/
-    cp -rv anki aqt web $pp/
+  checkFlags = [
+    # this test is flaky, see https://github.com/ankitects/anki/issues/3619
+    # also remove from anki-sync-server when removing this
+    "--skip=deckconfig::update::test::should_keep_at_least_one_remaining_relearning_step"
+  ];
 
-    # copy the manual into $doc
-    cp -r ${manual}/share/doc/anki/html $doc/share/doc/anki
-  '';
-
-  # now wrapPythonPrograms from postFixup will add both python and qt env variables
+  dontUseNinjaInstall = false;
   dontWrapQtApps = true;
+
+  env = {
+    # Activate optimizations
+    RELEASE = true;
+
+    # https://github.com/ankitects/anki/blob/24.11/docs/linux.md#packaging-considerations
+    OFFLINE_BUILD = "1";
+    NODE_BINARY = lib.getExe nodejs;
+    PROTOC_BINARY = lib.getExe protobuf;
+    PYTHON_BINARY = lib.getExe python3;
+  };
+
+  buildPhase = ''
+    export RUST_BACKTRACE=1
+    export RUST_LOG=debug
+
+    mkdir -p out/pylib/anki .git
+
+    echo ${builtins.substring 0 8 rev} > out/buildhash
+
+    ln -vsf ${pyEnv} ./out/pyenv
+
+    mv node_modules out
+
+    # Run everything else
+    patchShebangs ./ninja
+
+    # Necessary for yarn to not complain about 'corepack'
+    jq 'del(.packageManager)' package.json > package.json.tmp && mv package.json.tmp package.json
+    YARN_BINARY="${lib.getExe noInstallYarn}" PIP_USER=1 ./ninja build wheels
+  '';
+
+  # mimic https://github.com/ankitects/anki/blob/76d8807315fcc2675e7fa44d9ddf3d4608efc487/build/ninja_gen/src/python.rs#L232-L250
+  checkPhase =
+    let
+      disabledTestsString =
+        lib.pipe
+          [
+            # assumes / is not writeable, somehow fails on nix-portable brwap
+            "test_create_open"
+          ]
+          [
+            (lib.map (test: "not ${test}"))
+            (lib.concatStringsSep " and ")
+            lib.escapeShellArg
+          ];
+
+    in
+    ''
+      runHook preCheck
+      HOME=$TMP ANKI_TEST_MODE=1 PYTHONPATH=$PYTHONPATH:$PWD/out/pylib \
+        pytest -p no:cacheprovider pylib/tests -k ${disabledTestsString}
+      HOME=$TMP ANKI_TEST_MODE=1 PYTHONPATH=$PYTHONPATH:$PWD/out/pylib:$PWD/pylib:$PWD/out/qt \
+        pytest -p no:cacheprovider qt/tests -k ${disabledTestsString}
+      runHook postCheck
+    '';
+
+  preInstall = ''
+    mkdir dist
+    mv out/wheels/* dist
+  '';
+
+  postInstall = ''
+    install -D -t $out/share/applications qt/bundle/lin/anki.desktop
+    install -D -t $doc/share/doc/anki README* LICENSE*
+    install -D -t $out/share/mime/packages qt/bundle/lin/anki.xml
+    install -D -t $out/share/pixmaps qt/bundle/lin/anki.{png,xpm}
+    installManPage qt/bundle/lin/anki.1
+  '';
 
   preFixup = ''
     makeWrapperArgs+=(
@@ -190,12 +272,13 @@ buildPythonApplication rec {
   '';
 
   passthru = {
-    inherit manual;
+    withAddons = ankiAddons: callPackage ./with-addons.nix { inherit ankiAddons; };
+    tests.anki-sync-server = nixosTests.anki-sync-server;
   };
 
   meta = with lib; {
-    homepage = "https://apps.ankiweb.net/";
     description = "Spaced repetition flashcard program";
+    mainProgram = "anki";
     longDescription = ''
       Anki is a program which makes remembering things easy. Because it is a lot
       more efficient than traditional study methods, you can either greatly
@@ -208,8 +291,15 @@ buildPythonApplication rec {
       people's names and faces, brushing up on geography, mastering long poems,
       or even practicing guitar chords!
     '';
+    homepage = "https://apps.ankiweb.net";
     license = licenses.agpl3Plus;
-    platforms = platforms.mesaPlatforms;
-    maintainers = with maintainers; [ oxij Profpatsch ];
+    inherit (mesa.meta) platforms;
+    maintainers = with maintainers; [
+      euank
+      junestepp
+      oxij
+    ];
+    # Reported to crash at launch on darwin (as of 2.1.65)
+    broken = stdenv.hostPlatform.isDarwin;
   };
 }

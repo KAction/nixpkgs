@@ -1,52 +1,58 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
-, pytest-asyncio
-, pretend
-, freezegun
-, simplejson
-, typing-extensions
-, pythonAtLeast
+{
+  lib,
+  better-exceptions,
+  buildPythonPackage,
+  fetchFromGitHub,
+  freezegun,
+  greenlet,
+  hatch-fancy-pypi-readme,
+  hatch-vcs,
+  hatchling,
+  pretend,
+  pytest-asyncio,
+  pytestCheckHook,
+  rich,
+  simplejson,
+  twisted,
 }:
 
 buildPythonPackage rec {
   pname = "structlog";
-  version = "22.1.0";
-  format = "flit";
+  version = "25.4.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "hynek";
     repo = "structlog";
-    rev = "refs/tags/${version}";
-    sha256 = "sha256-2sdH6iP+l+6pBNC+sjpAX8bCdCANqqkaqZRmR68uwxY=";
+    tag = version;
+    hash = "sha256-iNnUogcICQJvHBZO2J8uk4NleQY/ra3ZzxQgnSRKr30=";
   };
 
-  propagatedBuildInputs = lib.optionals (pythonOlder "3.8") [
-    typing-extensions
+  build-system = [
+    hatch-fancy-pypi-readme
+    hatch-vcs
+    hatchling
   ];
 
-  pythonImportsCheck = [
-    "structlog"
-  ];
-
-  checkInputs = [
+  nativeCheckInputs = [
+    better-exceptions
     freezegun
+    greenlet
     pretend
     pytest-asyncio
     pytestCheckHook
+    rich
     simplejson
+    twisted
   ];
 
-  pytestFlagsArray = [
-    "--asyncio-mode=legacy"
-  ];
+  pythonImportsCheck = [ "structlog" ];
 
-  meta = with lib; {
+  meta = {
     description = "Painless structural logging";
     homepage = "https://github.com/hynek/structlog";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/hynek/structlog/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

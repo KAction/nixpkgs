@@ -1,29 +1,52 @@
-{ lib, fetchFromGitHub, buildPythonPackage, pythonOlder,
-cython, numpy, pytest, requests-toolbelt }:
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  pythonOlder,
+  cython,
+  pytestCheckHook,
+  requests-toolbelt,
+}:
 
 buildPythonPackage rec {
   pname = "streaming-form-data";
-  version = "1.8.1";
+  version = "1.13.0";
+  format = "setuptools";
   disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "siddhantgoel";
     repo = "streaming-form-data";
     rev = "v${version}";
-    sha256 = "1wnak8gwkc42ihgf0g9r7r858hxbqav2xdgqa8azid8v2ff6iq4d";
+    hash = "sha256-Ntiad5GZtfRd+2uDPgbDzLBzErGFroffK6ZAmMcsfXA=";
   };
+
+  # streaming-form-data has a small bit of code that uses smart_open, which has a massive closure.
+  # The only consumer of streaming-form-data is Moonraker, which doesn't use that code.
+  # So, just drop the dependency to not have to deal with it.
+  patches = [ ./drop-smart-open.patch ];
+
+  # The repo has a vendored copy of the cython output, which doesn't build on 3.13,
+  # so regenerate it with our cython, which does.
+  preBuild = ''
+    cython streaming_form_data/_parser.pyx
+  '';
 
   nativeBuildInputs = [ cython ];
 
-  propagatedBuildInputs = [ requests-toolbelt ];
+  nativeCheckInputs = [
+    pytestCheckHook
+    requests-toolbelt
+  ];
 
-  checkInputs = [ numpy pytest ];
-
-  checkPhase = ''
-    make test
-  '';
+  pytestFlagsArray = [ "tests" ];
 
   pythonImportsCheck = [ "streaming_form_data" ];
+
+  preCheck = ''
+    # remove in-tree copy to make pytest find the installed one, with the native parts already built
+    rm -rf streaming_form_data
+  '';
 
   meta = with lib; {
     description = "Streaming parser for multipart/form-data";

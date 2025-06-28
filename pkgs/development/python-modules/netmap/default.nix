@@ -1,14 +1,16 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, substituteAll
-, nmap
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  replaceVars,
+  nmap,
+  python,
 }:
 
 buildPythonPackage rec {
   pname = "netmap";
   version = "0.7.0.2";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "home-assistant-libs";
@@ -18,8 +20,7 @@ buildPythonPackage rec {
   };
 
   patches = [
-    (substituteAll {
-      src = ./nmap-path.patch;
+    (replaceVars ./nmap-path.patch {
       nmap = "${lib.getBin nmap}/bin/nmap";
     })
   ];

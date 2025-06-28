@@ -1,27 +1,61 @@
-{ stdenv, lib, fetchFromGitHub
-, qtbase, qttools, cmake, wrapQtAppsHook
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  qtbase,
+  qttools,
+  qtsvg,
+  qt5compat,
+  opencascade-occt,
+  libGLU,
+  cmake,
+  wrapQtAppsHook,
+  rustPlatform,
+  cargo,
+  rustc,
 }:
 
 stdenv.mkDerivation rec {
   pname = "librepcb";
-  version = "0.1.7";
+  version = "1.3.0";
 
   src = fetchFromGitHub {
-    owner  = pname;
-    repo   = pname;
-    rev    = version;
-    sha256 = "sha256-zqvvc3CHqdRWVUFt4BkH5Vq50/FKNvMNW2NvGyfWwFM=";
+    owner = pname;
+    repo = pname;
+    rev = version;
+    hash = "sha256-J4y0ikZNuOguN9msmEQzgcY0/REnOEOoDkY/ga+Cfd8=";
     fetchSubmodules = true;
   };
 
-  nativeBuildInputs = [ cmake qttools wrapQtAppsHook ];
+  nativeBuildInputs = [
+    cmake
+    qttools
+    qtsvg
+    qt5compat
+    wrapQtAppsHook
+    opencascade-occt
+    libGLU
+    rustPlatform.cargoSetupHook
+    cargo
+    rustc
+  ];
   buildInputs = [ qtbase ];
 
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit src cargoRoot;
+    hash = "sha256-1td3WjxbDq2lX7c0trpYRhO82ChNAG/ZABBRsekYtq4=";
+  };
+
+  cargoRoot = "libs/librepcb/rust-core";
+
   meta = with lib; {
-    description = "A free EDA software to develop printed circuit boards";
-    homepage    = "https://librepcb.org/";
-    maintainers = with maintainers; [ luz thoughtpolice ];
-    license     = licenses.gpl3Plus;
-    platforms   = platforms.linux;
+    description = "Free EDA software to develop printed circuit boards";
+    homepage = "https://librepcb.org/";
+    maintainers = with maintainers; [
+      luz
+      thoughtpolice
+    ];
+    license = licenses.gpl3Plus;
+    platforms = platforms.linux;
   };
 }

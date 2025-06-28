@@ -1,28 +1,32 @@
-{ lib, stdenv, fetchFromGitHub }:
+{
+  lib,
+  stdenv,
+  fetchFromSourcehut,
+}:
 
 {
   # : string
-  pname
+  pname,
   # : string
-, version
+  version,
   # : string
-, sha256
+  sha256,
   # : string
-, description
+  description,
   # : list Maintainer
-, maintainers
+  maintainers,
   # : license
-, license ? lib.licenses.isc
+  license ? lib.licenses.isc,
   # : string
-, owner ? "flexibeast"
+  owner ? "~flexibeast",
   # : string
-, rev ? "v${version}"
+  rev ? "v${version}",
 }:
 
 let
   manDir = "${placeholder "out"}/share/man";
 
-  src = fetchFromGitHub {
+  src = fetchFromSourcehut {
     inherit owner rev sha256;
     repo = pname;
   };
@@ -32,7 +36,7 @@ stdenv.mkDerivation {
   inherit pname version src;
 
   makeFlags = [
-    "MANPATH=${manDir}"
+    "MAN_DIR=${manDir}"
   ];
 
   dontBuild = true;

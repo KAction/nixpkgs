@@ -1,13 +1,17 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+}:
 
 buildPythonPackage rec {
   pname = "rplcd";
-  version = "1.3.0";
+  version = "1.4.0";
+  format = "setuptools";
 
   src = fetchPypi {
-    inherit version;
-    pname = "RPLCD";
-    sha256 = "sha256-AIEiL+IPU76DF+P08c5qokiJcZdNNDJ/Jjng2Z292LY=";
+    inherit pname version;
+    hash = "sha256-Jl1qVOTtixYV29azPG8g/2ccZWFIyrMRrhtvo3CACVo=";
   };
 
   # Disable check because it depends on a GPIO library
@@ -18,6 +22,7 @@ buildPythonPackage rec {
     description = ''
       Raspberry Pi LCD library for the widely used Hitachi HD44780 controller
     '';
+    mainProgram = "rplcd-tests";
     license = licenses.mit;
     maintainers = with maintainers; [ onny ];
   };

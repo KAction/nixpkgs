@@ -1,12 +1,13 @@
-{ cmake
-, fetchFromGitHub
-, fetchpatch
-, sqlite
-, postgresql
-, boost
-, lib, stdenv
+{
+  cmake,
+  fetchFromGitHub,
+  fetchpatch,
+  sqlite,
+  libpq,
+  boost,
+  lib,
+  stdenv,
 }:
-
 stdenv.mkDerivation rec {
   pname = "soci";
   version = "4.0.2";
@@ -27,18 +28,22 @@ stdenv.mkDerivation rec {
   ];
 
   # Do not build static libraries
-  cmakeFlags = [ "-DSOCI_STATIC=OFF" "-DCMAKE_CXX_STANDARD=11" "-DSOCI_TESTS=off" ];
+  cmakeFlags = [
+    "-DSOCI_STATIC=OFF"
+    "-DCMAKE_CXX_STANDARD=11"
+    "-DSOCI_TESTS=off"
+  ];
 
   nativeBuildInputs = [ cmake ];
   buildInputs = [
     sqlite
-    postgresql
+    libpq
     boost
   ];
 
   meta = with lib; {
     description = "Database access library for C++";
-    homepage = "http://soci.sourceforge.net/";
+    homepage = "https://soci.sourceforge.net/";
     license = licenses.boost;
     platforms = platforms.all;
     maintainers = with maintainers; [ jluttine ];

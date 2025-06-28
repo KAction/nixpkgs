@@ -1,7 +1,8 @@
 {
-  x86_64-linux = "/nix/store/nmq5zcd93qb1yskx42rs910ff0247nn2-nix-2.11.0";
-  i686-linux = "/nix/store/ja6im1sw9a8lzczi10lc0iddffl9kzmn-nix-2.11.0";
-  aarch64-linux = "/nix/store/myr6fcqa9y4y2fb83zz73dck52vcn81z-nix-2.11.0";
-  x86_64-darwin = "/nix/store/2pfjz9b22k9997gh7cb0hjk1qa4lxrvy-nix-2.11.0";
-  aarch64-darwin = "/nix/store/lr32i0bdarx1iqsch4sy24jj1jkfw9vf-nix-2.11.0";
+  x86_64-linux = "/nix/store/gy397nw6h414f4l4vxny1wg8cn4i955d-nix-2.28.4";
+  i686-linux = "/nix/store/k192aqw8zh71zrli5abqd5wg01bqwmh9-nix-2.28.4";
+  aarch64-linux = "/nix/store/cp0bzvj8vf5y2z0nimq57crcq6h419fj-nix-2.28.4";
+  riscv64-linux = "/nix/store/zav2zzhxld8fqvj7hb5z83ggd3ij6888-nix-riscv64-unknown-linux-gnu-2.28.4";
+  x86_64-darwin = "/nix/store/gj4y690ligr5gawmpnkiw2qs087m068w-nix-2.28.4";
+  aarch64-darwin = "/nix/store/nb6nkjac7nj242j3m56pkdkbikfjw343-nix-2.28.4";
 }

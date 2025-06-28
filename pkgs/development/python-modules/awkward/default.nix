@@ -1,66 +1,75 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, cmake
-, numba
-, numpy
-, pytestCheckHook
-, pythonOlder
-, pyyaml
-, rapidjson
-, setuptools
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatch-fancy-pypi-readme,
+  hatchling,
+
+  # dependencies
+  awkward-cpp,
+  fsspec,
+  numpy,
+  packaging,
+
+  # tests
+  numba,
+  numexpr,
+  pandas,
+  pyarrow,
+  pytest-xdist,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "awkward";
-  version = "1.10.1";
-  format = "setuptools";
+  version = "2.8.4";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-xjlO0l+xSghtY2IdnYT9wij11CpkWG8hVzGzb94XA0s=";
+  src = fetchFromGitHub {
+    owner = "scikit-hep";
+    repo = "awkward";
+    tag = "v${version}";
+    hash = "sha256-btW4y3lSwHRgoM7B7KVzJ2h8CQdZYNUwqSRIYZfK0Hg=";
   };
 
-  nativeBuildInputs = [
-    cmake
+  build-system = [
+    hatch-fancy-pypi-readme
+    hatchling
   ];
 
-  buildInputs = [
-    pyyaml
-    rapidjson
-  ];
-
-  propagatedBuildInputs = [
+  dependencies = [
+    awkward-cpp
+    fsspec
     numpy
-    setuptools
+    packaging
   ];
 
   dontUseCmakeConfigure = true;
 
-  checkInputs = [
-    pytestCheckHook
-    numba
-  ];
+  pythonImportsCheck = [ "awkward" ];
 
-  disabledTests = [
-    # incomatible with numpy 1.23
-    "test_numpyarray"
+  nativeCheckInputs = [
+    fsspec
+    numba
+    numexpr
+    pandas
+    pyarrow
+    pytest-xdist
+    pytestCheckHook
   ];
 
   disabledTestPaths = [
+    # Need to be run on a GPU platform.
     "tests-cuda"
   ];
 
-  pythonImportsCheck = [
-    "awkward"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Manipulate JSON-like data with NumPy-like idioms";
     homepage = "https://github.com/scikit-hep/awkward";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ veprbl ];
+    changelog = "https://github.com/scikit-hep/awkward/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ veprbl ];
   };
 }

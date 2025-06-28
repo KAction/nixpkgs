@@ -1,44 +1,91 @@
-{ lib, stdenv, fetchFromGitHub, substituteAll, pkg-config, gnused, autoreconfHook
-, gtk-doc, acl, systemd, glib, libatasmart, polkit, coreutils, bash, which
-, expat, libxslt, docbook_xsl, util-linux, mdadm, libgudev, libblockdev, parted
-, gobject-introspection, docbook_xml_dtd_412, docbook_xml_dtd_43
-, xfsprogs, f2fs-tools, dosfstools, e2fsprogs, btrfs-progs, exfat, nilfs-utils, ntfs3g
-, nixosTests
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchpatch,
+  replaceVars,
+  pkg-config,
+  gnused,
+  autoreconfHook,
+  gtk-doc,
+  acl,
+  systemd,
+  glib,
+  libatasmart,
+  polkit,
+  coreutils,
+  bash,
+  which,
+  expat,
+  libxslt,
+  docbook_xsl,
+  util-linux,
+  mdadm,
+  libgudev,
+  libblockdev,
+  parted,
+  gobject-introspection,
+  docbook_xml_dtd_412,
+  docbook_xml_dtd_43,
+  xfsprogs,
+  f2fs-tools,
+  dosfstools,
+  e2fsprogs,
+  btrfs-progs,
+  exfat,
+  nilfs-utils,
+  ntfs3g,
+  nixosTests,
+  udevCheckHook,
 }:
 
 stdenv.mkDerivation rec {
   pname = "udisks";
-  version = "2.9.4";
+  version = "2.10.1";
 
   src = fetchFromGitHub {
     owner = "storaged-project";
     repo = "udisks";
     rev = "${pname}-${version}";
-    sha256 = "sha256-MYQztzIyp5kh9t1bCIlj08/gaOmZfuu/ZOwo3F+rZiw=";
+    sha256 = "sha256-L8jr1+SJWsCizkPXC8VKDy2eVa7/FpqdB8SkBYq6vwc=";
   };
 
-  outputs = [ "out" "man" "dev" ] ++ lib.optional (stdenv.hostPlatform == stdenv.buildPlatform) "devdoc";
+  outputs = [
+    "out"
+    "man"
+    "dev"
+  ] ++ lib.optional (stdenv.hostPlatform == stdenv.buildPlatform) "devdoc";
 
   patches = [
-    (substituteAll {
-      src = ./fix-paths.patch;
-      bash = "${bash}/bin/bash";
-      blkid = "${util-linux}/bin/blkid";
+    (replaceVars ./fix-paths.patch {
       false = "${coreutils}/bin/false";
       mdadm = "${mdadm}/bin/mdadm";
-      mkswap = "${util-linux}/bin/mkswap";
       sed = "${gnused}/bin/sed";
       sh = "${bash}/bin/sh";
       sleep = "${coreutils}/bin/sleep";
-      swapon = "${util-linux}/bin/swapon";
       true = "${coreutils}/bin/true";
     })
-    (substituteAll {
-      src = ./force-path.patch;
+    (replaceVars ./force-path.patch {
       path = lib.makeBinPath [
-        btrfs-progs coreutils dosfstools e2fsprogs exfat f2fs-tools nilfs-utils
-        xfsprogs ntfs3g parted util-linux
+        btrfs-progs
+        coreutils
+        dosfstools
+        e2fsprogs
+        exfat
+        f2fs-tools
+        nilfs-utils
+        xfsprogs
+        ntfs3g
+        parted
+        util-linux
       ];
+    })
+
+    # CVE-2025-6019: https://www.openwall.com/lists/oss-security/2025/06/17/5
+    (fetchpatch {
+      name = "CVE-2025-6019-2.patch";
+      url = "https://www.openwall.com/lists/oss-security/2025/06/17/5/2";
+      hash = "sha256-pgTA6yxQ1o9OU3qBeV1lh2O6mBkaUcc9md4uwFwz+AM=";
     })
   ];
 
@@ -46,18 +93,34 @@ stdenv.mkDerivation rec {
   # pkg-config had to be in both to find gtk-doc and gobject-introspection
   depsBuildBuild = [ pkg-config ];
   nativeBuildInputs = [
-    autoreconfHook which gobject-introspection pkg-config
-    gtk-doc libxslt docbook_xml_dtd_412 docbook_xml_dtd_43 docbook_xsl
+    autoreconfHook
+    which
+    gobject-introspection
+    pkg-config
+    gtk-doc
+    libxslt
+    docbook_xml_dtd_412
+    docbook_xml_dtd_43
+    docbook_xsl
+    udevCheckHook
   ];
 
   postPatch = lib.optionalString stdenv.hostPlatform.isMusl ''
-      substituteInPlace udisks/udisksclient.c \
-        --replace 'defined( __GNUC_PREREQ)' 1 \
-        --replace '__GNUC_PREREQ(4,6)' 1
+    substituteInPlace udisks/udisksclient.c \
+      --replace 'defined( __GNUC_PREREQ)' 1 \
+      --replace '__GNUC_PREREQ(4,6)' 1
   '';
 
   buildInputs = [
-    expat libgudev libblockdev acl systemd glib libatasmart polkit util-linux
+    expat
+    libgudev
+    libblockdev
+    acl
+    systemd
+    glib
+    libatasmart
+    polkit
+    util-linux
   ];
 
   preConfigure = "NOCONFIGURE=1 ./autogen.sh";
@@ -83,14 +146,22 @@ stdenv.mkDerivation rec {
   enableParallelBuilding = true;
 
   doCheck = true;
+  doInstallCheck = true;
 
-  passthru.tests.vm = nixosTests.udisks2;
+  passthru = {
+    inherit libblockdev;
+    tests.vm = nixosTests.udisks2;
+  };
 
   meta = with lib; {
-    description = "A daemon, tools and libraries to access and manipulate disks, storage devices and technologies";
+    description = "Daemon, tools and libraries to access and manipulate disks, storage devices and technologies";
     homepage = "https://www.freedesktop.org/wiki/Software/udisks/";
-    license = with licenses; [ lgpl2Plus gpl2Plus ]; # lgpl2Plus for the library, gpl2Plus for the tools & daemon
-    maintainers = teams.freedesktop.members ++ (with maintainers; [ johnazoidberg ]);
+    license = with licenses; [
+      lgpl2Plus
+      gpl2Plus
+    ]; # lgpl2Plus for the library, gpl2Plus for the tools & daemon
+    maintainers = with maintainers; [ johnazoidberg ];
+    teams = [ teams.freedesktop ];
     platforms = platforms.linux;
   };
 }

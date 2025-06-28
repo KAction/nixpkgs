@@ -1,16 +1,23 @@
-{ lib, skawarePackages }:
+{
+  lib,
+  skawarePackages,
+  skalibs,
+}:
 
-with skawarePackages;
-
-buildPackage {
+skawarePackages.buildPackage {
   pname = "s6-linux-utils";
-  version = "2.6.0.0";
-  sha256 = "sha256-bHEyc0oMgocALuaRDEafF1qX12aoAjwMM6+LqSZD7Vk=";
+  version = "2.6.3.0";
+  sha256 = "sha256-fiScNsc7mev8H5qaTDGL52tGHrxT05Ut6QZMz6tABzk=";
 
-  description = "A set of minimalistic Linux-specific system utilities";
+  description = "Set of minimalistic Linux-specific system utilities";
   platforms = lib.platforms.linux;
 
-  outputs = [ "bin" "dev" "doc" "out" ];
+  outputs = [
+    "bin"
+    "dev"
+    "doc"
+    "out"
+  ];
 
   # TODO: nsss support
   configureFlags = [
@@ -25,6 +32,7 @@ buildPackage {
   postInstall = ''
     # remove all s6 executables from build directory
     rm $(find -name "s6-*" -type f -mindepth 1 -maxdepth 1 -executable) rngseed
+    rm libs6ps.a.xyzzy
 
     mv doc $doc/share/doc/s6-linux-utils/html
   '';

@@ -1,4 +1,8 @@
-{ lib, bundlerApp, bundlerUpdateScript }:
+{
+  lib,
+  bundlerApp,
+  bundlerUpdateScript,
+}:
 
 bundlerApp {
   pname = "gitlab-triage";
@@ -9,8 +13,9 @@ bundlerApp {
 
   meta = with lib; {
     description = "GitLab's issues and merge requests triage, automated!";
-    homepage = "https://gitlab.com/gitlab-org/gitlab-triage";
+    homepage = "https://gitlab.com/gitlab-org/ruby/gems/gitlab-triage";
     license = licenses.mit;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    maintainers = [ ];
+    mainProgram = "gitlab-triage";
   };
 }

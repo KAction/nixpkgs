@@ -1,44 +1,75 @@
-{ lib, stdenv, buildPythonPackage, isPyPy, fetchPypi, pytestCheckHook,
-  libffi, pkg-config, pycparser
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  isPyPy,
+  fetchPypi,
+  setuptools,
+  pytestCheckHook,
+  libffi,
+  pkg-config,
+  pycparser,
 }:
 
-if isPyPy then null else buildPythonPackage rec {
-  pname = "cffi";
-  version = "1.15.1";
+let
+  version = "1.17.1";
+in
+if isPyPy then
+  buildPythonPackage {
+    pname = "cffi";
+    inherit version;
+    pyproject = false;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-1AC/uaN7E1ElPLQCZxzqfom97MKU6AFqcH9tHYrJNPk=";
-  };
+    # cffi is bundled with PyPy.
+    dontUnpack = true;
 
-  buildInputs = [ libffi ];
+    # Some dependent packages expect to have pycparser available when using cffi.
+    dependencies = [ pycparser ];
 
-  nativeBuildInputs = [ pkg-config ];
+    meta = {
+      description = "Foreign Function Interface for Python calling C code (bundled with PyPy, placeholder package)";
+      homepage = "https://cffi.readthedocs.org/";
+      license = lib.licenses.mit;
+      teams = [ lib.teams.python ];
+    };
+  }
+else
+  buildPythonPackage rec {
+    pname = "cffi";
+    inherit version;
+    pyproject = true;
 
-  propagatedBuildInputs = [ pycparser ];
+    src = fetchPypi {
+      inherit pname version;
+      hash = "sha256-HDnGAWwyvEjdVFYZUOvWg24WcPKuRhKPZ89J54nFKCQ=";
+    };
 
-  postPatch = lib.optionalString stdenv.isDarwin ''
-    # Remove setup.py impurities
-    substituteInPlace setup.py \
-      --replace "'-iwithsysroot/usr/include/ffi'" "" \
-      --replace "'/usr/include/ffi'," "" \
-      --replace '/usr/include/libffi' '${lib.getDev libffi}/include'
-  '';
+    nativeBuildInputs = [ pkg-config ];
 
-  # The tests use -Werror but with python3.6 clang detects some unreachable code.
-  NIX_CFLAGS_COMPILE = lib.optionalString stdenv.cc.isClang
-    "-Wno-unused-command-line-argument -Wno-unreachable-code -Wno-c++11-narrowing";
+    build-system = [ setuptools ];
 
-  # Lots of tests fail on aarch64-darwin due to "Cannot allocate write+execute memory":
-  # * https://cffi.readthedocs.io/en/latest/using.html#callbacks
-  doCheck = !stdenv.hostPlatform.isMusl && !(stdenv.isDarwin && stdenv.isAarch64);
+    buildInputs = [ libffi ];
 
-  checkInputs = [ pytestCheckHook ];
+    dependencies = [ pycparser ];
 
-  meta = with lib; {
-    maintainers = with maintainers; [ domenkozar lnl7 ];
-    homepage = "https://cffi.readthedocs.org/";
-    license = licenses.mit;
-    description = "Foreign Function Interface for Python calling C code";
-  };
-}
+    # The tests use -Werror but with python3.6 clang detects some unreachable code.
+    env.NIX_CFLAGS_COMPILE = lib.optionalString stdenv.cc.isClang "-Wno-unused-command-line-argument -Wno-unreachable-code -Wno-c++11-narrowing";
+
+    doCheck = !(stdenv.hostPlatform.isMusl || stdenv.hostPlatform.useLLVM or false);
+
+    nativeCheckInputs = [ pytestCheckHook ];
+
+    disabledTests = lib.optionals stdenv.hostPlatform.isFreeBSD [
+      # https://github.com/python-cffi/cffi/pull/144
+      "test_dlopen_handle"
+    ];
+
+    meta = with lib; {
+      changelog = "https://github.com/python-cffi/cffi/releases/tag/v${version}";
+      description = "Foreign Function Interface for Python calling C code";
+      downloadPage = "https://github.com/python-cffi/cffi";
+      homepage = "https://cffi.readthedocs.org/";
+      license = licenses.mit;
+      teams = [ teams.python ];
+    };
+  }

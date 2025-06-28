@@ -1,29 +1,24 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, qtbase
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  qtbase,
 }:
 
 stdenv.mkDerivation rec {
   pname = "qxlsx";
-  version = "1.4.4";
+  version = "1.5.0";
 
   src = fetchFromGitHub {
     owner = "QtExcel";
     repo = "QXlsx";
     rev = "v${version}";
-    hash = "sha256-01G7eJRrnee/acEeobYAYMY+93y+I0ASOTVRGuO+IcA=";
+    hash = "sha256-twOlAiLE0v7+9nWo/Gd+oiKT1umL3UnG1Xa0zDG7u7s=";
   };
 
   nativeBuildInputs = [ cmake ];
   buildInputs = [ qtbase ];
-
-  # Don't force Qt definitions onto users: https://github.com/QtExcel/QXlsx/commit/8e83402d
-  postPatch = ''
-    substituteInPlace QXlsx/CMakeLists.txt \
-     --replace 'target_compile_definitions(QXlsx PUBLIC' 'target_compile_definitions(QXlsx PRIVATE'
-  '';
 
   preConfigure = ''
     cd QXlsx
@@ -31,7 +26,7 @@ stdenv.mkDerivation rec {
 
   dontWrapQtApps = true;
 
-  meta = with lib;{
+  meta = with lib; {
     description = "Excel file(*.xlsx) reader/writer library using Qt 5 or 6";
     homepage = "https://qtexcel.github.io/QXlsx";
     license = licenses.mit;

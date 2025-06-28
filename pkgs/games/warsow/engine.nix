@@ -1,8 +1,24 @@
-{ stdenv, lib, substituteAll, fetchurl, cmake, libogg, libvorbis, libtheora, curl, freetype
-, libjpeg, libpng, SDL2, libGL, openal, zlib
+{
+  stdenv,
+  lib,
+  replaceVars,
+  fetchurl,
+  cmake,
+  libogg,
+  libvorbis,
+  libtheora,
+  curl,
+  freetype,
+  libjpeg,
+  libpng,
+  SDL2,
+  libGL,
+  libX11,
+  openal,
+  zlib,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "warsow-engine";
   version = "2.1.0";
 
@@ -12,23 +28,41 @@ stdenv.mkDerivation rec {
   };
 
   patches = [
-    (substituteAll {
-      src = ./libpath.patch;
-      inherit zlib curl libpng libjpeg libogg libvorbis libtheora freetype;
+    (replaceVars ./libpath.patch {
+      inherit
+        zlib
+        curl
+        libpng
+        libjpeg
+        libogg
+        libvorbis
+        libtheora
+        freetype
+        ;
     })
   ];
 
   nativeBuildInputs = [ cmake ];
 
   buildInputs = [
-    libogg libvorbis libtheora curl freetype libjpeg SDL2 libGL openal zlib
+    libogg
+    libvorbis
+    libtheora
+    curl
+    freetype
+    libjpeg
+    SDL2
+    libGL
+    libX11
+    openal
+    zlib
     libpng
   ];
 
   # Workaround build failure on -fno-common toolchains:
   #   ld: CMakeFiles/wswtv_server.dir/__/unix/unix_time.c.o:(.bss+0x8): multiple definition of
   #     `c_pointcontents'; CMakeFiles/wswtv_server.dir/__/null/ascript_null.c.o:(.bss+0x8): first defined here
-  NIX_CFLAGS_COMPILE = "-fcommon";
+  env.NIX_CFLAGS_COMPILE = "-fcommon";
 
   cmakeFlags = [ "-DQFUSION_GAME=Warsow" ];
 
@@ -52,8 +86,10 @@ stdenv.mkDerivation rec {
     description = "Multiplayer FPS game designed for competitive gaming (engine only)";
     homepage = "http://www.warsow.net";
     license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ astsmtl abbradar ];
+    maintainers = with maintainers; [
+      abbradar
+    ];
     platforms = platforms.linux;
-    broken = stdenv.isAarch64;
+    broken = stdenv.hostPlatform.isAarch64;
   };
 }

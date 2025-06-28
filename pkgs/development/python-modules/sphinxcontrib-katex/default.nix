@@ -1,36 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, sphinx
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pythonOlder,
+  setuptools,
+  sphinx,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "sphinxcontrib-katex";
-  version = "0.9.0";
-  format = "setuptools";
+  version = "0.9.10";
+  pyproject = true;
 
   disabled = pythonOlder "3.7";
 
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-HFs1+9tWl1D5VWY14dPCk+Ewv+ubedhd9DcCSrPQZnQ=";
+    pname = "sphinxcontrib_katex";
+    inherit version;
+    hash = "sha256-MJqS2uJF28WE/36l+2VJcnuuleTlIAi3TSWdL9GtDew=";
   };
 
-  propagatedBuildInputs = [
-    sphinx
-  ];
+  build-system = [ setuptools ];
 
-  # There are no unit tests
-  doCheck = false;
+  dependencies = [ sphinx ];
 
-  pythonImportsCheck = [
-    "sphinxcontrib.katex"
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "sphinxcontrib.katex" ];
+
+  pythonNamespaces = [ "sphinxcontrib" ];
 
   meta = with lib; {
     description = "Sphinx extension using KaTeX to render math in HTML";
     homepage = "https://github.com/hagenw/sphinxcontrib-katex";
+    changelog = "https://github.com/hagenw/sphinxcontrib-katex/blob/v${version}/CHANGELOG.rst";
     license = licenses.mit;
     maintainers = with maintainers; [ jluttine ];
   };

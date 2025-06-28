@@ -1,25 +1,28 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, requests
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchPypi,
+  poetry-core,
+  requests,
 }:
 
 buildPythonPackage rec {
   pname = "hydrus-api";
-  version = "4.0.0";
-  format = "setuptools";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-4by2TlZJIKElGgaof1w555ik2hUNbg16YekSWwICGmg=";
-  };
+  version = "5.1.1";
+  pyproject = true;
 
   disabled = pythonOlder "3.9";
 
-  propagatedBuildInputs = [
-    requests
-  ];
+  src = fetchPypi {
+    pname = "hydrus_api";
+    inherit version;
+    hash = "sha256-oA3DbdX+MRZiInCKXurBdKlUFQ4jeU+jHr9NxMEHQmI=";
+  };
+
+  build-system = [ poetry-core ];
+
+  dependencies = [ requests ];
 
   pythonImportsCheck = [ "hydrus_api" ];
 

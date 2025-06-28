@@ -13,29 +13,29 @@ auditTmpdir() {
     local dir="$1"
     [ -e "$dir" ] || return 0
 
-    header "checking for references to $TMPDIR/ in $dir..."
+    echo "checking for references to $TMPDIR/ in $dir..."
 
-    local i
-    while IFS= read -r -d $'\0' i; do
-        if [[ "$i" =~ .build-id ]]; then continue; fi
-
-        if isELF "$i"; then
-            if { printf :; patchelf --print-rpath "$i"; } | grep -q -F ":$TMPDIR/"; then
-                echo "RPATH of binary $i contains a forbidden reference to $TMPDIR/"
+    _processFile() {
+        local file="$1"
+        if isELF "$file"; then
+            if { printf :; patchelf --print-rpath "$file"; } | grep -q -F ":$TMPDIR/"; then
+                echo "RPATH of binary $file contains a forbidden reference to $TMPDIR/"
                 exit 1
             fi
-        fi
-
-        if isScript "$i"; then
-            if [ -e "$(dirname "$i")/.$(basename "$i")-wrapped" ]; then
-                if grep -q -F "$TMPDIR/" "$i"; then
-                    echo "wrapper script $i contains a forbidden reference to $TMPDIR/"
+        elif isScript "$file"; then
+            filename=${i##*/}
+            dir=${i%/*}
+            if [ -e "$dir/.$filename-wrapped" ]; then
+                if grep -q -F "$TMPDIR/" "$file"; then
+                    echo "wrapper script $file contains a forbidden reference to $TMPDIR/"
                     exit 1
                 fi
             fi
         fi
+    }
 
-    done < <(find "$dir" -type f -print0)
+    find "$dir" -type f -not -path '*/.build-id/*' -print0 \
+    | parallelMap _processFile
 
-    stopNest
+    unset -f _processFile
 }

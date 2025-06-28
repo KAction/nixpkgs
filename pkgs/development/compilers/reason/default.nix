@@ -1,51 +1,46 @@
-{ lib, callPackage, stdenv, makeWrapper, fetchurl, ocaml, findlib, dune_3
-, ncurses
-, fix, menhir, menhirLib, menhirSdk, merlin-extend, ppxlib, utop, cppo, ppx_derivers
+{
+  lib,
+  callPackage,
+  buildDunePackage,
+  fetchurl,
+  fix,
+  menhir,
+  menhirLib,
+  menhirSdk,
+  merlin-extend,
+  ppxlib,
+  cppo,
+  ppx_derivers,
+  dune-build-info,
 }:
 
-stdenv.mkDerivation rec {
-  pname = "ocaml${ocaml.version}-reason";
-  version = "3.8.2";
+buildDunePackage rec {
+  pname = "reason";
+  version = "3.15.0";
+
+  minimalOCamlVersion = "4.11";
 
   src = fetchurl {
     url = "https://github.com/reasonml/reason/releases/download/${version}/reason-${version}.tbz";
-    sha256 = "sha256-etzEXbILje+CrfJxIhH7jthEMoSJdS6O33QoG8HrLvI=";
+    hash = "sha256-7D0gJfQ5Hw0riNIFPmJ6haoa3dnFEyDp5yxpDgX7ZqY=";
   };
 
   nativeBuildInputs = [
-    makeWrapper
     menhir
+    cppo
   ];
 
   buildInputs = [
-    cppo
-    dune_3
-    findlib
+    dune-build-info
     fix
-    menhir
     menhirSdk
-    ocaml
-    ppxlib
-    utop
-  ] ++ lib.optional (lib.versionOlder ocaml.version "4.07") ncurses;
-
-  propagatedBuildInputs = [
-    menhirLib
     merlin-extend
-    ppx_derivers
   ];
 
-  buildFlags = [ "build" ]; # do not "make tests" before reason lib is installed
-
-  installPhase = ''
-    runHook preInstall
-    dune install --prefix=$out --libdir=$OCAMLFIND_DESTDIR
-    wrapProgram $out/bin/rtop \
-      --prefix PATH : "${utop}/bin" \
-      --prefix CAML_LD_LIBRARY_PATH : "$CAML_LD_LIBRARY_PATH" \
-      --prefix OCAMLPATH : "$OCAMLPATH:$OCAMLFIND_DESTDIR"
-    runHook postInstall
-  '';
+  propagatedBuildInputs = [
+    ppxlib
+    menhirLib
+  ];
 
   passthru.tests = {
     hello = callPackage ./tests/hello { };
@@ -54,9 +49,8 @@ stdenv.mkDerivation rec {
   meta = with lib; {
     homepage = "https://reasonml.github.io/";
     downloadPage = "https://github.com/reasonml/reason";
-    description = "Facebook's friendly syntax to OCaml";
+    description = "User-friendly programming language built on OCaml";
     license = licenses.mit;
-    inherit (ocaml.meta) platforms;
-    maintainers = with maintainers; [ ];
+    maintainers = [ ];
   };
 }

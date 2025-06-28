@@ -1,72 +1,109 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, setuptools
-, click
-, requests
-, packaging
-, dparse
-, ruamel-yaml
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchFromGitHub,
+  hatchling,
+  setuptools,
+  click,
+  requests,
+  packaging,
+  dparse,
+  ruamel-yaml,
+  jinja2,
+  marshmallow,
+  nltk,
+  authlib,
+  typer,
+  pydantic,
+  safety-schemas,
+  typing-extensions,
+  filelock,
+  psutil,
+  httpx,
+  tenacity,
+  tomlkit,
+  git,
+  pytestCheckHook,
+  tomli,
+  writableTmpDirAsHomeHook,
 }:
 
 buildPythonPackage rec {
   pname = "safety";
-  version = "2.2.1";
+  version = "3.5.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  format = "pyproject";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-2LSMRqxmKLuDRBt93cR1bP4lgqvhOhEu5uTvGjSq0DI=";
+  src = fetchFromGitHub {
+    owner = "pyupio";
+    repo = "safety";
+    tag = version;
+    hash = "sha256-kYGoJpFkZo4kZmbmak/+nOS2gzDO/xAwfbcGPOFxyrY=";
   };
 
-  postPatch = ''
-    substituteInPlace safety/safety.py \
-      --replace "telemetry=True" "telemetry=False"
-    substituteInPlace safety/cli.py \
-      --replace "telemetry', default=True" "telemetry', default=False"
-  '';
-
-  nativeBuildInputs = [
-    setuptools
+  patches = [
+    ./disable-telemetry.patch
   ];
 
-  propagatedBuildInputs = [
+  build-system = [ hatchling ];
+
+  pythonRelaxDeps = [
+    "filelock"
+    "pydantic"
+    "psutil"
+  ];
+
+  dependencies = [
     setuptools
     click
     requests
     packaging
     dparse
     ruamel-yaml
+    jinja2
+    marshmallow
+    nltk
+    authlib
+    typer
+    pydantic
+    safety-schemas
+    typing-extensions
+    filelock
+    psutil
+    httpx
+    tenacity
+    tomlkit
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    git
     pytestCheckHook
+    tomli
+    writableTmpDirAsHomeHook
   ];
 
-  # Disable tests depending on online services
   disabledTests = [
+    # Disable tests depending on online services
     "test_announcements_if_is_not_tty"
     "test_check_live"
-    "test_check_live_cached"
-    "test_check_vulnerabilities"
-    "test_license"
-    "test_chained_review"
+    "test_debug_flag"
+    "test_get_packages_licenses_without_api_key"
+    "test_init_project"
+    "test_validate_with_basic_policy_file"
   ];
 
-  preCheck = ''
-    export HOME=$(mktemp -d)
-  '';
+  # ImportError: cannot import name 'get_command_for' from partially initialized module 'safety.cli_util' (most likely due to a circular import)
+  disabledTestPaths = [ "tests/alerts/test_utils.py" ];
 
-  meta = with lib; {
+  meta = {
     description = "Checks installed dependencies for known vulnerabilities";
+    mainProgram = "safety";
     homepage = "https://github.com/pyupio/safety";
-    changelog = "https://github.com/pyupio/safety/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ thomasdesr dotlambda ];
+    changelog = "https://github.com/pyupio/safety/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      thomasdesr
+      dotlambda
+    ];
   };
 }

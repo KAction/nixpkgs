@@ -1,18 +1,39 @@
-{ lib, stdenv, fetchurl, libogg, libvorbis, libao, pkg-config, curl
-, speex, flac
-, autoreconfHook }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  libogg,
+  libvorbis,
+  libao,
+  pkg-config,
+  curl,
+  libiconv,
+  speex,
+  flac,
+  autoreconfHook,
+}:
 
 stdenv.mkDerivation rec {
   pname = "vorbis-tools";
-  version = "1.4.2";
+  version = "1.4.3";
 
   src = fetchurl {
     url = "http://downloads.xiph.org/releases/vorbis/vorbis-tools-${version}.tar.gz";
-    sha256 = "1c7h4ivgfdyygz2hyh6nfibxlkz8kdk868a576qkkjgj5gn78xyv";
+    hash = "sha256-of493Gd3vc6/a3l+ft/gQ3lUskdW/8yMa4FrY+BGDd4=";
   };
 
-  nativeBuildInputs = [ autoreconfHook pkg-config ];
-  buildInputs = [ libogg libvorbis libao curl speex flac ];
+  nativeBuildInputs = [
+    autoreconfHook
+    pkg-config
+  ];
+  buildInputs = [
+    libogg
+    libvorbis
+    libao
+    curl
+    speex
+    flac
+  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ libiconv ];
 
   meta = with lib; {
     description = "Extra tools for Ogg-Vorbis audio codec";
@@ -25,4 +46,3 @@ stdenv.mkDerivation rec {
     platforms = platforms.all;
   };
 }
-

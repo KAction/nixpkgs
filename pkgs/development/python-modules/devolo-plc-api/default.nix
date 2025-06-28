@@ -1,60 +1,71 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, fetchpatch
-, httpx
-, protobuf
-, pytest-asyncio
-, pytest-httpx
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
-, setuptools-scm
-, zeroconf
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  httpx,
+  protobuf,
+  pytest-asyncio,
+  pytest-httpx,
+  pytest-mock,
+  pytestCheckHook,
+  pythonOlder,
+  segno,
+  setuptools-scm,
+  syrupy,
+  tenacity,
+  zeroconf,
 }:
 
 buildPythonPackage rec {
   pname = "devolo-plc-api";
-  version = "0.8.1";
-  format = "setuptools";
+  version = "1.5.1";
+  pyproject = true;
 
   disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "2Fake";
     repo = "devolo_plc_api";
-    rev = "v${version}";
-    sha256 = "sha256-Gjs4x52LwCsE0zAJjLO1N0w5r1jDJkZoVY1JVZB8bmE=";
+    tag = "v${version}";
+    hash = "sha256-bmZcjvqZwVJzDsdtSbQvJpry2QSSuB6/jOTWG1+jyV4=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "protobuf>=4.22.0" "protobuf"
+  '';
 
-  nativeBuildInputs = [
-    setuptools-scm
-  ];
+  build-system = [ setuptools-scm ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     httpx
     protobuf
+    segno
+    tenacity
     zeroconf
   ];
 
-  checkInputs = [
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
     pytest-asyncio
     pytest-httpx
     pytest-mock
     pytestCheckHook
+    syrupy
   ];
 
-
-
-  pythonImportsCheck = [
-    "devolo_plc_api"
+  disabledTests = [
+    # pytest-httpx compat issue
+    "test_wrong_password_type"
   ];
+
+  pythonImportsCheck = [ "devolo_plc_api" ];
 
   meta = with lib; {
-    description = "Python module to interact with Devolo PLC devices";
+    description = "Module to interact with Devolo PLC devices";
     homepage = "https://github.com/2Fake/devolo_plc_api";
+    changelog = "https://github.com/2Fake/devolo_plc_api/releases/tag/v${version}";
     license = licenses.gpl3Only;
     maintainers = with maintainers; [ fab ];
   };

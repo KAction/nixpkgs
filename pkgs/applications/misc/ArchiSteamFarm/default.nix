@@ -1,41 +1,58 @@
-{ lib
-, buildDotnetModule
-, fetchFromGitHub
-, dotnetCorePackages
-, libkrb5
-, zlib
-, openssl
-, callPackage
-, stdenvNoCC
+{
+  lib,
+  buildDotnetModule,
+  fetchFromGitHub,
+  dotnetCorePackages,
+  libkrb5,
+  zlib,
+  openssl,
+  callPackage,
 }:
 
 buildDotnetModule rec {
-  pname = "archisteamfarm";
+  pname = "ArchiSteamFarm";
   # nixpkgs-update: no auto update
-  version = "5.3.1.2";
+  version = "6.1.6.7";
 
   src = fetchFromGitHub {
-    owner = "justarchinet";
-    repo = pname;
+    owner = "JustArchiNET";
+    repo = "ArchiSteamFarm";
     rev = version;
-    sha256 = "sha256-plimvkMUjQWQ0Ewm1TXL5IB1xe62DFhwBlBc4UeCguU=";
+    hash = "sha256-XdnKcWzw/d7yLG2efgw/gQ8UkPjExigffbomTD3YUgE=";
   };
 
-  dotnet-runtime = dotnetCorePackages.aspnetcore_6_0;
+  dotnet-runtime = dotnetCorePackages.aspnetcore_9_0;
+  dotnet-sdk = dotnetCorePackages.sdk_9_0;
 
-  nugetDeps = ./deps.nix;
-
-  # Without this dotnet attempts to restore for Windows targets, which it cannot find the dependencies for
-  dotnetRestoreFlags = [ "--runtime ${dotnetCorePackages.sdk_6_0.systemToDotnetRid stdenvNoCC.targetPlatform.system}" ];
+  nugetDeps = ./deps.json;
 
   projectFile = "ArchiSteamFarm.sln";
-  executables = [ "ArchiSteamFarm" ];
+  executable = "ArchiSteamFarm";
 
-  runtimeDeps = [ libkrb5 zlib openssl ];
+  enableParallelBuilding = false;
+
+  useAppHost = false;
+  dotnetFlags = [
+    # useAppHost doesn't explicitly disable this
+    "-p:UseAppHost=false"
+    "-p:RuntimeIdentifiers="
+  ];
+  dotnetBuildFlags = [
+    "--framework=net9.0"
+  ];
+  dotnetInstallFlags = dotnetBuildFlags;
+
+  runtimeDeps = [
+    libkrb5
+    zlib
+    openssl
+  ];
 
   doCheck = true;
 
   preInstall = ''
+    dotnetProjectFiles=(ArchiSteamFarm)
+
     # A mutable path, with this directory tree must be set. By default, this would point at the nix store causing errors.
     makeWrapperArgs+=(
       --run 'mkdir -p ~/.config/archisteamfarm/{config,logs,plugins}'
@@ -43,7 +60,27 @@ buildDotnetModule rec {
     )
   '';
 
+  postInstall = ''
+    buildPlugin() {
+      echo "Publishing plugin $1"
+      dotnet publish $1 -p:ContinuousIntegrationBuild=true -p:Deterministic=true \
+        --output $out/lib/ArchiSteamFarm/plugins/$1 --configuration Release \
+        $dotnetFlags $dotnetInstallFlags
+    }
+
+    buildPlugin ArchiSteamFarm.OfficialPlugins.ItemsMatcher
+    buildPlugin ArchiSteamFarm.OfficialPlugins.MobileAuthenticator
+    buildPlugin ArchiSteamFarm.OfficialPlugins.Monitoring
+    buildPlugin ArchiSteamFarm.OfficialPlugins.SteamTokenDumper
+
+    chmod +x $out/lib/ArchiSteamFarm/ArchiSteamFarm.dll
+    wrapDotnetProgram $out/lib/ArchiSteamFarm/ArchiSteamFarm.dll $out/bin/ArchiSteamFarm
+    substituteInPlace $out/bin/ArchiSteamFarm \
+      --replace-fail "exec " "exec dotnet "
+  '';
+
   passthru = {
+    # nix-shell maintainers/scripts/update.nix --argstr package ArchiSteamFarm
     updateScript = ./update.sh;
     ui = callPackage ./web-ui { };
   };
@@ -52,7 +89,7 @@ buildDotnetModule rec {
     description = "Application with primary purpose of idling Steam cards from multiple accounts simultaneously";
     homepage = "https://github.com/JustArchiNET/ArchiSteamFarm";
     license = licenses.asl20;
-    platforms = [ "x86_64-linux" "aarch64-linux" ];
-    maintainers = with maintainers; [ SuperSandro2000 lom ];
+    mainProgram = "ArchiSteamFarm";
+    maintainers = with maintainers; [ SuperSandro2000 ];
   };
 }

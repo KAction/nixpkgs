@@ -1,108 +1,130 @@
-{ lib
-, avahi
-, bc
-, coreutils
-, cups
-, dbus
-, dejavu_fonts
-, fetchurl
-, fontconfig
-, gawk
-, ghostscript
-, gnugrep
-, gnused
-, ijs
-, libjpeg
-, liblouis
-, libpng
-, makeWrapper
-, mupdf
-, perl
-, pkg-config
-, poppler
-, poppler_utils
-, qpdf
-, stdenv
-, which
-, withAvahi ? true
+{
+  lib,
+  bc,
+  coreutils,
+  cups,
+  dbus,
+  dejavu_fonts,
+  fetchFromGitHub,
+  fontconfig,
+  gawk,
+  ghostscript,
+  gnugrep,
+  gnused,
+  ijs,
+  libcupsfilters,
+  libppd,
+  libexif,
+  libjpeg,
+  liblouis,
+  libpng,
+  makeWrapper,
+  autoreconfHook,
+  mupdf,
+  perl,
+  pkg-config,
+  poppler,
+  poppler-utils,
+  qpdf,
+  stdenv,
+  which,
+  withAvahi ? true,
+  glib,
 }:
 
-let
-  binPath = lib.makeBinPath [ bc coreutils gawk gnused gnugrep which ];
+(
+  if !withAvahi then
+    lib.warn "the 'withAvahi' parameter to 'cups-filters' is deprecated, as the cups-browsed component (which does not make sense without avahi) has been split out of the cups-filters package (which no longer needs avahi)"
+  else
+    lib.id
+)
 
-in
-stdenv.mkDerivation rec {
-  pname = "cups-filters";
-  version = "1.28.15";
+  (
+    let
+      binPath = lib.makeBinPath [
+        bc
+        coreutils
+        gawk
+        gnused
+        gnugrep
+        which
+      ];
 
-  src = fetchurl {
-    url = "https://openprinting.org/download/cups-filters/${pname}-${version}.tar.xz";
-    sha256 = "sha256-qQfsdp+7cu+/v5tUCyUKCOM7bjc6inw0P5hA+6TQR4s=";
-  };
+    in
+    stdenv.mkDerivation rec {
+      pname = "cups-filters";
+      version = "2.0.1";
 
-  nativeBuildInputs = [ pkg-config makeWrapper ];
+      src = fetchFromGitHub {
+        owner = "OpenPrinting";
+        repo = "cups-filters";
+        rev = version;
+        hash = "sha256-bLOl64bdeZ10JLcQ7GbU+VffJu3Lzo0ves7O7GQIOWY=";
+      };
 
-  buildInputs = [
-    cups
-    dbus
-    fontconfig
-    ghostscript
-    ijs
-    libjpeg
-    liblouis # braille embosser support
-    libpng
-    mupdf
-    perl
-    poppler
-    poppler_utils
-    qpdf
-  ] ++ lib.optionals withAvahi [ avahi ];
+      strictDeps = true;
 
-  configureFlags = [
-    "--with-mutool-path=${mupdf}/bin/mutool"
-    "--with-pdftops=pdftops"
-    "--with-pdftops-path=${poppler_utils}/bin/pdftops"
-    "--with-gs-path=${ghostscript}/bin/gs"
-    "--with-pdftocairo-path=${poppler_utils}/bin/pdftocairo"
-    "--with-ippfind-path=${cups}/bin/ippfind"
-    "--enable-imagefilters"
-    "--with-rcdir=no"
-    "--with-shell=${stdenv.shell}"
-    "--with-test-font-path=${dejavu_fonts}/share/fonts/truetype/DejaVuSans.ttf"
-    "--localstatedir=/var"
-    "--sysconfdir=/etc"
-  ] ++ lib.optionals (!withAvahi) [ "--disable-avahi" ];
+      nativeBuildInputs = [
+        autoreconfHook
+        cups
+        glib
+        makeWrapper
+        pkg-config
+      ];
 
-  makeFlags = [ "CUPS_SERVERBIN=$(out)/lib/cups" "CUPS_DATADIR=$(out)/share/cups" "CUPS_SERVERROOT=$(out)/etc/cups" ];
+      buildInputs = [
+        cups
+        ghostscript
+        libcupsfilters
+        libppd
+        mupdf
+      ];
 
-  postConfigure =
-    ''
-      # Ensure that bannertopdf can find the PDF templates in
-      # $out. (By default, it assumes that cups and cups-filters are
-      # installed in the same prefix.)
-      substituteInPlace config.h --replace ${cups.out}/share/cups/data $out/share/cups/data
+      configureFlags = [
+        "--with-mutool-path=${mupdf}/bin/mutool"
+        "--with-gs-path=${ghostscript}/bin/gs"
+        "--with-ippfind-path=${cups}/bin/ippfind"
+        "--with-shell=${stdenv.shell}"
+        "--localstatedir=/var"
+        "--sysconfdir=/etc"
+      ];
 
-      # Ensure that gstoraster can find gs in $PATH.
-      substituteInPlace filter/gstoraster.c --replace execve execvpe
+      makeFlags = [
+        "CUPS_SERVERBIN=$(out)/lib/cups"
+        "CUPS_DATADIR=$(out)/share/cups"
+        "CUPS_SERVERROOT=$(out)/etc/cups"
+      ];
 
-      # Patch shebangs of generated build scripts
-      patchShebangs filter
-    '';
+      # https://github.com/OpenPrinting/cups-filters/issues/512
+      env.NIX_CFLAGS_COMPILE = "-std=c++17";
 
-  postInstall =
-    ''
-      for i in $out/lib/cups/filter/*; do
-        wrapProgram "$i" --prefix PATH ':' ${binPath}
-      done
-    '';
+      postConfigure = ''
+        # Ensure that bannertopdf can find the PDF templates in
+        # $out. (By default, it assumes that cups and cups-filters are
+        # installed in the same prefix.)
+        substituteInPlace config.h --replace ${cups.out}/share/cups/data $out/share/cups/data
 
-  enableParallelBuilding = true;
-  doCheck = true;
+        # Ensure that gstoraster can find gs in $PATH.
+        substituteInPlace filter/gstoraster.c --replace execve execvpe
 
-  meta = {
-    homepage = "http://www.linuxfoundation.org/collaborate/workgroups/openprinting/cups-filters";
-    description = "Backends, filters, and other software that was once part of the core CUPS distribution but is no longer maintained by Apple Inc";
-    license = lib.licenses.gpl2;
-    platforms = lib.platforms.linux;
-  };
-}
+        # Patch shebangs of generated build scripts
+        patchShebangs filter
+      '';
+
+      postInstall = ''
+        for i in $out/lib/cups/filter/*; do
+          wrapProgram "$i" --prefix PATH ':' ${binPath}
+        done
+      '';
+
+      enableParallelBuilding = true;
+      doCheck = true;
+
+      meta = {
+        homepage = "http://www.linuxfoundation.org/collaborate/workgroups/openprinting/cups-filters";
+        description = "Backends, filters, and other software that was once part of the core CUPS distribution but is no longer maintained by Apple Inc";
+        license = lib.licenses.gpl2Plus;
+        platforms = lib.platforms.linux;
+      };
+    }
+  )

@@ -1,43 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, mock
-, pytestCheckHook
-, pythonOlder
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  mock,
+  pytestCheckHook,
+  pythonOlder,
+  six,
 }:
 
 buildPythonPackage rec {
   pname = "configobj";
-  version = "5.0.6";
+  version = "5.0.9";
   format = "setuptools";
 
   disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "DiffSK";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-HMLYzVMnxvMpb3ORsbKy18oU/NkuRT0isK6NaUk6J3U=";
+    repo = "configobj";
+    tag = "v${version}";
+    hash = "sha256-duPCGBaHCXp4A6ZHLnyL1SZtR7K4FJ4hs5wCE1V9WB4=";
   };
 
-  propagatedBuildInputs = [
-    six
-  ];
+  propagatedBuildInputs = [ six ];
 
-  checkInputs = [
-    mock
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pythonImportsCheck = [
-    "configobj"
-  ];
+  checkInputs = [ mock ];
+
+  pythonImportsCheck = [ "configobj" ];
 
   meta = with lib; {
     description = "Config file reading, writing and validation";
-    homepage = "https://pypi.python.org/pypi/configobj";
+    homepage = "https://github.com/DiffSK/configobj";
+    changelog = "https://github.com/DiffSK/configobj/blob/v${version}/CHANGES.rst";
     license = licenses.bsd3;
-    maintainers = with maintainers; [ ];
+    maintainers = [ ];
   };
 }

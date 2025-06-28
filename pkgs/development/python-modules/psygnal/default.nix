@@ -1,65 +1,64 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, importlib-metadata
-, numpy
-, pydantic
-, pytest-mypy-plugins
-, pytestCheckHook
-, pythonOlder
-, setuptools-scm
-, typing-extensions
-, wheel
-, wrapt
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatch-vcs,
+  hatchling,
+  mypy-extensions,
+  numpy,
+  pydantic,
+  pytestCheckHook,
+  pythonOlder,
+  toolz,
+  typing-extensions,
+  wrapt,
+  attrs,
 }:
 
 buildPythonPackage rec {
   pname = "psygnal";
-  version = "0.6.0";
-  format = "setuptools";
+  version = "0.13.0";
+  format = "pyproject";
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
-    owner = "tlambert03";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    hash = "sha256-KCdX+pMUAQxeQRZhkrdGCKGjBaB1Ode/r1W8LJQPxyM=";
+    owner = "pyapp-kit";
+    repo = "psygnal";
+    tag = "v${version}";
+    hash = "sha256-ZEN8S2sI1usXl5A1Ow1+l4BBB6qNnlVt/nvFtAX4maY=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
-  buildInputs = [
-    setuptools-scm
-    wheel
+  build-system = [
+    hatch-vcs
+    hatchling
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
+    mypy-extensions
     typing-extensions
-  ] ++ lib.optionals (pythonOlder "3.8") [
-    importlib-metadata
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     numpy
     pydantic
-    pytest-mypy-plugins
     pytestCheckHook
+    toolz
     wrapt
+    attrs
   ];
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace " --cov=psygnal --cov-report=term-missing" ""
-  '';
-
-  pythonImportsCheck = [
-    "psygnal"
+  pytestFlagsArray = [
+    "-W"
+    "ignore::pydantic.warnings.PydanticDeprecatedSince211"
   ];
+
+  pythonImportsCheck = [ "psygnal" ];
 
   meta = with lib; {
     description = "Implementation of Qt Signals";
-    homepage = "https://github.com/tlambert03/psygnal";
+    homepage = "https://github.com/pyapp-kit/psygnal";
+    changelog = "https://github.com/pyapp-kit/psygnal/blob/${src.tag}/CHANGELOG.md";
     license = licenses.bsd3;
     maintainers = with maintainers; [ SomeoneSerge ];
   };

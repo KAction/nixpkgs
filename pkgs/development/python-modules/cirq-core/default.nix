@@ -1,82 +1,86 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, fetchpatch
-, duet
-, matplotlib
-, networkx
-, numpy
-, pandas
-, requests
-, scipy
-, sortedcontainers
-, sympy
-, tqdm
-, typing-extensions
-  # Contrib requirements
-, withContribRequires ? false
-, autoray ? null
-, opt-einsum
-, ply
-, pylatex ? null
-, pyquil ? null
-, quimb ? null
-  # test inputs
-, pytestCheckHook
-, freezegun
-, pytest-asyncio
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  attrs,
+  duet,
+  matplotlib,
+  networkx,
+  numpy,
+  pandas,
+  requests,
+  scipy,
+  sortedcontainers,
+  sympy,
+  tqdm,
+  typing-extensions,
+  autoray ? null,
+  opt-einsum,
+  ply,
+  pylatex ? null,
+  pyquil ? null,
+  quimb ? null,
+
+  # tests
+  freezegun,
+  pytest-asyncio,
+  pytestCheckHook,
+
+  withContribRequires ? false,
 }:
 
 buildPythonPackage rec {
   pname = "cirq-core";
-  version = "1.0.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "1.5.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "quantumlib";
     repo = "cirq";
-    rev = "v${version}";
-    hash = "sha256-KJ+z4zGrdGIXcGZzqHtWMf8aAzcn9CtltFawcHVldMQ=";
+    tag = "v${version}";
+    hash = "sha256-4FgXX4ox7BkjmLecxsvg0/JpcrHPn6hlFw5rk4bn9Cc=";
   };
 
-  sourceRoot = "source/${pname}";
+  sourceRoot = "${src.name}/${pname}";
 
-  postPatch = ''
-    substituteInPlace requirements.txt \
-      --replace "matplotlib~=3.0" "matplotlib" \
-      --replace "networkx~=2.4" "networkx" \
-      --replace "numpy~=1.16" "numpy"
-  '';
+  pythonRelaxDeps = [ "matplotlib" ];
 
-  propagatedBuildInputs = [
-    duet
-    matplotlib
-    networkx
-    numpy
-    pandas
-    requests
-    scipy
-    sortedcontainers
-    sympy
-    tqdm
-    typing-extensions
-  ] ++ lib.optionals withContribRequires [
-    autoray
-    opt-einsum
-    ply
-    pylatex
-    pyquil
-    quimb
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    pytestCheckHook
-    pytest-asyncio
+  dependencies =
+    [
+      attrs
+      duet
+      matplotlib
+      networkx
+      numpy
+      pandas
+      requests
+      scipy
+      sortedcontainers
+      sympy
+      tqdm
+      typing-extensions
+    ]
+    ++ lib.optionals withContribRequires [
+      autoray
+      opt-einsum
+      ply
+      pylatex
+      pyquil
+      quimb
+    ];
+
+  nativeCheckInputs = [
     freezegun
+    pytest-asyncio
+    pytestCheckHook
   ];
 
   disabledTestPaths = lib.optionals (!withContribRequires) [
@@ -86,19 +90,28 @@ buildPythonPackage rec {
     "cirq/_version_test.py"
   ];
 
-  disabledTests = [
-    # Tries to import flynt, which isn't in Nixpkgs
-    "test_metadata_search_path"
-    # Fails due pandas MultiIndex. Maybe issue with pandas version in nix?
-    "test_benchmark_2q_xeb_fidelities"
-  ];
+  disabledTests =
+    [
+      # Assertion error
+      "test_parameterized_cphase"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isAarch64 [
+      # https://github.com/quantumlib/Cirq/issues/5924
+      "test_prepare_two_qubit_state_using_sqrt_iswap"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      # test_scalar_division[scalar9-terms9-terms_expected9] result differs in the final digit
+      "test_scalar_division"
+    ];
 
-  meta = with lib; {
+  meta = {
     description = "Framework for creating, editing, and invoking Noisy Intermediate Scale Quantum (NISQ) circuits";
     homepage = "https://github.com/quantumlib/cirq";
     changelog = "https://github.com/quantumlib/Cirq/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ drewrisinger fab ];
-    broken = (stdenv.isLinux && stdenv.isAarch64);
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      drewrisinger
+      fab
+    ];
   };
 }

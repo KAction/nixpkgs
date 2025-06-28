@@ -1,38 +1,41 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, cmake
-, clang
-, libclang
-, zlib
-, openexr
-, openimageio2
-, llvm
-, boost
-, flex
-, bison
-, partio
-, pugixml
-, util-linux
-, python3
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  cmake,
+  clang,
+  libclang,
+  libxml2,
+  zlib,
+  openexr,
+  openimageio,
+  llvm,
+  boost,
+  flex,
+  bison,
+  partio,
+  pugixml,
+  robin-map,
+  util-linux,
+  python3,
 }:
 
 let
-
   boost_static = boost.override { enableStatic = true; };
-
-in stdenv.mkDerivation rec {
+in
+stdenv.mkDerivation (finalAttrs: {
   pname = "openshadinglanguage";
-  version = "1.11.17.0";
+  version = "1.14.5.1";
 
   src = fetchFromGitHub {
     owner = "AcademySoftwareFoundation";
     repo = "OpenShadingLanguage";
-    rev = "v${version}";
-    sha256 = "sha256-2OOkLnHLz+vmSeEDQl12SrJBTuWwbnvoTatnvm8lpbA=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-dmGVCx4m2bkeKhAJbU1mrzEDAmnL++7GA5okb9wwk/Y=";
   };
 
   cmakeFlags = [
+    "-DBoost_ROOT=${boost}"
     "-DUSE_BOOST_WAVE=ON"
     "-DENABLE_RTTI=ON"
 
@@ -40,12 +43,17 @@ in stdenv.mkDerivation rec {
     # Override defaults.
     "-DLLVM_DIRECTORY=${llvm}"
     "-DLLVM_CONFIG=${llvm.dev}/bin/llvm-config"
-
-    # Set C++11 to C++14 required for LLVM10+
-    "-DCMAKE_CXX_STANDARD=14"
+    "-DLLVM_BC_GENERATOR=${clang}/bin/clang++"
   ];
 
-  preConfigure = "patchShebangs src/liboslexec/serialize-bc.bash ";
+  prePatch = ''
+    substituteInPlace src/cmake/modules/FindLLVM.cmake \
+      --replace-fail "NO_DEFAULT_PATH" ""
+  '';
+
+  preConfigure = ''
+    patchShebangs src/liboslexec/serialize-bc.bash
+  '';
 
   nativeBuildInputs = [
     bison
@@ -54,30 +62,34 @@ in stdenv.mkDerivation rec {
     flex
   ];
 
-  buildInputs = [
-    boost_static
-    libclang
-    llvm
-    openexr
-    openimageio2
-    partio
-    pugixml
-    python3.pkgs.pybind11
-    util-linux # needed just for hexdump
-    zlib
-  ];
+  buildInputs =
+    [
+      boost_static
+      libclang
+      llvm
+      openexr
+      openimageio
+      partio
+      pugixml
+      python3.pkgs.pybind11
+      robin-map
+      util-linux # needed just for hexdump
+      zlib
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      libxml2
+    ];
 
   postFixup = ''
     substituteInPlace "$out"/lib/pkgconfig/*.pc \
       --replace '=''${exec_prefix}//' '=/'
   '';
 
-  meta = with lib; {
-    broken = (stdenv.isLinux && stdenv.isAarch64);
+  meta = {
     description = "Advanced shading language for production GI renderers";
     homepage = "https://opensource.imageworks.com/osl.html";
-    maintainers = with maintainers; [ hodapp ];
-    license = licenses.bsd3;
-    platforms = platforms.linux;
+    maintainers = with lib.maintainers; [ hodapp ];
+    license = lib.licenses.bsd3;
+    platforms = lib.platforms.unix;
   };
-}
+})

@@ -1,17 +1,24 @@
-{ lib, buildGoModule, fetchFromGitHub, nixosTests, makeWrapper, freeipmi }:
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  nixosTests,
+  makeWrapper,
+  freeipmi,
+}:
 
 buildGoModule rec {
   pname = "ipmi_exporter";
-  version = "1.6.1";
+  version = "1.10.0";
 
   src = fetchFromGitHub {
     owner = "prometheus-community";
     repo = "ipmi_exporter";
     rev = "v${version}";
-    hash = "sha256-hifG1lpFUVLoy7Ol3N6h+s+hZjnQxja5svpY4lFFsxw=";
+    hash = "sha256-Go47Txf/NX9ytMvvFQeNVCw0ORWqbsg2sIWK4MVRyIA=";
   };
 
-  vendorHash = "sha256-UuPZmxoKVj7FusOS6H1gn6SAzQIZAKyX+m+QS657yXw=";
+  vendorHash = "sha256-OXVUFamFv1BZTXuIfmaYHc1y9B9j4ndo1/2CGLNavh0=";
 
   nativeBuildInputs = [ makeWrapper ];
 
@@ -32,7 +39,8 @@ buildGoModule rec {
   ];
 
   meta = with lib; {
-    description = "An IPMI exporter for Prometheus";
+    description = "IPMI exporter for Prometheus";
+    mainProgram = "ipmi_exporter";
     homepage = "https://github.com/prometheus-community/ipmi_exporter";
     changelog = "https://github.com/prometheus-community/ipmi_exporter/blob/${src.rev}/CHANGELOG.md";
     license = licenses.mit;

@@ -1,53 +1,51 @@
-{ lib
-, stdenv
-, fetchurl
-, fetchpatch
-, perl
-, CoreServices
-, ApplicationServices
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  perl,
 }:
 
 stdenv.mkDerivation rec {
   pname = "moarvm";
-  version = "2022.07";
+  version = "2025.05";
 
-  src = fetchurl {
-    url = "https://moarvm.org/releases/MoarVM-${version}.tar.gz";
-    hash = "sha256-M37wTRb4JvmUZcZTuSAGAo/iIL5o09z9BylhL09rW0Y=";
+  # nixpkgs-update: no auto update
+  src = fetchFromGitHub {
+    owner = "moarvm";
+    repo = "moarvm";
+    rev = version;
+    hash = "sha256-ikzi0DsKb/HDL+rmMcm/LbYXZWhYzysERHvcmSemfJ0=";
+    fetchSubmodules = true;
   };
 
-  patches = [
-    (fetchpatch {
-      name = "mimalloc-older-macos-fixes.patch";
-      url = "https://github.com/microsoft/mimalloc/commit/40e0507a5959ee218f308d33aec212c3ebeef3bb.patch";
-      stripLen = 1;
-      extraPrefix = "3rdparty/mimalloc/";
-      sha256 = "1gcbn1850vy7xzalhn9ffnsg6x1ywi3fmnxvnal3m6lmb4kz5kb1";
-    })
-  ];
+  postPatch =
+    ''
+      patchShebangs .
+    ''
+    + lib.optionalString stdenv.hostPlatform.isDarwin ''
+      substituteInPlace Configure.pl \
+        --replace '`/usr/bin/arch`' '"${stdenv.hostPlatform.darwinArch}"' \
+        --replace '/usr/bin/arch' "$(type -P true)" \
+        --replace '/usr/' '/nope/'
+      substituteInPlace 3rdparty/dyncall/configure \
+        --replace '`sw_vers -productVersion`' '"11.0"'
+    '';
 
-  postPatch = ''
-    patchShebangs .
-  '' + lib.optionalString stdenv.isDarwin ''
-    substituteInPlace Configure.pl \
-      --replace '`/usr/bin/arch`' '"${stdenv.hostPlatform.darwinArch}"' \
-      --replace '/usr/bin/arch' "$(type -P true)" \
-      --replace '/usr/' '/nope/'
-    substituteInPlace 3rdparty/dyncall/configure \
-      --replace '`sw_vers -productVersion`' '"$MACOSX_DEPLOYMENT_TARGET"'
-  '';
-
-  buildInputs = [ perl ] ++ lib.optionals stdenv.isDarwin [ CoreServices ApplicationServices ];
+  buildInputs = [ perl ];
   doCheck = false; # MoarVM does not come with its own test suite
 
   configureScript = "${perl}/bin/perl ./Configure.pl";
 
-  meta = with lib; {
+  meta = {
     description = "VM with adaptive optimization and JIT compilation, built for Rakudo";
     homepage = "https://moarvm.org";
-    license = licenses.artistic2;
-    maintainers = with maintainers; [ thoughtpolice vrthra sgo ];
+    license = lib.licenses.artistic2;
+    maintainers = with lib.maintainers; [
+      thoughtpolice
+      sgo
+      prince213
+    ];
     mainProgram = "moar";
-    platforms = platforms.unix;
+    platforms = lib.platforms.unix;
   };
 }

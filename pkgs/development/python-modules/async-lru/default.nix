@@ -1,40 +1,43 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, pytestCheckHook
-, pytest-asyncio
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchFromGitHub,
+  setuptools,
+  typing-extensions,
+  pytestCheckHook,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytest-timeout,
 }:
 
 buildPythonPackage rec {
   pname = "async-lru";
-  version = "1.0.3";
-
-  disabled = pythonOlder "3.6";
+  version = "2.0.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "aio-libs";
     repo = "async-lru";
-    rev = "v${version}";
-    hash = "sha256-98ZPFSOFRnymTCfCG9OuajfxXAWyCrByyJEHhpPVPbM=";
+    tag = "v${version}";
+    hash = "sha256-FJ1q6W9IYs0OSMZc+bI4v22hOAAWAv2OW3BAqixm8Hs=";
   };
 
-  postPatch = ''
-    sed -i -e '/^addopts/d' -e '/^filterwarnings/,+2d' setup.cfg
-  '';
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  dependencies = lib.optionals (pythonOlder "3.11") [ typing-extensions ];
+
+  nativeCheckInputs = [
     pytestCheckHook
     pytest-asyncio
-  ];
-
-  pytestFlagsArray = [
-    "--asyncio-mode=strict"
+    pytest-cov-stub
+    pytest-timeout
   ];
 
   pythonImportsCheck = [ "async_lru" ];
 
   meta = with lib; {
+    changelog = "https://github.com/aio-libs/async-lru/releases/tag/${src.tag}";
     description = "Simple lru cache for asyncio";
     homepage = "https://github.com/wikibusiness/async_lru";
     license = licenses.mit;

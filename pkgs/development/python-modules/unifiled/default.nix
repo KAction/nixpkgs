@@ -1,17 +1,19 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, requests
-, urllib3
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  requests,
+  urllib3,
 }:
 
 buildPythonPackage rec {
   pname = "unifiled";
   version = "1.1";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "florisvdk";
-    repo = pname;
+    repo = "unifiled";
     rev = "v${version}";
     sha256 = "1nmqxxhwa0isxdb889nhbp7w4axj1mcrwd3pr9d8nhpw4yj9h3vq";
   };

@@ -1,116 +1,148 @@
-{ lib
-, stdenv
-, callPackage
-, fetchFromGitHub
-, cmake
-, clang
-, llvm
-, python3
-, zlib
-, z3
-, stp
-, cryptominisat
-, gperftools
-, sqlite
-, gtest
-, lit
+{
+  lib,
+  llvmPackages,
+  callPackage,
+  fetchFromGitHub,
+  cmake,
+  python3,
+  z3,
+  stp,
+  cryptominisat,
+  gperftools,
+  sqlite,
+  gtest,
+  lit,
+  nix-update-script,
 
-# Build KLEE in debug mode. Defaults to false.
-, debug ? false
+  # Build KLEE in debug mode. Defaults to false.
+  debug ? false,
 
-# Include debug info in the build. Defaults to true.
-, includeDebugInfo ? true
+  # Include debug info in the build. Defaults to true.
+  includeDebugInfo ? true,
 
-# Enable KLEE asserts. Defaults to true, since LLVM is built with them.
-, asserts ? true
+  # Enable KLEE asserts. Defaults to true, since LLVM is built with them.
+  asserts ? true,
 
-# Build the KLEE runtime in debug mode. Defaults to true, as this improves
-# stack traces of the software under test.
-, debugRuntime ? true
+  # Build the KLEE runtime in debug mode. Defaults to true, as this improves
+  # stack traces of the software under test.
+  debugRuntime ? true,
 
-# Enable runtime asserts. Default false.
-, runtimeAsserts ? false
+  # Enable runtime asserts. Default false.
+  runtimeAsserts ? false,
 
-# Extra klee-uclibc config.
-, extraKleeuClibcConfig ? {}
+  # Klee uclibc. Defaults to the bundled version.
+  kleeuClibc ? null,
+
+  # Extra klee-uclibc config for the default klee-uclibc.
+  extraKleeuClibcConfig ? { },
 }:
 
+# Klee supports these LLVM versions.
 let
+  llvmVersion = llvmPackages.llvm.version;
+  inherit (lib.strings) versionAtLeast versionOlder;
+in
+assert versionAtLeast llvmVersion "11" && versionOlder llvmVersion "17";
+
+let
+  # The chosen version of klee-uclibc.
+  chosenKleeuClibc =
+    if kleeuClibc == null then
+      callPackage ./klee-uclibc.nix {
+        llvmPackages = llvmPackages;
+        inherit extraKleeuClibcConfig debugRuntime runtimeAsserts;
+      }
+    else
+      kleeuClibc;
+
   # Python used for KLEE tests.
   kleePython = python3.withPackages (ps: with ps; [ tabulate ]);
-
-  # The klee-uclibc derivation.
-  kleeuClibc = callPackage ./klee-uclibc.nix {
-    inherit stdenv clang llvm extraKleeuClibcConfig debugRuntime runtimeAsserts;
-  };
-in stdenv.mkDerivation rec {
+in
+llvmPackages.stdenv.mkDerivation rec {
   pname = "klee";
-  version = "2.3";
+  version = "3.1";
 
   src = fetchFromGitHub {
     owner = "klee";
     repo = "klee";
     rev = "v${version}";
-    sha256 = "sha256-E1c6K6Q+LAWm342W8I00JI6+LMvqmULHZLkv9Kj5RmY=";
+    hash = "sha256-5js1N8qVF0lCkahSU3ojT7+p/a9IaUpPWhIyFHEzqto=";
   };
 
+  nativeBuildInputs = [ cmake ];
+
   buildInputs = [
+    llvmPackages.llvm
     cryptominisat
     gperftools
-    lit # Configure phase checking for lit
-    llvm
     sqlite
     stp
     z3
   ];
 
-  nativeBuildInputs = [
-    clang
-    cmake
-  ];
-
-  checkInputs = [
+  nativeCheckInputs = [
     gtest
 
     # Should appear BEFORE lit, since lit passes through python rather
     # than the python environment we make.
     kleePython
-    (lit.override { python3 = kleePython; })
+    (lit.override { python = kleePython; })
   ];
 
-  cmakeFlags = let
-    onOff = val: if val then "ON" else "OFF";
-  in [
-    "-DCMAKE_BUILD_TYPE=${if debug then "Debug" else if !debug && includeDebugInfo then "RelWithDebInfo" else "MinSizeRel"}"
-    "-DKLEE_RUNTIME_BUILD_TYPE=${if debugRuntime then "Debug" else "Release"}"
-    "-DKLEE_ENABLE_TIMESTAMP=${onOff false}"
-    "-DENABLE_KLEE_UCLIBC=${onOff true}"
-    "-DKLEE_UCLIBC_PATH=${kleeuClibc}"
-    "-DENABLE_KLEE_ASSERTS=${onOff asserts}"
-    "-DENABLE_POSIX_RUNTIME=${onOff true}"
-    "-DENABLE_UNIT_TESTS=${onOff true}"
-    "-DENABLE_SYSTEM_TESTS=${onOff true}"
-    "-DGTEST_SRC_DIR=${gtest.src}"
-    "-DGTEST_INCLUDE_DIR=${gtest.src}/googletest/include"
-    "-Wno-dev"
-  ];
+  cmakeBuildType =
+    if debug then
+      "Debug"
+    else if !debug && includeDebugInfo then
+      "RelWithDebInfo"
+    else
+      "MinSizeRel";
+
+  cmakeFlags =
+    let
+      onOff = val: if val then "ON" else "OFF";
+    in
+    [
+      "-DKLEE_RUNTIME_BUILD_TYPE=${if debugRuntime then "Debug" else "Release"}"
+      "-DLLVMCC=${llvmPackages.clang}/bin/clang"
+      "-DLLVMCXX=${llvmPackages.clang}/bin/clang++"
+      "-DKLEE_ENABLE_TIMESTAMP=${onOff false}"
+      "-DKLEE_UCLIBC_PATH=${chosenKleeuClibc}"
+      "-DENABLE_KLEE_ASSERTS=${onOff asserts}"
+      "-DENABLE_POSIX_RUNTIME=${onOff true}"
+      "-DENABLE_UNIT_TESTS=${onOff true}"
+      "-DENABLE_SYSTEM_TESTS=${onOff true}"
+      "-DGTEST_SRC_DIR=${gtest.src}"
+      "-DGTEST_INCLUDE_DIR=${gtest.src}/googletest/include"
+      "-Wno-dev"
+    ];
 
   # Silence various warnings during the compilation of fortified bitcode.
-  NIX_CFLAGS_COMPILE = ["-Wno-macro-redefined"];
+  env.NIX_CFLAGS_COMPILE = toString [ "-Wno-macro-redefined" ];
 
   prePatch = ''
-    patchShebangs .
+    patchShebangs --build .
   '';
 
+  # https://github.com/klee/klee/issues/1690
+  hardeningDisable = [ "fortify" ];
+
+  enableParallelBuilding = true;
   doCheck = true;
 
   passthru = {
-    # Let the user depend on `klee.uclibc` for klee-uclibc
-    uclibc = kleeuClibc;
+    updateScript = nix-update-script {
+      extraArgs = [
+        "--version-regex"
+        "v(\\d\\.\\d)"
+      ];
+    };
+    # Let the user access the chosen uClibc outside the derivation.
+    uclibc = chosenKleeuClibc;
   };
 
   meta = with lib; {
-    description = "A symbolic virtual machine built on top of LLVM";
+    mainProgram = "klee";
+    description = "Symbolic virtual machine built on top of LLVM";
     longDescription = ''
       KLEE is a symbolic virtual machine built on top of the LLVM compiler
       infrastructure. Currently, there are two primary components:
@@ -130,7 +162,7 @@ in stdenv.mkDerivation rec {
       that matches a computed test input, including setting up files, pipes,
       environment variables, and passing command line arguments.
     '';
-    homepage = "https://klee.github.io/";
+    homepage = "https://klee.github.io";
     license = licenses.ncsa;
     platforms = [ "x86_64-linux" ];
     maintainers = with maintainers; [ numinit ];

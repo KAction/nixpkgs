@@ -1,47 +1,48 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, text-unidecode
-, unidecode
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
+  text-unidecode,
+  unidecode,
 }:
 
 buildPythonPackage rec {
   pname = "python-slugify";
-  version = "6.1.2";
-  format = "setuptools";
+  version = "8.0.4";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "un33k";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-JGjUNBEMuICsaClQGDSGX4qFRjecVKzmpPNRUTvfwho=";
+    repo = "python-slugify";
+    tag = "v${version}";
+    hash = "sha256-zReUMIkItnDot3XyYCoPUNHrrAllbClWFYcxdTy3A30=";
   };
 
-  propagatedBuildInputs = [
-    text-unidecode
-    unidecode
-  ];
+  nativeBuildInputs = [ setuptools ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  propagatedBuildInputs = [ text-unidecode ];
 
-  pytestFlagsArray = [
-    "test.py"
-  ];
+  optional-dependencies = {
+    unidecode = [ unidecode ];
+  };
 
-  pythonImportsCheck = [
-    "slugify"
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pytestFlagsArray = [ "test.py" ];
+
+  pythonImportsCheck = [ "slugify" ];
 
   meta = with lib; {
     description = "Python Slugify application that handles Unicode";
+    mainProgram = "slugify";
     homepage = "https://github.com/un33k/python-slugify";
+    changelog = "https://github.com/un33k/python-slugify/blob/v${version}/CHANGELOG.md";
     license = licenses.mit;
-    maintainers = with maintainers; [ vrthra ];
+    maintainers = [ ];
   };
 }

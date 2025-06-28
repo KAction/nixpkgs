@@ -1,34 +1,38 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, meson
-, ninja
-, pkg-config
-, python3
-, vala
-, accountsservice
-, dbus
-, desktop-file-utils
-, geoclue2
-, glib
-, gobject-introspection
-, gtk3
-, granite
-, libgee
-, systemd
-, wrapGAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  accountsservice,
+  dbus,
+  desktop-file-utils,
+  fwupd,
+  gdk-pixbuf,
+  geoclue2,
+  gexiv2,
+  glib,
+  gobject-introspection,
+  gtk3,
+  granite,
+  libgee,
+  packagekit,
+  systemd,
+  wrapGAppsHook3,
 }:
 
 stdenv.mkDerivation rec {
   pname = "elementary-settings-daemon";
-  version = "1.2.0";
+  version = "8.3.1";
 
   src = fetchFromGitHub {
     owner = "elementary";
     repo = "settings-daemon";
     rev = version;
-    sha256 = "sha256-5QdCj2Z31t7dxZi7ZZ5g6qLgsMyw7rM5dRw0G8uoC6o=";
+    sha256 = "sha256-bYwgxUrPMDaxv/Vv+DuMUzOT1/GRcvNHZW+fjiN5Kdo=";
   };
 
   nativeBuildInputs = [
@@ -37,38 +41,34 @@ stdenv.mkDerivation rec {
     meson
     ninja
     pkg-config
-    python3
     vala
-    wrapGAppsHook
+    wrapGAppsHook3
   ];
 
   buildInputs = [
     accountsservice
     dbus
+    fwupd
+    gdk-pixbuf
     geoclue2
+    gexiv2
     glib
     gtk3
     granite
     libgee
+    packagekit
     systemd
   ];
 
-  postPatch = ''
-    chmod +x meson/post_install.py
-    patchShebangs meson/post_install.py
-  '';
-
   passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    updateScript = nix-update-script { };
   };
 
   meta = with lib; {
     description = "Settings daemon for Pantheon";
     homepage = "https://github.com/elementary/settings-daemon";
     license = licenses.gpl3Plus;
-    maintainers = teams.pantheon.members;
+    teams = [ teams.pantheon ];
     platforms = platforms.linux;
     mainProgram = "io.elementary.settings-daemon";
   };

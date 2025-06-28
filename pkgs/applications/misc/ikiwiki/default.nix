@@ -1,12 +1,31 @@
-{ lib, stdenv, fetchurl, fetchpatch, perlPackages, gettext, makeWrapper, ImageMagick, which, highlight
-, gitSupport ? false, git
-, docutilsSupport ? false, python, docutils
-, monotoneSupport ? false, monotone
-, bazaarSupport ? false, breezy
-, cvsSupport ? false, cvs, cvsps
-, subversionSupport ? false, subversion
-, mercurialSupport ? false, mercurial
-, extraUtils ? []
+{
+  lib,
+  stdenv,
+  fetchurl,
+  fetchpatch,
+  perlPackages,
+  gettext,
+  makeWrapper,
+  ImageMagick,
+  which,
+  highlight,
+  gitSupport ? false,
+  git,
+  docutilsSupport ? false,
+  python3,
+  docutils,
+  monotoneSupport ? false,
+  monotone,
+  bazaarSupport ? false,
+  breezy,
+  cvsSupport ? false,
+  cvs,
+  cvsps,
+  subversionSupport ? false,
+  subversion,
+  mercurialSupport ? false,
+  mercurial,
+  extraUtils ? [ ],
 }:
 
 stdenv.mkDerivation rec {
@@ -19,21 +38,49 @@ stdenv.mkDerivation rec {
   };
 
   nativeBuildInputs = [ makeWrapper ];
-  buildInputs = [ which highlight ]
-    ++ (with perlPackages; [ perl TextMarkdown URI HTMLParser HTMLScrubber HTMLTemplate
-      TimeDate gettext DBFile CGISession CGIFormBuilder LocaleGettext
-      RpcXML XMLSimple ImageMagick YAML YAMLLibYAML HTMLTree AuthenPassphrase
-      NetOpenIDConsumer LWPxParanoidAgent CryptSSLeay ])
+  buildInputs =
+    [
+      which
+      highlight
+    ]
+    ++ (with perlPackages; [
+      perl
+      TextMarkdown
+      URI
+      HTMLParser
+      HTMLScrubber
+      HTMLTemplate
+      TimeDate
+      gettext
+      DBFile
+      CGISession
+      CGIFormBuilder
+      LocaleGettext
+      RpcXML
+      XMLSimple
+      ImageMagick
+      YAML
+      YAMLLibYAML
+      HTMLTree
+      AuthenPassphrase
+      NetOpenIDConsumer
+      LWPxParanoidAgent
+      CryptSSLeay
+    ])
     ++ lib.optionals docutilsSupport [
-         (python.withPackages (pp: with pp; [ pygments ]))
-         docutils
-       ]
-    ++ lib.optionals gitSupport [git]
-    ++ lib.optionals monotoneSupport [monotone]
-    ++ lib.optionals bazaarSupport [breezy]
-    ++ lib.optionals cvsSupport [cvs cvsps perlPackages.Filechdir]
-    ++ lib.optionals subversionSupport [subversion]
-    ++ lib.optionals mercurialSupport [mercurial];
+      (python3.withPackages (pp: with pp; [ pygments ]))
+      docutils
+    ]
+    ++ lib.optionals gitSupport [ git ]
+    ++ lib.optionals monotoneSupport [ monotone ]
+    ++ lib.optionals bazaarSupport [ breezy ]
+    ++ lib.optionals cvsSupport [
+      cvs
+      cvsps
+      perlPackages.Filechdir
+    ]
+    ++ lib.optionals subversionSupport [ subversion ]
+    ++ lib.optionals mercurialSupport [ mercurial ];
 
   patches = [
     # A few markdown tests fail, but this is expected when using Text::Markdown
@@ -57,6 +104,11 @@ stdenv.mkDerivation rec {
     # Without patched plugin shebangs, some tests like t/rst.t fail
     # (with docutilsSupport enabled)
     patchShebangs plugins/*
+
+    # Creating shared git repo fails when running tests in Nix sandbox.
+    # The error is: "fatal: Could not make /tmp/ikiwiki-test-git.2043/repo/branches/ writable by group".
+    # Hopefully, not many people use `ikiwiki-makerepo` to create locally shared repositories these days.
+    substituteInPlace ikiwiki-makerepo --replace "git --bare init --shared" "git --bare init"
   '';
 
   configurePhase = "perl Makefile.PL PREFIX=$out";

@@ -1,19 +1,36 @@
-{ lib, stdenv, fetchFromGitHub, autoconf, automake, pkg-config, cairo, poppler, wxGTK, Cocoa }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  autoconf,
+  automake,
+  pkg-config,
+  cairo,
+  poppler,
+  wxGTK,
+}:
 
 stdenv.mkDerivation rec {
   pname = "diff-pdf";
-  version = "0.5";
+  version = "0.5.2";
 
   src = fetchFromGitHub {
     owner = "vslavik";
     repo = "diff-pdf";
     rev = "v${version}";
-    sha256 = "sha256-Si8v5ZY1Q/AwQTaxa1bYG8bgqxWj++c4Hh1LzXSmSwE=";
+    sha256 = "sha256-6aKF3Xqp/1BoHEiZVZJSemTjn5Qwwr3QyhsXOIjTr08=";
   };
 
-  nativeBuildInputs = [ autoconf automake pkg-config ];
-  buildInputs = [ cairo poppler wxGTK ]
-    ++ lib.optionals stdenv.isDarwin [ Cocoa ];
+  nativeBuildInputs = [
+    autoconf
+    automake
+    pkg-config
+  ];
+  buildInputs = [
+    cairo
+    poppler
+    wxGTK
+  ];
 
   preConfigure = "./bootstrap";
 
@@ -23,5 +40,6 @@ stdenv.mkDerivation rec {
     license = licenses.gpl2;
     platforms = platforms.all;
     maintainers = with maintainers; [ dtzWill ];
+    mainProgram = "diff-pdf";
   };
 }

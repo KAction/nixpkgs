@@ -1,70 +1,74 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, python
-, cmake
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  python3,
+  cmake,
+  ninja,
 }:
 
 let
-  pyEnv = python.withPackages (ps: [ ps.setuptools ]);
+  pyEnv = python3.withPackages (ps: [
+    ps.setuptools
+    ps.tomli
+    ps.pip
+    ps.setuptools
+  ]);
 in
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "lief";
-  version = "0.12.3";
+  version = "0.16.5";
 
   src = fetchFromGitHub {
     owner = "lief-project";
     repo = "LIEF";
-    rev = version;
-    sha256 = "sha256-wZgv4AFc7DrMCyxMLKQxO1mUTDAU4klK8aZAySqGJoY=";
+    tag = finalAttrs.version;
+    hash = "sha256-X1hkEOgU7AaQDeVlrFM4VDqweElADdColRffbV8/BfM=";
   };
 
-  outputs = [ "out" "py" ];
+  outputs = [
+    "out"
+    "py"
+  ];
 
   nativeBuildInputs = [
     cmake
+    ninja
   ];
 
-  # Not a propagatedBuildInput because only the $py output needs it; $out is
+  # Not in propagatedBuildInputs because only the $py output needs it; $out is
   # just the library itself (e.g. C/C++ headers).
-  buildInputs = [
+  buildInputs = with python3.pkgs; [
     python
+    build
+    pathspec
+    pip
+    pydantic
+    scikit-build-core
   ];
 
-  dontUseCmakeConfigure = true;
+  cmakeFlags = [ (lib.cmakeBool "BUILD_SHARED_LIBS" (!stdenv.hostPlatform.isStatic)) ];
 
-  buildPhase = ''
-    runHook preBuild
-
-    substituteInPlace setup.py \
-      --replace 'cmake_args = []' "cmake_args = [ \"-DCMAKE_INSTALL_PREFIX=$prefix\" ]"
-    ${pyEnv.interpreter} setup.py --sdk build --parallel=$NIX_BUILD_CORES
-
-    runHook postBuild
+  postBuild = ''
+    pushd ../api/python
+    ${pyEnv.interpreter} -m build --no-isolation --wheel --skip-dependency-check --config-setting=--parallel=$NIX_BUILD_CORES
+    popd
   '';
 
-  # I was unable to find a way to build the library itself and have it install
-  # to $out, while also installing the Python bindings to $py without building
-  # the project twice (using cmake), so this is the best we've got. It uses
-  # something called CPack to create the tarball, but it's not obvious to me
-  # *how* that happens, or how to intercept it to just get the structured
-  # library output.
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p $out $py/nix-support
-    echo "${python}" >> $py/nix-support/propagated-build-inputs
-    tar xf build/*.tar.gz --directory $out --strip-components 1
-    ${pyEnv.interpreter} setup.py install --skip-build --root=/ --prefix=$py
-
-    runHook postInstall
+  postInstall = ''
+    pushd ../api/python
+    ${pyEnv.interpreter} -m pip install --prefix $py dist/*.whl
+    popd
   '';
 
   meta = with lib; {
     description = "Library to Instrument Executable Formats";
     homepage = "https://lief.quarkslab.com/";
     license = [ licenses.asl20 ];
-    platforms = platforms.linux;
-    maintainers = [ maintainers.lassulus ];
+    platforms = with platforms; linux ++ darwin;
+    maintainers = with maintainers; [
+      lassulus
+      genericnerdyusername
+    ];
   };
-}
+})

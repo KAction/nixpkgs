@@ -1,33 +1,40 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchFromGitHub
-, asgineer
-, bcrypt
-, itemdb
-, jinja2
-, markdown
-, pscript
-, pyjwt
-, uvicorn
-, pytestCheckHook
-, requests
+{
+  lib,
+  asgineer,
+  bcrypt,
+  buildPythonPackage,
+  fetchFromGitHub,
+  iptools,
+  itemdb,
+  jinja2,
+  markdown,
+  nodejs,
+  pscript,
+  pyjwt,
+  pytestCheckHook,
+  pythonOlder,
+  requests,
+  uvicorn,
 }:
 
 buildPythonPackage rec {
   pname = "timetagger";
-  version = "22.10.1";
+  version = "25.06.1";
+  format = "setuptools";
+
+  disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "almarklein";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-+7PKYVZfX+zDBKpaFwEVftyp4yPL90X9HSQDvoNNFuA=";
+    repo = "timetagger";
+    tag = "v${version}";
+    hash = "sha256-fuZj4DoqtgIcRd/u7l0GsWqmuLEgF3BW5gN5wY8FdK0=";
   };
 
   propagatedBuildInputs = [
     asgineer
     bcrypt
+    iptools
     itemdb
     jinja2
     markdown
@@ -40,16 +47,18 @@ buildPythonPackage rec {
     export HOME=$(mktemp -d)
   '';
 
-  checkInputs = [
+  nativeCheckInputs = [
+    nodejs
     pytestCheckHook
     requests
   ];
 
   meta = with lib; {
-    broken = stdenv.isDarwin;
-    homepage = "https://timetagger.app";
+    description = "Library to interact with TimeTagger";
+    mainProgram = "timetagger";
+    homepage = "https://github.com/almarklein/timetagger";
+    changelog = "https://github.com/almarklein/timetagger/releases/tag/${src.tag}";
     license = licenses.gpl3Only;
-    description = "Tag your time, get the insight";
     maintainers = with maintainers; [ matthiasbeyer ];
   };
 }

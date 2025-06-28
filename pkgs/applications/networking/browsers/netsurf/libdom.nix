@@ -1,43 +1,61 @@
-{ lib, stdenv, fetchurl, pkg-config, expat
-, buildsystem
-, libparserutils
-, libwapcaplet
-, libhubbub
+{
+  lib,
+  stdenv,
+  fetchurl,
+  fetchpatch,
+  expat,
+  pkg-config,
+  buildsystem,
+  libparserutils,
+  libwapcaplet,
+  libhubbub,
 }:
 
-stdenv.mkDerivation rec {
-  pname = "netsurf-${libname}";
-  libname = "libdom";
-  version = "0.4.1";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "netsurf-libdom";
+  version = "0.4.2";
 
   src = fetchurl {
-    url = "http://download.netsurf-browser.org/libs/releases/${libname}-${version}-src.tar.gz";
-    sha256 = "sha256-mO4HJHHlXiCMmHjlFcQQrUYso2+HtK/L7K0CPzos70o=";
+    url = "http://download.netsurf-browser.org/libs/releases/libdom-${finalAttrs.version}-src.tar.gz";
+    hash = "sha256-0F5FrxZUcBTCsKOuzzZw+hPUGfUFs/X8esihSR/DDzw=";
   };
 
+  patches = [
+    # fixes libdom build on gcc 14 due to calloc-transposed-args warning
+    # remove on next release
+    (fetchpatch {
+      name = "fix-calloc-transposed-args.patch";
+      url = "https://source.netsurf-browser.org/libdom.git/patch/?id=2687282d56dfef19e26e9639a5c0cd81de957e22";
+      hash = "sha256-1uAdLM9foplCVu8IQlMMlXh6OWHs5eUgsKp+0ZqM9yM=";
+    })
+  ];
+
   nativeBuildInputs = [ pkg-config ];
+
   buildInputs = [
     expat
+    buildsystem
     libhubbub
     libparserutils
     libwapcaplet
-    buildsystem ];
+  ];
 
   makeFlags = [
     "PREFIX=$(out)"
     "NSSHARED=${buildsystem}/share/netsurf-buildsystem"
   ];
 
-  meta = with lib; {
-    homepage = "https://www.netsurf-browser.org/projects/${libname}/";
+  enableParallelBuilding = true;
+
+  meta = {
+    homepage = "https://www.netsurf-browser.org/projects/libdom/";
     description = "Document Object Model library for netsurf browser";
     longDescription = ''
       LibDOM is an implementation of the W3C DOM, written in C. It is currently
       in development for use with NetSurf and is intended to be suitable for use
       in other projects under a more permissive license.
     '';
-    license = licenses.mit;
-    maintainers = [ maintainers.vrthra maintainers.AndersonTorres ];
-    platforms = platforms.linux;
+    license = lib.licenses.mit;
+    inherit (buildsystem.meta) maintainers platforms;
   };
-}
+})

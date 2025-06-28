@@ -1,34 +1,35 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, substituteAll
-, dbus-python
-, distro
-, jinja2
-, keyring
-, proton-client
-, pygobject3
-, pyxdg
-, systemd
-, ncurses
-, networkmanager
-, pkgs-systemd
-, python
-, xdg-utils
-, makeWrapper
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  replaceVars,
+  dbus-python,
+  distro,
+  jinja2,
+  keyring,
+  proton-client,
+  pygobject3,
+  pyxdg,
+  systemd,
+  ncurses,
+  networkmanager,
+  pkgs-systemd,
+  python,
+  xdg-utils,
 }:
 
 buildPythonPackage rec {
   pname = "protonvpn-nm-lib";
-  version = "3.13.0";
+  version = "3.16.0";
+  format = "setuptools";
   disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "ProtonVPN";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    sha256 = "sha256-i6Y+ardptWCVO2SzzluAOQp6MDO6Xzm0NneiqzkhHrw=";
+    repo = "protonvpn-nm-lib";
+    tag = version;
+    hash = "sha256-n3jfBHMYqyQZgvFFJcylNbTWZ3teuqhdelTfpNrwWuA=";
   };
 
   propagatedBuildInputs = [
@@ -47,8 +48,7 @@ buildPythonPackage rec {
   ];
 
   patches = [
-    (substituteAll {
-      src = ./0001-Patching-GIRepository.patch;
+    (replaceVars ./0001-Patching-GIRepository.patch {
       networkmanager_path = "${networkmanager}/lib/girepository-1.0";
     })
   ];
@@ -72,9 +72,10 @@ buildPythonPackage rec {
 
   meta = with lib; {
     description = "ProtonVPN NetworkManager Library intended for every ProtonVPN service user";
+    mainProgram = "protonvpn_reconnector.py";
     homepage = "https://github.com/ProtonVPN/protonvpn-nm-lib";
     license = licenses.gpl3Only;
-    maintainers = with maintainers; [ wolfangaukang ];
+    maintainers = [ ];
     platforms = platforms.linux;
   };
 }

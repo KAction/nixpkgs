@@ -1,33 +1,40 @@
-{ lib
-, buildPythonPackage
-, base36
-, chacha20poly1305-reuseable
-, cryptography
-, fetchFromGitHub
-, h11
-, orjson
-, pyqrcode
-, pytest-asyncio
-, pytest-timeout
-, pytestCheckHook
-, pythonOlder
-, zeroconf
+{
+  lib,
+  async-timeout,
+  buildPythonPackage,
+  base36,
+  chacha20poly1305-reuseable,
+  cryptography,
+  fetchFromGitHub,
+  h11,
+  orjson,
+  pyqrcode,
+  pytest-asyncio,
+  pytest-timeout,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
+  zeroconf,
 }:
 
 buildPythonPackage rec {
   pname = "hap-python";
-  version = "4.5.0";
-  format = "setuptools";
-  disabled = pythonOlder "3.6";
+  version = "4.9.2";
+  pyproject = true;
+
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "ikalchev";
     repo = "HAP-python";
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-/XJvCL9hMIrOUwGPcrvSrJ6SZ/E6BQy+isFFlAniIM4=";
+    tag = version;
+    hash = "sha256-mBjVUfNHuGSeLRisqu9ALpTDwpxHir+6X0scq+HrzxA=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    async-timeout
     chacha20poly1305-reuseable
     cryptography
     h11
@@ -35,17 +42,16 @@ buildPythonPackage rec {
     zeroconf
   ];
 
-  passthru.optional-dependencies.QRCode = [
+  optional-dependencies.QRCode = [
     base36
     pyqrcode
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-asyncio
     pytest-timeout
     pytestCheckHook
-  ]
-  ++ passthru.optional-dependencies.QRCode;
+  ] ++ optional-dependencies.QRCode;
 
   disabledTestPaths = [
     # Disable tests requiring network access
@@ -67,8 +73,9 @@ buildPythonPackage rec {
   pythonImportsCheck = [ "pyhap" ];
 
   meta = with lib; {
+    description = "HomeKit Accessory Protocol implementation";
     homepage = "https://github.com/ikalchev/HAP-python";
-    description = "HomeKit Accessory Protocol implementation in python";
+    changelog = "https://github.com/ikalchev/HAP-python/blob/${version}/CHANGELOG.md";
     license = licenses.asl20;
     maintainers = with maintainers; [ oro ];
   };

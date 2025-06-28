@@ -1,6 +1,11 @@
-{ lib, buildDunePackage, dune-configurator, pkg-config, fetchFromGitHub, callPackage
-, ffmpeg-base ? callPackage ./base.nix { }
-, ffmpeg-av, ffmpeg
+{
+  buildDunePackage,
+  dune-configurator,
+  pkg-config,
+  callPackage,
+  ffmpeg-base ? callPackage ./base.nix { },
+  ffmpeg-av,
+  ffmpeg,
 }:
 
 buildDunePackage {
@@ -8,11 +13,15 @@ buildDunePackage {
 
   minimalOCamlVersion = "4.08";
 
-  inherit (ffmpeg-base) version src useDune2;
+  inherit (ffmpeg-base) version src;
 
   nativeBuildInputs = [ pkg-config ];
   buildInputs = [ dune-configurator ];
-  propagatedBuildInputs = [ ffmpeg-av ffmpeg.dev ];
+
+  propagatedBuildInputs = [
+    ffmpeg-av
+    ffmpeg.dev
+  ];
 
   doCheck = true;
 

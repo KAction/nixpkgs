@@ -1,8 +1,13 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+}:
 
 buildPythonPackage rec {
   pname = "progressbar";
   version = "2.5";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
@@ -16,6 +21,6 @@ buildPythonPackage rec {
     homepage = "https://pypi.python.org/pypi/progressbar";
     description = "Text progressbar library for python";
     license = licenses.lgpl3Plus;
-    maintainers = with maintainers; [ domenkozar ];
+    maintainers = with maintainers; [ ];
   };
 }

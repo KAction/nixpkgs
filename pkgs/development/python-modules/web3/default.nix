@@ -1,85 +1,128 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, aiohttp
-, eth-abi
-, eth-account
-, eth-hash
-, eth-typing
-, eth-utils
-, eth-rlp
-, hexbytes
-, ipfshttpclient
-, jsonschema
-, lru-dict
-, protobuf
-, requests
-, typing-extensions
-, websockets
-# , eth-tester
-# , py-geth
-, pytestCheckHook
-, pythonOlder
-, pythonRelaxDepsHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  aiohttp,
+  eth-abi,
+  eth-account,
+  eth-hash,
+  eth-typing,
+  eth-utils,
+  hexbytes,
+  jsonschema,
+  lru-dict,
+  protobuf,
+  pydantic,
+  requests,
+  types-requests,
+  websockets,
+
+  # optional-dependencies
+  ipfshttpclient,
+
+  # tests
+  eth-tester,
+  flaky,
+  hypothesis,
+  py-evm,
+  pytest-asyncio_0_21,
+  pytest-mock,
+  pytest-xdist,
+  pytestCheckHook,
+  pyunormalize,
 }:
 
 buildPythonPackage rec {
   pname = "web3";
-  version = "5.31.1";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "7.8.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ethereum";
     repo = "web3.py";
-    rev = "v${version}";
-    hash = "sha256-YsAbPI9Y6z+snKZ9NsA0YSpB38n+ra4+Ei6COYFe8v4=";
+    tag = "v${version}";
+    hash = "sha256-Rk12QZK47oF0ri1+kCquW4vaqPPPO5UPYOhq4StR1+U=";
   };
 
-  nativeBuildInputs = [
-    pythonRelaxDepsHook
+  build-system = [ setuptools ];
+
+  pythonRelaxDeps = [
+    "websockets"
   ];
 
-  propagatedBuildInputs = [
-    aiohttp
-    eth-abi
-    eth-account
-    eth-hash
-    eth-rlp
-    eth-typing
-    eth-utils
-    hexbytes
-    ipfshttpclient
-    jsonschema
-    lru-dict
-    protobuf
-    requests
-    websockets
-  ] ++ lib.optionals (pythonOlder "3.8") [
-    typing-extensions
-  ] ++ eth-hash.optional-dependencies.pycryptodome;
+  dependencies =
+    [
+      aiohttp
+      eth-abi
+      eth-account
+      eth-hash
+    ]
+    ++ eth-hash.optional-dependencies.pycryptodome
+    ++ [
+      eth-typing
+      eth-utils
+      hexbytes
+      jsonschema
+      lru-dict
+      protobuf
+      pydantic
+      requests
+      types-requests
+      websockets
+    ];
 
-  pythonRelaxDeps = true;
+  # Note: to reflect the extra_requires in main/setup.py.
+  optional-dependencies = {
+    ipfs = [ ipfshttpclient ];
+  };
 
-  # TODO: package eth-tester
-  #checkInputs = [
-  #  eth-tester
-  #  eth-tester.optional-dependencies.py-evm
-  #  py-geth
-  #  pytestCheckHook
-  #];
-
-  doCheck = false;
-
-  pythonImportsCheck = [
-    "web3"
+  nativeCheckInputs = [
+    eth-tester
+    flaky
+    hypothesis
+    py-evm
+    pytest-asyncio_0_21
+    pytest-mock
+    pytest-xdist
+    pytestCheckHook
+    pyunormalize
   ];
 
-  meta = with lib; {
-    description = "Web3 library for interactions";
-    homepage = "https://github.com/ethereum/web3";
-    license = licenses.mit;
-    maintainers = with maintainers; [ raitobezarius ];
+  disabledTests = [
+    # side-effect: runs pip online check and is blocked by sandbox
+    "test_install_local_wheel"
+
+    # not sure why they fail
+    "test_async_init_multiple_contracts_performance"
+    "test_init_multiple_contracts_performance"
+
+    # AssertionError: assert '/build/geth.ipc' == '/tmp/geth.ipc
+    "test_get_dev_ipc_path"
+
+    # Require network access
+    "test_websocket_provider_timeout"
+  ];
+
+  disabledTestPaths = [
+    # requires geth library and binaries
+    "tests/integration/go_ethereum"
+
+    # requires local running beacon node
+    "tests/beacon"
+  ];
+
+  pythonImportsCheck = [ "web3" ];
+
+  meta = {
+    description = "Python interface for interacting with the Ethereum blockchain and ecosystem";
+    homepage = "https://web3py.readthedocs.io/";
+    changelog = "https://web3py.readthedocs.io/en/stable/release_notes.html";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ hellwolf ];
   };
 }

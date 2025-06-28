@@ -1,17 +1,24 @@
-{ buildPythonPackage, lib, fetchFromGitHub
-, networkx, numpy, scipy, six
-, pytestCheckHook
+{
+  buildPythonPackage,
+  lib,
+  fetchFromGitHub,
+  networkx,
+  numpy,
+  scipy,
+  six,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "geometric";
-  version = "0.9.7.2";
+  version = "1.1";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "leeping";
     repo = "geomeTRIC";
-    rev = version;
-    hash = "sha256-QFpfY6tWqcda6AJT17YBEuwu/4DYPbIMJU1c9/gHjaA=";
+    tag = version;
+    hash = "sha256-hxNzyuupktUWDzZXXJNsVoC6m/kyE1fbfY5K6LiO+x0=";
   };
 
   propagatedBuildInputs = [
@@ -21,13 +28,17 @@ buildPythonPackage rec {
     six
   ];
 
-  checkInputs = [ pytestCheckHook ];
+  preCheck = ''
+    export OMP_NUM_THREADS=2
+  '';
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   meta = with lib; {
     description = "Geometry optimization code for molecular structures";
+    mainProgram = "geometric-optimize";
     homepage = "https://github.com/leeping/geomeTRIC";
     license = [ licenses.bsd3 ];
     maintainers = [ maintainers.markuskowa ];
   };
 }
-

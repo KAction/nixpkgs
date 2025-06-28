@@ -1,12 +1,18 @@
-{ lib, buildPythonPackage, fetchPypi, numpy, pytestCheckHook }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  numpy,
+}:
 
 buildPythonPackage rec {
   pname = "jplephem";
-  version = "2.18";
+  version = "2.23";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-SSkR6KTEeDB5GwO5oP/ff8ZfaF0cuzoXkLHqKIrn+uU=";
+    hash = "sha256-0/uUd+S/TDnRBJfU/xXlJxt6wD+hAeGCGqxSfWRuzPk=";
   };
 
   propagatedBuildInputs = [ numpy ];

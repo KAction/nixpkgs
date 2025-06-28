@@ -1,4 +1,10 @@
-{ lib, stdenv, fwts, kernel }:
+{
+  lib,
+  stdenv,
+  fwts,
+  kernel,
+  kernelModuleMakeFlags,
+}:
 
 stdenv.mkDerivation rec {
   pname = "fwts-efi-runtime";
@@ -6,7 +12,7 @@ stdenv.mkDerivation rec {
 
   inherit (fwts) src;
 
-  sourceRoot = "source/efi_runtime";
+  sourceRoot = "${src.name}/efi_runtime";
 
   postPatch = ''
     substituteInPlace Makefile --replace \
@@ -18,7 +24,7 @@ stdenv.mkDerivation rec {
 
   hardeningDisable = [ "pic" ];
 
-  makeFlags = kernel.makeFlags ++ [
+  makeFlags = kernelModuleMakeFlags ++ [
     "INSTALL_MOD_PATH=${placeholder "out"}"
   ];
 

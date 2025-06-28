@@ -1,36 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, python
-, proj
-, pythonOlder
-, substituteAll
-, cython
-, pytestCheckHook
-, mock
-, certifi
-, numpy
-, shapely
-, pandas
-, xarray
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  pythonOlder,
+  replaceVars,
+
+  certifi,
+  cython,
+  mock,
+  numpy,
+  pandas,
+  proj,
+  shapely,
+  xarray,
 }:
 
 buildPythonPackage rec {
   pname = "pyproj";
-  version = "3.3.1";
-  disabled = pythonOlder "3.7";
+  version = "3.7.1";
+  format = "setuptools";
+  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "pyproj4";
     repo = "pyproj";
-    rev = "refs/tags/${version}";
-    hash = "sha256-QmpwnOnMjV29Tq+M6FCotDytq6zlhsp0Zgzw3V7nhNQ=";
+    tag = version;
+    hash = "sha256-tVzifc+Y5u9Try5FHt67rj/+zaok0JNn3M8plMqX90g=";
   };
 
   # force pyproj to use ${proj}
   patches = [
-    (substituteAll {
-      src = ./001.proj.patch;
+    (replaceVars ./001.proj.patch {
       proj = proj;
       projdev = proj.dev;
     })
@@ -39,28 +40,25 @@ buildPythonPackage rec {
   nativeBuildInputs = [ cython ];
   buildInputs = [ proj ];
 
-  propagatedBuildInputs = [
-     certifi
-  ];
+  propagatedBuildInputs = [ certifi ];
 
-  checkInputs = [
-    pytestCheckHook
+  nativeCheckInputs = [
     mock
     numpy
-    shapely
     pandas
+    pytestCheckHook
+    shapely
     xarray
   ];
 
   preCheck = ''
-    # We need to build extensions locally to run tests
-    ${python.interpreter} setup.py build_ext --inplace
-    cd test
+    # import from $out
+    rm -r pyproj
   '';
 
   disabledTestPaths = [
-    "test_doctest_wrapper.py"
-    "test_datadir.py"
+    "test/test_doctest_wrapper.py"
+    "test/test_datadir.py"
   ];
 
   disabledTests = [
@@ -83,12 +81,37 @@ buildPythonPackage rec {
     "test_sync_download__directory"
     "test_sync_download__system_directory"
     "test_transformer_group__download_grids"
+
+    # proj-data grid required
+    "test_azimuthal_equidistant"
   ];
 
-  meta = {
-    description = "Python interface to PROJ.4 library";
+  pythonImportsCheck = [
+    "pyproj"
+    "pyproj.crs"
+    "pyproj.transformer"
+    "pyproj.geod"
+    "pyproj.proj"
+    "pyproj.database"
+    "pyproj.list"
+    "pyproj.datadir"
+    "pyproj.network"
+    "pyproj.sync"
+    "pyproj.enums"
+    "pyproj.aoi"
+    "pyproj.exceptions"
+  ];
+
+  meta = with lib; {
+    description = "Python interface to PROJ library";
+    mainProgram = "pyproj";
     homepage = "https://github.com/pyproj4/pyproj";
-    license = with lib.licenses; [ isc ];
-    maintainers = with lib.maintainers; [ lsix ];
+    changelog = "https://github.com/pyproj4/pyproj/blob/${src.rev}/docs/history.rst";
+    license = licenses.mit;
+    maintainers = with maintainers; [
+      lsix
+      dotlambda
+    ];
+    teams = [ teams.geospatial ];
   };
 }

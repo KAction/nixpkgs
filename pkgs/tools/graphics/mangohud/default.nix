@@ -1,194 +1,257 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, fetchurl
-, substituteAll
-, coreutils
-, curl
-, glxinfo
-, gnugrep
-, gnused
-, xdg-utils
-, dbus
-, hwdata
-, libX11
-, mangohud32
-, vulkan-headers
-, appstream
-, glslang
-, makeWrapper
-, Mako
-, meson
-, ninja
-, pkg-config
-, unzip
-, vulkan-loader
-, libXNVCtrl
-, wayland
-, glew
-, glfw
-, nlohmann_json
-, xorg
-, addOpenGLRunpath
-, gamescopeSupport ? true # build mangoapp and mangohudctl
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchurl,
+  replaceVars,
+  coreutils,
+  curl,
+  gnugrep,
+  gnused,
+  xdg-utils,
+  dbus,
+  libGL,
+  libX11,
+  hwdata,
+  mangohud32,
+  addDriverRunpath,
+  appstream,
+  glslang,
+  python3Packages,
+  meson,
+  ninja,
+  pkg-config,
+  unzip,
+  wayland,
+  libXNVCtrl,
+  nlohmann_json,
+  spdlog,
+  libxkbcommon,
+  glew,
+  glfw,
+  libXrandr,
+  x11Support ? true,
+  waylandSupport ? true,
+  nvidiaSupport ? lib.meta.availableOn stdenv.hostPlatform libXNVCtrl,
+  gamescopeSupport ? true,
+  mangoappSupport ? gamescopeSupport,
+  mangohudctlSupport ? gamescopeSupport,
+  lowerBitnessSupport ? stdenv.hostPlatform.isx86_64, # Support 32 bit on 64bit
+  nix-update-script,
 }:
+
+assert lib.assertMsg (
+  x11Support || waylandSupport
+) "either x11Support or waylandSupport should be enabled";
+
+assert lib.assertMsg (nvidiaSupport -> x11Support) "nvidiaSupport requires x11Support";
+assert lib.assertMsg (mangoappSupport -> x11Support) "mangoappSupport requires x11Support";
 
 let
   # Derived from subprojects/imgui.wrap
   imgui = rec {
-    version = "1.81";
+    version = "1.89.9";
     src = fetchFromGitHub {
       owner = "ocornut";
       repo = "imgui";
-      rev = "refs/tags/v${version}";
-      sha256 = "sha256-rRkayXk3xz758v6vlMSaUu5fui6NR8Md3njhDB0gJ18=";
+      tag = "v${version}";
+      hash = "sha256-0k9jKrJUrG9piHNFQaBBY3zgNIKM23ZA879NY+MNYTU=";
     };
     patch = fetchurl {
       url = "https://wrapdb.mesonbuild.com/v2/imgui_${version}-1/get_patch";
-      sha256 = "sha256-bQC0QmkLalxdj4mDEdqvvOFtNwz2T1MpTDuMXGYeQ18=";
+      hash = "sha256-myEpDFl9dr+NTus/n/oCSxHZ6mxh6R1kjMyQtChD1YQ=";
     };
   };
 
-  # Derived from subprojects/spdlog.wrap
-  #
-  # NOTE: We only statically link spdlog due to a bug in pressure-vessel:
-  # https://github.com/ValveSoftware/steam-runtime/issues/511
-  #
-  # Once this fix is released upstream, we should switch back to using
-  # the system provided spdlog
-  spdlog = rec {
-    version = "1.8.5";
+  # Derived from subprojects/implot.wrap
+  implot = rec {
+    version = "0.16";
     src = fetchFromGitHub {
-      owner = "gabime";
-      repo = "spdlog";
-      rev = "refs/tags/v${version}";
-      sha256 = "sha256-D29jvDZQhPscaOHlrzGN1s7/mXlcsovjbqYpXd7OM50=";
+      owner = "epezent";
+      repo = "implot";
+      tag = "v${version}";
+      hash = "sha256-/wkVsgz3wiUVZBCgRl2iDD6GWb+AoHN+u0aeqHHgem0=";
     };
     patch = fetchurl {
-      url = "https://wrapdb.mesonbuild.com/v2/spdlog_${version}-1/get_patch";
-      sha256 = "sha256-PDjyddV5KxKGORECWUMp6YsXc3kks0T5gxKrCZKbdL4=";
+      url = "https://wrapdb.mesonbuild.com/v2/implot_${version}-1/get_patch";
+      hash = "sha256-HGsUYgZqVFL6UMHaHdR/7YQfKCMpcsgtd48pYpNlaMc=";
     };
   };
-in stdenv.mkDerivation rec {
+
+  # Derived from subprojects/vulkan-headers.wrap
+  vulkan-headers = rec {
+    version = "1.2.158";
+    src = fetchFromGitHub {
+      owner = "KhronosGroup";
+      repo = "Vulkan-Headers";
+      tag = "v${version}";
+      hash = "sha256-5uyk2nMwV1MjXoa3hK/WUeGLwpINJJEvY16kc5DEaks=";
+    };
+    patch = fetchurl {
+      url = "https://wrapdb.mesonbuild.com/v2/vulkan-headers_${version}-2/get_patch";
+      hash = "sha256-hgNYz15z9FjNHoj4w4EW0SOrQh1c4uQSnsOOrt2CDhc=";
+    };
+  };
+in
+stdenv.mkDerivation (finalAttrs: {
   pname = "mangohud";
-  version = "0.6.8";
+  version = "0.8.1";
 
   src = fetchFromGitHub {
     owner = "flightlessmango";
     repo = "MangoHud";
-    rev = "refs/tags/v${version}";
+    tag = "v${finalAttrs.version}";
     fetchSubmodules = true;
-    sha256 = "sha256-jfmgN90kViHa7vMOjo2x4bNY2QbLk93uYEvaA4DxYvg=";
+    hash = "sha256-FvPhnOvcYE8vVB5R+ZRmuZxrC9U4GA338V7VAuUlHCE=";
   };
 
-  outputs = [ "out" "doc" "man" ];
+  outputs = [
+    "out"
+    "doc"
+    "man"
+  ];
 
   # Unpack subproject sources
-  postUnpack = ''(
-    cd "$sourceRoot/subprojects"
-    cp -R --no-preserve=mode,ownership ${imgui.src} imgui-${imgui.version}
-    cp -R --no-preserve=mode,ownership ${spdlog.src} spdlog-${spdlog.version}
-  )'';
+  postUnpack = ''
+    (
+      cd "$sourceRoot/subprojects"
+      cp -R --no-preserve=mode,ownership ${imgui.src} imgui-${imgui.version}
+      cp -R --no-preserve=mode,ownership ${implot.src} implot-${implot.version}
+      cp -R --no-preserve=mode,ownership ${vulkan-headers.src} Vulkan-Headers-${vulkan-headers.version}
+    )
+  '';
 
   patches = [
+    # Add @libraryPath@ template variable to fix loading the preload
+    # library and @dataPath@ to support overlaying Vulkan apps without
+    # requiring MangoHud to be installed
+    ./preload-nix-workaround.patch
+
     # Hard code dependencies. Can't use makeWrapper since the Vulkan
     # layer can be used without the mangohud executable by setting MANGOHUD=1.
-    (substituteAll {
-      src = ./hardcode-dependencies.patch;
-
+    (replaceVars ./hardcode-dependencies.patch {
       path = lib.makeBinPath [
         coreutils
         curl
-        glxinfo
         gnugrep
         gnused
         xdg-utils
       ];
 
       libdbus = dbus.lib;
-      inherit hwdata libX11;
-    })
-  ] ++ lib.optionals (stdenv.hostPlatform.system == "x86_64-linux") [
-    # Support 32bit OpenGL applications by appending the mangohud32
-    # lib path to LD_LIBRARY_PATH.
-    #
-    # This workaround is necessary since on Nix's build of ld.so, $LIB
-    # always expands to lib even when running an 32bit application.
-    #
-    # See https://github.com/NixOS/nixpkgs/issues/101597.
-    (substituteAll {
-      src = ./opengl32-nix-workaround.patch;
-      inherit mangohud32;
+      libGL = libGL;
+      libX11 = libX11;
+      inherit hwdata;
     })
   ];
 
-  postPatch = ''(
-    cd subprojects
-    unzip ${imgui.patch}
-    unzip ${spdlog.patch}
-  )'';
+  postPatch = ''
+    substituteInPlace bin/mangohud.in \
+      --subst-var-by libraryPath ${
+        lib.makeSearchPath "lib/mangohud" (
+          [
+            (placeholder "out")
+          ]
+          ++ lib.optional lowerBitnessSupport mangohud32
+        )
+      } \
+      --subst-var-by version "${finalAttrs.version}" \
+      --subst-var-by dataDir ${placeholder "out"}/share
+
+    (
+      cd subprojects
+      unzip ${imgui.patch}
+      unzip ${implot.patch}
+      unzip ${vulkan-headers.patch}
+    )
+  '';
 
   mesonFlags = [
-    "-Duse_system_vulkan=enabled"
-    "-Dvulkan_datadir=${vulkan-headers}/share"
-    "-Dwith_wayland=enabled"
-  ] ++ lib.optionals gamescopeSupport [
-    "-Dmangoapp_layer=true"
-    "-Dmangoapp=true"
-    "-Dmangohudctl=true"
+    "-Duse_system_spdlog=enabled"
+    "-Dtests=disabled" # amdgpu test segfaults in nix sandbox
+    (lib.mesonEnable "with_x11" x11Support)
+    (lib.mesonEnable "with_wayland" waylandSupport)
+    (lib.mesonEnable "with_xnvctrl" nvidiaSupport)
+    (lib.mesonBool "mangoapp" mangoappSupport)
+    (lib.mesonBool "mangohudctl" mangohudctlSupport)
   ];
 
+  strictDeps = true;
+
   nativeBuildInputs = [
-    appstream
+    addDriverRunpath
     glslang
-    makeWrapper
-    Mako
+    python3Packages.mako
     meson
     ninja
     pkg-config
     unzip
-    vulkan-loader
   ];
 
-  buildInputs = [
-    dbus
-    libX11
-    libXNVCtrl
-    wayland
-  ] ++ lib.optionals gamescopeSupport [
-    glew
-    glfw
-    nlohmann_json
-    vulkan-headers
-    xorg.libXrandr
+  buildInputs =
+    [
+      dbus
+      nlohmann_json
+      spdlog
+    ]
+    ++ lib.optional waylandSupport wayland
+    ++ lib.optional x11Support libX11
+    ++ lib.optional nvidiaSupport libXNVCtrl
+    ++ lib.optional (x11Support || waylandSupport) libxkbcommon
+    ++ lib.optionals mangoappSupport [
+      glew
+      glfw
+      libXrandr
+    ];
+
+  doCheck = true;
+
+  nativeCheckInputs = [
+    appstream
   ];
 
-  # Support 32bit Vulkan applications by linking in 32bit Vulkan layer
-  # This is needed for the same reason the 32bit OpenGL workaround is needed.
-  postInstall = lib.optionalString (stdenv.hostPlatform.system == "x86_64-linux") ''
-    ln -s ${mangohud32}/share/vulkan/implicit_layer.d/MangoHud.json \
-      "$out/share/vulkan/implicit_layer.d/MangoHud.x86.json"
+  # Support 32bit Vulkan applications by linking in 32bit Vulkan layers
+  # This is needed for the same reason the 32bit preload workaround is needed.
+  postInstall = lib.optionalString lowerBitnessSupport ''
+    ln -s ${mangohud32}/share/vulkan/implicit_layer.d/MangoHud.x86.json \
+      "$out/share/vulkan/implicit_layer.d"
   '';
 
-  # Support Nvidia cards by adding OpenGL path and support overlaying
-  # Vulkan applications without requiring MangoHud to be installed
-  postFixup = ''
-    wrapProgram "$out/bin/mangohud" \
-      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ addOpenGLRunpath.driverLink ]} \
-      --prefix XDG_DATA_DIRS : "$out/share"
-  '' + lib.optionalString (gamescopeSupport) ''
-    if [[ -e "$out/bin/mangoapp" ]]; then
-      wrapProgram "$out/bin/mangoapp" \
-        --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ addOpenGLRunpath.driverLink ]} \
-        --prefix XDG_DATA_DIRS : "$out/share"
-    fi
-  '';
+  postFixup =
+    let
+      archMap = {
+        "x86_64-linux" = "x86_64";
+        "i686-linux" = "x86";
+      };
+      layerPlatform = archMap."${stdenv.hostPlatform.system}" or null;
+    in
+    # We need to give the different layers separate names or else the loader
+    # might try the 32-bit one first, fail and not attempt to load the 64-bit
+    # layer under the same name.
+    lib.optionalString (layerPlatform != null) ''
+      substituteInPlace $out/share/vulkan/implicit_layer.d/MangoHud.${layerPlatform}.json \
+        --replace-fail "VK_LAYER_MANGOHUD_overlay" "VK_LAYER_MANGOHUD_overlay_${toString stdenv.hostPlatform.parsed.cpu.bits}"
+    ''
+    + lib.optionalString nvidiaSupport ''
+      # Add OpenGL driver and libXNVCtrl paths to RUNPATH to support NVIDIA cards
+      addDriverRunpath "$out/lib/mangohud/libMangoHud.so"
+      patchelf --add-rpath ${libXNVCtrl}/lib "$out/lib/mangohud/libMangoHud.so"
+    ''
+    + lib.optionalString mangoappSupport ''
+      addDriverRunpath "$out/bin/mangoapp"
+    '';
+
+  passthru.updateScript = nix-update-script { };
 
   meta = with lib; {
-    description = "A Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and more";
+    description = "Vulkan and OpenGL overlay for monitoring FPS, temperatures, CPU/GPU load and more";
     homepage = "https://github.com/flightlessmango/MangoHud";
+    changelog = "https://github.com/flightlessmango/MangoHud/releases/tag/v${finalAttrs.version}";
     platforms = platforms.linux;
     license = licenses.mit;
-    maintainers = with maintainers; [ kira-bruneau zeratax ];
+    maintainers = with maintainers; [
+      kira-bruneau
+      zeratax
+    ];
   };
-}
+})

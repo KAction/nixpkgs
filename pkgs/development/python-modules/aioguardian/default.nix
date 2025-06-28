@@ -1,71 +1,77 @@
-{ lib
-, aiohttp
-, async-timeout
-, asyncio-dgram
-, asynctest
-, buildPythonPackage
-, docutils
-, fetchFromGitHub
-, poetry-core
-, pytest-aiohttp
-, pytest-asyncio
-, pytestCheckHook
-, voluptuous
+{
+  lib,
+  aiohttp,
+  asyncio-dgram,
+  buildPythonPackage,
+  certifi,
+  fetchFromGitHub,
+  frozenlist,
+  poetry-core,
+  pytest-aiohttp,
+  pytest-asyncio,
+  pytestCheckHook,
+  pythonOlder,
+  voluptuous,
+  typing-extensions,
+  yarl,
 }:
 
 buildPythonPackage rec {
   pname = "aioguardian";
-  version = "2022.10.0";
+  version = "2025.02.0";
+  pyproject = true;
+
+  disabled = pythonOlder "3.11";
 
   src = fetchFromGitHub {
     owner = "bachya";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    sha256 = "sha256-plgO+pyKmG0mYnFZxDcrENcuEg5AG2Og2xWipzuzyHo=";
+    repo = "aioguardian";
+    tag = version;
+    hash = "sha256-RoVD2O/OAk4l96kYEq7ZM/2QuckcPxDluf1MT4HdKc4=";
   };
 
-  format = "pyproject";
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail poetry-core==2.0.1 poetry-core
+  '';
 
-  nativeBuildInputs = [
-    poetry-core
+  pythonRelaxDeps = [
+    "asyncio_dgram"
+    "frozenlist"
+    "typing-extensions"
   ];
 
-  propagatedBuildInputs = [
+  build-system = [ poetry-core ];
+
+  dependencies = [
     aiohttp
-    async-timeout
     asyncio-dgram
-    docutils
+    certifi
+    frozenlist
     voluptuous
+    typing-extensions
+    yarl
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     asyncio-dgram
-    asynctest
     pytest-aiohttp
     pytest-asyncio
     pytestCheckHook
   ];
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'docutils = "<0.18"' 'docutils = "*"'
-  '';
+  disabledTestPaths = [ "examples/" ];
 
-  disabledTestPaths = [
-    "examples/"
-  ];
-
-  pythonImportsCheck = [
-    "aioguardian"
-  ];
+  pythonImportsCheck = [ "aioguardian" ];
 
   meta = with lib; {
     description = " Python library to interact with Elexa Guardian devices";
     longDescription = ''
-      aioguardian is a Pytho3, asyncio-focused library for interacting with the
+      aioguardian is an asyncio-focused library for interacting with the
       Guardian line of water valves and sensors from Elexa.
     '';
     homepage = "https://github.com/bachya/aioguardian";
+    changelog = "https://github.com/bachya/aioguardian/releases/tag/${version}";
     license = with licenses; [ mit ];
     maintainers = with maintainers; [ fab ];
   };

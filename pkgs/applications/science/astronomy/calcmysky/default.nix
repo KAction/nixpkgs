@@ -1,30 +1,45 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, wrapQtAppsHook
-, glm
-, eigen
-, qtbase
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  wrapQtAppsHook,
+  glm,
+  eigen,
+  qtbase,
+  stellarium,
 }:
 
 stdenv.mkDerivation rec {
   pname = "calcmysky";
-  version = "0.1.0";
+  version = "0.3.5";
 
   src = fetchFromGitHub {
     owner = "10110111";
     repo = "CalcMySky";
-    rev = "v${version}";
-    hash = "sha256-0tHxHek4wqJKLl54zF7wDYN+UPL2y35/YAb6Dtg4k48=";
+    tag = "v${version}";
+    hash = "sha256-++011c4/IFf/5GKmFostTnxgfEdw3/GJf0e5frscCQ4=";
   };
 
-  nativeBuildInputs = [ cmake wrapQtAppsHook ];
-  buildInputs = [ glm eigen qtbase ];
+  nativeBuildInputs = [
+    cmake
+    wrapQtAppsHook
+  ];
+  buildInputs = [
+    glm
+    eigen
+    qtbase
+  ];
+
+  cmakeFlags = [ "-DQT_VERSION=6" ];
 
   doCheck = true;
 
-  meta = with lib;{
+  passthru.tests = {
+    inherit stellarium;
+  };
+
+  meta = with lib; {
     description = "Simulator of light scattering by planetary atmospheres";
     homepage = "https://github.com/10110111/CalcMySky";
     license = licenses.gpl3Only;

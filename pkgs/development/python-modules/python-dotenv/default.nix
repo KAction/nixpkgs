@@ -1,41 +1,45 @@
-{ lib
-, buildPythonPackage
-, click
-, fetchPypi
-, ipython
-, mock
-, pytestCheckHook
-, pythonOlder
-, sh
+{
+  lib,
+  buildPythonPackage,
+  click,
+  fetchFromGitHub,
+  ipython,
+  mock,
+  pytestCheckHook,
+  setuptools,
+  sh,
 }:
 
 buildPythonPackage rec {
   pname = "python-dotenv";
-  version = "0.21.0";
-  disabled = pythonOlder "3.5";
+  version = "1.1.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-t30IJ0Y549NBRd+mxwCOZt8PBLe+enX9DVKSwZHXkEU=";
+  src = fetchFromGitHub {
+    owner = "theskumar";
+    repo = "python-dotenv";
+    tag = "v${version}";
+    hash = "sha256-jpSOChCUgJxrA5n+DNQX3dtFQ5Q6VG4g4pdWRIh+dOo=";
   };
 
-  propagatedBuildInputs = [ click ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  dependencies = [ click ];
+
+  nativeCheckInputs = [
     ipython
     mock
     pytestCheckHook
     sh
   ];
 
-  disabledTests = [
-    "cli"
-  ];
+  disabledTests = [ "cli" ];
 
   pythonImportsCheck = [ "dotenv" ];
 
   meta = with lib; {
     description = "Add .env support to your django/flask apps in development and deployments";
+    mainProgram = "dotenv";
     homepage = "https://github.com/theskumar/python-dotenv";
     license = licenses.bsdOriginal;
     maintainers = with maintainers; [ erikarvstedt ];

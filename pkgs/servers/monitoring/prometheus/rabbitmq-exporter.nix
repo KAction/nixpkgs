@@ -1,23 +1,37 @@
-{ lib, buildGoModule, fetchFromGitHub }:
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+}:
 
 buildGoModule rec {
   pname = "rabbitmq_exporter";
-  version = "1.0.0-RC8";
+  version = "1.0.0";
 
   src = fetchFromGitHub {
     owner = "kbudde";
     repo = "rabbitmq_exporter";
-    rev = "v${version}";
-    sha256 = "162rjp1j56kcq0vdi0ch09ka101zslxp684x6jvw0jq0aix4zj3r";
+    tag = "v${version}";
+    hash = "sha256-A6pBhfH+BK+0QQUl7H1y7TLd5hSaSyGCvR4Br/3DaN4=";
   };
 
-  vendorSha256 = "1cvdqf5pdwczhqz6xb6w86h7gdr0l8fc3lav88xq26r4x75cm6v0";
+  vendorHash = "sha256-O/3y3FwFp4gUFN8OmVeoHU6yJZYng7rU9VeDcCwWayI=";
 
-  meta = with lib; {
+  ldflags = [
+    "-s"
+    "-w"
+  ];
+
+  checkFlags = [
+    # Disable flaky tests on Darwin
+    "-skip=TestWholeApp|TestExporter"
+  ];
+
+  meta = {
     description = "Prometheus exporter for RabbitMQ";
+    mainProgram = "rabbitmq_exporter";
     homepage = "https://github.com/kbudde/rabbitmq_exporter";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
-    platforms = platforms.unix;
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

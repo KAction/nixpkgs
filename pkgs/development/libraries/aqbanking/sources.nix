@@ -1,9 +1,9 @@
 {
   # https://www.aquamaniac.de/rdm/projects/gwenhywfar/files
   gwenhywfar = {
-    version = "5.9.0";
-    hash = "sha256-6Ix9M4Ojy75Gyzsimfcd+55vpWX1oWaLQpc5HIdLDhI=";
-    releaseId = "415";
+    version = "5.11.2beta";
+    hash = "sha256-5/KxLAktb1mPKeJVsLAD2YrBeWyFtzpXCJDb8tzzWyQ=";
+    releaseId = "518";
   };
 
   # https://www.aquamaniac.de/rdm/projects/libchipcard/files
@@ -15,8 +15,8 @@
 
   # https://www.aquamaniac.de/rdm/projects/aqbanking/files
   aqbanking = {
-    version = "6.5.3";
-    hash = "sha256-bGK/JqpC5psh4Yi1T2pdgl1to03hoUy8O2fYWpcFE24=";
-    releaseId = "467";
+    version = "6.5.12beta";
+    hash = "sha256-TH6+eEiULmOciB1Mqo4vjgF9JbF4BW+llrTjS6BtctY=";
+    releaseId = "526";
   };
 }

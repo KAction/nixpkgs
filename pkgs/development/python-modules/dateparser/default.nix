@@ -1,63 +1,66 @@
-{ lib
-, buildPythonPackage
-, isPy3k
-, fetchFromGitHub
-, fetchpatch
-, python-dateutil
-, pytz
-, regex
-, tzlocal
-, hijri-converter
-, convertdate
-, fasttext
-, langdetect
-, parameterized
-, pytestCheckHook
-, GitPython
-, ruamel-yaml
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchFromGitHub,
+  setuptools,
+  python-dateutil,
+  pytz,
+  regex,
+  tzlocal,
+  hijri-converter,
+  convertdate,
+  fasttext,
+  langdetect,
+  parameterized,
+  pytestCheckHook,
+  gitpython,
+  parsel,
+  requests,
+  ruamel-yaml,
 }:
 
 buildPythonPackage rec {
   pname = "dateparser";
-  version = "1.1.1";
+  version = "1.2.1";
 
-  disabled = !isPy3k;
+  disabled = pythonOlder "3.7";
+
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "scrapinghub";
     repo = "dateparser";
-    rev = "v${version}";
-    sha256 = "sha256-bDup3q93Zq+pvwsy/lQy2byOMjG6C/+7813hWQMbZRU=";
+    tag = "v${version}";
+    hash = "sha256-O0FsLWbH0kGjwGCTklBMVVqosxXlXRyS9aAcggtBLsA=";
   };
 
-  patches = [
-    ./regex-compat.patch
-    (fetchpatch {
-      name = "tests-31st.patch";
-      url = "https://github.com/scrapinghub/dateparser/commit/b132381b9c15e560a0be5183c7d96180119a7b4f.diff";
-      sha256 = "nQUWtfku5sxx/C45KJnfwvDXiccXGeVM+cQDKX9lxbE=";
-    })
-  ];
-
-  postPatch = ''
-    substituteInPlace setup.py --replace \
-      'regex !=2019.02.19,!=2021.8.27,<2022.3.15' \
-      'regex'
-  '';
+  nativeBuildInputs = [ setuptools ];
 
   propagatedBuildInputs = [
-    # install_requires
-    python-dateutil pytz regex tzlocal
-    # extra_requires
-    hijri-converter convertdate fasttext langdetect
+    python-dateutil
+    pytz
+    regex
+    tzlocal
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    calendars = [
+      hijri-converter
+      convertdate
+    ];
+    fasttext = [ fasttext ];
+    langdetect = [ langdetect ];
+  };
+
+  nativeCheckInputs = [
     parameterized
     pytestCheckHook
-    GitPython
+    gitpython
+    parsel
+    requests
     ruamel-yaml
-  ];
+  ] ++ lib.flatten (lib.attrValues optional-dependencies);
 
   preCheck = ''
     export HOME="$TEMPDIR"
@@ -70,14 +73,20 @@ buildPythonPackage rec {
     # access network
     "test_custom_language_detect_fast_text_0"
     "test_custom_language_detect_fast_text_1"
+
+    # breaks with latest tzdata: https://github.com/scrapinghub/dateparser/issues/1237
+    # FIXME: look into this more
+    "test_relative_base"
   ];
 
   pythonImportsCheck = [ "dateparser" ];
 
   meta = with lib; {
+    changelog = "https://github.com/scrapinghub/dateparser/blob/${src.rev}/HISTORY.rst";
     description = "Date parsing library designed to parse dates from HTML pages";
     homepage = "https://github.com/scrapinghub/dateparser";
     license = licenses.bsd3;
+    mainProgram = "dateparser-download";
     maintainers = with maintainers; [ dotlambda ];
   };
 }

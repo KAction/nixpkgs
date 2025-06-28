@@ -1,10 +1,16 @@
-{ lib, stdenv, fetchzip, libGLU, libGL, fetchFromGitHub, cmake, Cocoa, OpenGL, IOKit }:
+{
+  lib,
+  stdenv,
+  fetchzip,
+  fetchFromGitHub,
+  cmake,
+}:
 
 let
   common = import ./common.nix { inherit fetchzip; };
 in
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "irrlicht-mac";
   version = common.version;
 
@@ -32,10 +38,9 @@ stdenv.mkDerivation rec {
   ];
 
   nativeBuildInputs = [ cmake ];
-  buildInputs = [ OpenGL Cocoa IOKit ];
 
   meta = {
-    homepage = "http://irrlicht.sourceforge.net/";
+    homepage = "https://irrlicht.sourceforge.net/";
     license = lib.licenses.zlib;
     description = "Open source high performance realtime 3D engine written in C++";
     platforms = lib.platforms.darwin;

@@ -1,20 +1,35 @@
-{ lib, buildPythonPackage, fetchFromGitHub, nixosTests, six, twisted }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  six,
+  twisted,
+  nixosTests,
+}:
 
 buildPythonPackage rec {
   pname = "txredisapi";
-  version = "1.4.7";
+  version = "1.4.11";
+  format = "pyproject";
 
   src = fetchFromGitHub {
     owner = "IlyaSkriblovsky";
     repo = "txredisapi";
-    rev = "1.4.7";
-    sha256 = "1f7j3c5l7jcfphvsk7nqmgyb4jaydbzq081m555kw0f9xxak0pgq";
+    tag = version;
+    hash = "sha256-gPXkpUcHAuXx/olB/nKstRrfIUFFLf4gFyv7ReRvV2E=";
   };
 
-  propagatedBuildInputs = [ six twisted ];
+  nativeBuildInputs = [ setuptools ];
+
+  propagatedBuildInputs = [
+    six
+    twisted
+  ] ++ twisted.optional-dependencies.tls;
+
+  pythonImportsCheck = [ "txredisapi" ];
 
   doCheck = false;
-  pythonImportsCheck = [ "txredisapi" ];
 
   passthru.tests.unit-tests = nixosTests.txredisapi;
 
@@ -25,4 +40,3 @@ buildPythonPackage rec {
     maintainers = with maintainers; [ dandellion ];
   };
 }
-

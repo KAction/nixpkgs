@@ -1,62 +1,83 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, fetchpatch
-, coreapi
-, django
-, django-guardian
-, pythonOlder
-, pytest-django
-, pytestCheckHook
-, pytz
-, pyyaml
-, uritemplate
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  django,
+  pytz,
+
+  # optional-dependencies
+  coreapi,
+  coreschema,
+  django-guardian,
+  inflection,
+  psycopg2,
+  pygments,
+  pyyaml,
+
+  # tests
+  pytestCheckHook,
+  pytest-django,
 }:
 
 buildPythonPackage rec {
   pname = "djangorestframework";
-  version = "3.13.1";
+  version = "3.16.0";
+  pyproject = true;
   disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "encode";
     repo = "django-rest-framework";
     rev = version;
-    sha256 = "sha256-XmX6DZBZYzVCe72GERplAWt5jIjV/cYercZGb0pYjoc=";
+    hash = "sha256-LFq8mUx+jAFFnQTfysYs+DSN941p+8h9mDDOp+LO7VU=";
   };
 
-  patches = [
-    # See https://github.com/encode/django-rest-framework/issues/8608
-    # and https://github.com/encode/django-rest-framework/pull/8591/
-    (fetchpatch {
-      name = "fix-django-collect-static.patch";
-      url = "https://github.com/encode/django-rest-framework/pull/8591/commits/65943bb58deba6ee1a89fe4504f270ab1806fce6.patch";
-      sha256 = "sha256-wI7EzX9tlyyXAPrJEr+/2uTg7dVY98IKgh7Cc/NZo5k=";
-    })
-  ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     django
-    pytz
-  ];
+    pygments
+  ] ++ (lib.optional (lib.versionOlder django.version "5.0.0") pytz);
 
-  checkInputs = [
+  optional-dependencies = {
+    complete =
+      [
+        coreschema
+        django-guardian
+        inflection
+        psycopg2
+        pygments
+        pyyaml
+      ]
+      ++ lib.optionals (pythonOlder "3.13") [
+        # broken on 3.13
+        coreapi
+      ];
+  };
+
+  nativeCheckInputs = [
     pytest-django
     pytestCheckHook
+  ] ++ optional-dependencies.complete;
 
-    # optional tests
-    coreapi
-    django-guardian
-    pyyaml
-    uritemplate
+  disabledTests = [
+    # https://github.com/encode/django-rest-framework/issues/9422
+    "test_urlpatterns"
   ];
 
   pythonImportsCheck = [ "rest_framework" ];
 
   meta = with lib; {
+    changelog = "https://github.com/encode/django-rest-framework/releases/tag/3.15.1";
     description = "Web APIs for Django, made easy";
     homepage = "https://www.django-rest-framework.org/";
-    maintainers = with maintainers; [ desiderius SuperSandro2000 ];
+    maintainers = with maintainers; [ desiderius ];
     license = licenses.bsd2;
   };
 }

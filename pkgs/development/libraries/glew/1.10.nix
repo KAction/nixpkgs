@@ -1,27 +1,40 @@
-{ lib, stdenv, fetchurl, libGLU, xlibsWrapper, libXmu, libXi
-, AGL, OpenGL
+{
+  lib,
+  stdenv,
+  fetchurl,
+  libGLU,
+  libXmu,
+  libXi,
+  libXext,
+  testers,
+  mesa,
 }:
 
-with lib;
-
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "glew";
   version = "1.10.0";
 
   src = fetchurl {
-    url = "mirror://sourceforge/glew/glew-${version}.tgz";
+    url = "mirror://sourceforge/glew/glew-${finalAttrs.version}.tgz";
     sha256 = "01zki46dr5khzlyywr3cg615bcal32dazfazkf360s1znqh17i4r";
   };
 
-  buildInputs = if stdenv.isDarwin then [ AGL ] else [ xlibsWrapper libXmu libXi ];
-  propagatedBuildInputs = if stdenv.isDarwin then [ OpenGL ] else [ libGLU ]; # GL/glew.h includes GL/glu.h
+  buildInputs = lib.optionals (!stdenv.hostPlatform.isDarwin) [
+    libXmu
+    libXi
+    libXext
+  ];
+  propagatedBuildInputs = lib.optionals (!stdenv.hostPlatform.isDarwin) [ libGLU ]; # GL/glew.h includes GL/glu.h
 
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 
   patchPhase = ''
     sed -i 's|lib64|lib|' config/Makefile.linux
-    ${optionalString (stdenv.hostPlatform != stdenv.buildPlatform) ''
-    sed -i -e 's/\(INSTALL.*\)-s/\1/' Makefile
+    ${lib.optionalString (stdenv.hostPlatform != stdenv.buildPlatform) ''
+      sed -i -e 's/\(INSTALL.*\)-s/\1/' Makefile
     ''}
   '';
 
@@ -41,13 +54,18 @@ stdenv.mkDerivation rec {
 
   makeFlags = [
     "SYSTEM=${if stdenv.hostPlatform.isMinGW then "mingw" else stdenv.hostPlatform.parsed.kernel.name}"
+    "CC:=$(CC)"
+    "LD:=$(CC)"
   ];
 
+  passthru.tests.pkg-config = testers.testMetaPkgConfig finalAttrs.finalPackage;
+
   meta = with lib; {
-    description = "An OpenGL extension loading library for C(++)";
-    homepage = "http://glew.sourceforge.net/";
+    description = "OpenGL extension loading library for C(++)";
+    homepage = "https://glew.sourceforge.net/";
     license = licenses.free; # different files under different licenses
-      #["BSD" "GLX" "SGI-B" "GPL2"]
-    platforms = platforms.mesaPlatforms;
+    #["BSD" "GLX" "SGI-B" "GPL2"]
+    pkgConfigModules = [ "glew" ];
+    inherit (mesa.meta) platforms;
   };
-}
+})

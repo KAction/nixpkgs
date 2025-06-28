@@ -1,37 +1,43 @@
-{ lib
-, mkDerivation
-, fetchFromGitHub
-, cmake
-, kwindowsystem
-, libfm-qt
-, lxqt-qtplugin
-, qtx11extras
-, gitUpdater
-, extraQtStyles ? []
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  kwindowsystem,
+  libexif,
+  libfm-qt,
+  lxqt-qtplugin,
+  menu-cache,
+  qtbase,
+  wrapQtAppsHook,
+  gitUpdater,
+  extraQtStyles ? [ ],
 }:
 
-mkDerivation rec {
+stdenv.mkDerivation rec {
   pname = "xdg-desktop-portal-lxqt";
-  version = "0.2.0";
+  version = "1.2.0";
 
   src = fetchFromGitHub {
     owner = "lxqt";
     repo = pname;
     rev = version;
-    sha256 = "15wld2p07sbf2i2qv86ljm479q0nr9r65wavmabmn3fkzkz5vlgf";
+    hash = "sha256-y3VqDuFagKcG8O5m5qjRGtlUZXfIXV0tclvZLChhWkg=";
   };
 
   nativeBuildInputs = [
     cmake
+    wrapQtAppsHook
   ];
 
   buildInputs = [
     kwindowsystem
+    libexif
     libfm-qt
     lxqt-qtplugin
-    qtx11extras
-  ]
-  ++ extraQtStyles;
+    menu-cache
+    qtbase
+  ] ++ extraQtStyles;
 
   passthru.updateScript = gitUpdater { };
 

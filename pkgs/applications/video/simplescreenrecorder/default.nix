@@ -1,41 +1,86 @@
-{ lib, stdenv, mkDerivation, fetchFromGitHub, alsa-lib, ffmpeg, libjack2, libX11, libXext, libXinerama, qtx11extras
-, libXfixes, libGLU, libGL, pkg-config, libpulseaudio, libv4l, qtbase, qttools, cmake, ninja
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  alsa-lib,
+  ffmpeg,
+  libjack2,
+  libX11,
+  libXext,
+  libXinerama,
+  qtx11extras,
+  libXfixes,
+  libGLU,
+  libGL,
+  pkg-config,
+  libpulseaudio,
+  libv4l,
+  pipewire,
+  qtbase,
+  qttools,
+  wrapQtAppsHook,
+  cmake,
+  ninja,
+  unstableGitUpdater,
 }:
 
-mkDerivation rec {
+stdenv.mkDerivation {
   pname = "simplescreenrecorder";
-  version = "0.4.3";
+  version = "0.4.4-unstable-2025-01-25";
 
   src = fetchFromGitHub {
     owner = "MaartenBaert";
     repo = "ssr";
-    rev = version;
-    sha256 = "0mrx8wprs8bi42fwwvk6rh634ic9jnn0gkfpd6q9pcawnnbz3vq8";
+    rev = "c50e83eea53f45eff503af58e6c86d0e928222f3";
+    hash = "sha256-pTgIooEOIYwOrSuXD0L5S7J7IsUIyzRuEX2ZziiIiAM=";
   };
 
-  cmakeFlags = [ "-DWITH_QT5=TRUE" ];
-
-  patches = [ ./fix-paths.patch ];
-
-  postPatch = ''
-    for i in scripts/ssr-glinject src/AV/Input/GLInjectInput.cpp; do
-      substituteInPlace $i \
-        --subst-var out \
-        --subst-var-by sh ${stdenv.shell}
-    done
-  '';
-
-  nativeBuildInputs = [ pkg-config cmake ninja ];
-  buildInputs = [
-    alsa-lib ffmpeg libjack2 libX11 libXext libXfixes libXinerama libGLU libGL
-    libpulseaudio libv4l qtbase qttools qtx11extras
+  cmakeFlags = [
+    "-DWITH_QT5=TRUE"
+    "-DWITH_GLINJECT=${if stdenv.hostPlatform.isx86 then "TRUE" else "FALSE"}"
   ];
 
+  postPatch = ''
+    substituteInPlace scripts/ssr-glinject \
+      --replace-fail "libssr-glinject.so" "$out/lib/libssr-glinject.so"
+
+    substituteInPlace src/AV/Input/GLInjectInput.cpp \
+      --replace-fail "/bin/sh" "${stdenv.shell}" \
+      --replace-fail "libssr-glinject.so" "$out/lib/libssr-glinject.so"
+  '';
+
+  nativeBuildInputs = [
+    pkg-config
+    cmake
+    ninja
+    wrapQtAppsHook
+  ];
+
+  buildInputs = [
+    alsa-lib
+    ffmpeg
+    libjack2
+    libX11
+    libXext
+    libXfixes
+    libXinerama
+    libGLU
+    libGL
+    libpulseaudio
+    libv4l
+    pipewire
+    qtbase
+    qttools
+    qtx11extras
+  ];
+
+  passthru.updateScript = unstableGitUpdater { };
+
   meta = with lib; {
-    description = "A screen recorder for Linux";
+    description = "Screen recorder for Linux";
     homepage = "https://www.maartenbaert.be/simplescreenrecorder";
     license = licenses.gpl3Plus;
-    platforms = [ "x86_64-linux" ];
-    maintainers = [ maintainers.goibhniu ];
+    platforms = platforms.linux;
+    maintainers = [ ];
   };
 }

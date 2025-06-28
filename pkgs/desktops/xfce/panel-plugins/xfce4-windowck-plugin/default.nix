@@ -1,37 +1,62 @@
-{ lib
-, mkXfceDerivation
-, imagemagick
-, libwnck
-, libxfce4ui
-, python3
-, xfce4-panel
-, xfconf
+{
+  stdenv,
+  lib,
+  fetchurl,
+  gettext,
+  meson,
+  ninja,
+  pkg-config,
+  python3,
+  glib,
+  gtk3,
+  libwnck,
+  libxfce4ui,
+  libxfce4util,
+  xfce4-panel,
+  xfconf,
+  gitUpdater,
 }:
 
-mkXfceDerivation {
-  category = "panel-plugins";
+stdenv.mkDerivation (finalAttrs: {
   pname = "xfce4-windowck-plugin";
-  version = "0.5.0";
-  rev-prefix = "v";
-  odd-unstable = false;
-  sha256 = "sha256-MhNSgI74VLdoS5yL6nfRrVrPvv7+0P5meO4zQheYFzo=";
+  version = "0.6.1";
+
+  src = fetchurl {
+    url = "mirror://xfce/src/panel-plugins/xfce4-windowck-plugin/${lib.versions.majorMinor finalAttrs.version}/xfce4-windowck-plugin-${finalAttrs.version}.tar.xz";
+    hash = "sha256-Ay4wXXTxe9ZbKL0mDPGS/PiqDfM9EWCH5IX9E2i3zzk=";
+  };
+
+  strictDeps = true;
+
+  nativeBuildInputs = [
+    gettext
+    glib # glib-compile-resources
+    meson
+    ninja
+    pkg-config
+    python3
+  ];
 
   buildInputs = [
-    imagemagick
+    glib
+    gtk3
     libwnck
     libxfce4ui
-    python3
+    libxfce4util
     xfce4-panel
     xfconf
   ];
 
-  postPatch = ''
-    patchShebangs themes/windowck{,-dark}/{xfwm4,unity}/generator.py
-  '';
-
-  meta = with lib; {
-    description = "Xfce panel plugin for displaying window title and buttons";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ ] ++ teams.xfce.members;
+  passthru.updateScript = gitUpdater {
+    url = "https://gitlab.xfce.org/panel-plugins/xfce4-windowck-plugin";
+    rev-prefix = "xfce4-windowck-plugin-";
   };
-}
+
+  meta = {
+    description = "Xfce panel plugin for displaying window title and buttons";
+    homepage = "https://gitlab.xfce.org/panel-plugins/xfce4-windowck-plugin";
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.xfce ];
+  };
+})

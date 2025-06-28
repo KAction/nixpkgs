@@ -1,37 +1,39 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, frozenlist
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  frozenlist,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytestCheckHook,
+  pythonOlder,
 }:
 
 buildPythonPackage rec {
   pname = "aiosignal";
-  version = "1.2.0";
-  disabled = pythonOlder "3.6";
+  version = "1.3.2";
+  format = "setuptools";
+
+  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "aio-libs";
-    repo = pname;
+    repo = "aiosignal";
     rev = "v${version}";
-    sha256 = "1pamfc2l95s1q86jvmbp17chjy129gk01kwy8xm88d2ijy8s1caq";
+    hash = "sha256-CvNarJpSq8EKnt+PuSerMK/ZVbxL9rp7rQ4dkWykG1M=";
   };
 
-  propagatedBuildInputs = [
-    frozenlist
-  ];
+  propagatedBuildInputs = [ frozenlist ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-asyncio
+    pytest-cov-stub
     pytestCheckHook
   ];
 
   postPatch = ''
-    substituteInPlace pytest.ini \
-      --replace "filterwarnings = error" "" \
-      --replace "--cov=aiosignal" ""
+    substituteInPlace setup.cfg \
+      --replace "filterwarnings = error" ""
   '';
 
   pythonImportsCheck = [ "aiosignal" ];
@@ -39,6 +41,7 @@ buildPythonPackage rec {
   meta = with lib; {
     description = "Python list of registered asynchronous callbacks";
     homepage = "https://github.com/aio-libs/aiosignal";
+    changelog = "https://github.com/aio-libs/aiosignal/blob/v${version}/CHANGES.rst";
     license = with licenses; [ asl20 ];
     maintainers = with maintainers; [ fab ];
   };

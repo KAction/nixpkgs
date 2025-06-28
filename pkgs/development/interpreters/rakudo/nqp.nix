@@ -1,12 +1,22 @@
-{ stdenv, fetchurl, perl, lib, moarvm }:
+{
+  stdenv,
+  fetchFromGitHub,
+  perl,
+  lib,
+  moarvm,
+}:
 
 stdenv.mkDerivation rec {
   pname = "nqp";
-  version = "2022.07";
+  version = "2025.05";
 
-  src = fetchurl {
-    url = "https://github.com/raku/nqp/releases/download/${version}/nqp-${version}.tar.gz";
-    hash = "sha256-WAgcEG1nKlQGAY/WmRLI1IX9Er8iWVEyXFDJKagjImg=";
+  # nixpkgs-update: no auto update
+  src = fetchFromGitHub {
+    owner = "raku";
+    repo = "nqp";
+    rev = version;
+    hash = "sha256-CNanRrK9ReK1OoM82ytCRh/tZfnvAs4vCyy5BRYIwCU=";
+    fetchSubmodules = true;
   };
 
   buildInputs = [ perl ];
@@ -29,11 +39,15 @@ stdenv.mkDerivation rec {
 
   doCheck = true;
 
-  meta = with lib; {
-    description = "Not Quite Perl -- a lightweight Raku-like environment for virtual machines";
+  meta = {
+    description = "Lightweight Raku-like environment for virtual machines";
     homepage = "https://github.com/Raku/nqp";
-    license = licenses.artistic2;
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ thoughtpolice vrthra sgo ];
+    license = lib.licenses.artistic2;
+    platforms = lib.platforms.unix;
+    maintainers = with lib.maintainers; [
+      thoughtpolice
+      sgo
+      prince213
+    ];
   };
 }

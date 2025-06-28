@@ -1,5 +1,3 @@
-source $stdenv/setup
-
 source $mirrorsFile
 
 curlVersion=$(curl -V | head -1 | cut -d' ' -f2)
@@ -13,6 +11,8 @@ curl=(
     --location
     --max-redirs 20
     --retry 3
+    --retry-all-errors
+    --continue-at -
     --disable-epsv
     --cookie-jar cookies
     --user-agent "curl/$curlVersion Nixpkgs/$nixpkgsVersion"
@@ -36,7 +36,7 @@ if [ -n "$downloadToTemp" ]; then downloadedFile="$TMPDIR/file"; fi
 tryDownload() {
     local url="$1"
     echo
-    header "trying $url"
+    echo "trying $url"
     local curlexit=18;
 
     success=

@@ -1,73 +1,125 @@
-{ stdenv, lib, callPackage, fetchurl
-, isInsiders ? false
-, commandLineArgs ? ""
+{
+  lib,
+  stdenv,
+  stdenvNoCC,
+  callPackage,
+  fetchurl,
+  nixosTests,
+  srcOnly,
+  isInsiders ? false,
+  # sourceExecutableName is the name of the binary in the source archive over
+  # which we have no control and it is needed to run the insider version as
+  # documented in https://wiki.nixos.org/wiki/Visual_Studio_Code#Insiders_Build
+  # On MacOS the insider binary is still called code instead of code-insiders as
+  # of 2023-08-06.
+  sourceExecutableName ?
+    "code" + lib.optionalString (isInsiders && stdenv.hostPlatform.isLinux) "-insiders",
+  commandLineArgs ? "",
+  useVSCodeRipgrep ? stdenv.hostPlatform.isDarwin,
 }:
 
 let
   inherit (stdenv.hostPlatform) system;
   throwSystem = throw "Unsupported system: ${system}";
 
-  plat = {
-    x86_64-linux = "linux-x64";
-    x86_64-darwin = "darwin";
-    aarch64-linux = "linux-arm64";
-    aarch64-darwin = "darwin-arm64";
-    armv7l-linux = "linux-armhf";
-  }.${system} or throwSystem;
+  plat =
+    {
+      x86_64-linux = "linux-x64";
+      x86_64-darwin = "darwin";
+      aarch64-linux = "linux-arm64";
+      aarch64-darwin = "darwin-arm64";
+      armv7l-linux = "linux-armhf";
+    }
+    .${system} or throwSystem;
 
-  archive_fmt = if stdenv.isDarwin then "zip" else "tar.gz";
+  archive_fmt = if stdenv.hostPlatform.isDarwin then "zip" else "tar.gz";
 
-  sha256 = {
-    x86_64-linux = "1dcp6r78kaq3wzcw7dfra59kfpdzqy9qnlyp1ywayxh610ryjyfc";
-    x86_64-darwin = "0ypxjh5z0v83y0wb22m942qqlvx5df7k4dk8ip9wqd4p7h8540q8";
-    aarch64-linux = "1qq4zg0j3rpx06cqaic7a1x7ckk5wf8w1gp5y8hwhvkym4s8g4i7";
-    aarch64-darwin = "18hrsvr7hgmlpi64dbk581i516my6c5zwz6g8awp4fhxilk0wbrg";
-    armv7l-linux = "1y357ci4gllxg26m5qdv9652i5rra5vj972l7kdnxiimfgm6h83b";
-  }.${system} or throwSystem;
+  hash =
+    {
+      x86_64-linux = "sha256-Rr7JNWloV4VkgGk9zDEnD/WRHSYv5su8UrOSIl3247c=";
+      x86_64-darwin = "sha256-hHAJVmFKwD0Z8YyqvNlM4SpWnSIniVvdMwR3fhk/mKE=";
+      aarch64-linux = "sha256-/pYykG/1IJU7aJ9wtO5oo3dUdCGtfxklre0SGMpgnq8=";
+      aarch64-darwin = "sha256-pWMCQlgxoJ4EGfycuz3H76r9Sc3x006el1ITOM6E4wE=";
+      armv7l-linux = "sha256-M0fK1n/HMuNQvN85I4g5GV8QAg3n6vQtR6V/B1PFAwQ=";
+    }
+    .${system} or throwSystem;
 in
-  callPackage ./generic.nix rec {
-    # Please backport all compatible updates to the stable release.
-    # This is important for the extension ecosystem.
-    version = "1.73.0";
-    pname = "vscode";
+callPackage ./generic.nix rec {
+  # Please backport all compatible updates to the stable release.
+  # This is important for the extension ecosystem.
+  version = "1.101.1";
+  pname = "vscode" + lib.optionalString isInsiders "-insiders";
 
-    executableName = "code" + lib.optionalString isInsiders "-insiders";
-    longName = "Visual Studio Code" + lib.optionalString isInsiders " - Insiders";
-    shortName = "Code" + lib.optionalString isInsiders " - Insiders";
-    inherit commandLineArgs;
+  # This is used for VS Code - Remote SSH test
+  rev = "18e3a1ec544e6907be1e944a94c496e302073435";
 
+  executableName = "code" + lib.optionalString isInsiders "-insiders";
+  longName = "Visual Studio Code" + lib.optionalString isInsiders " - Insiders";
+  shortName = "Code" + lib.optionalString isInsiders " - Insiders";
+  inherit commandLineArgs useVSCodeRipgrep sourceExecutableName;
+
+  src = fetchurl {
+    name = "VSCode_${version}_${plat}.${archive_fmt}";
+    url = "https://update.code.visualstudio.com/${version}/${plat}/stable";
+    inherit hash;
+  };
+
+  # We don't test vscode on CI, instead we test vscodium
+  tests = { };
+
+  sourceRoot = "";
+
+  # As tests run without networking, we need to download this for the Remote SSH server
+  vscodeServer = srcOnly {
+    name = "vscode-server-${rev}.tar.gz";
     src = fetchurl {
-      name = "VSCode_${version}_${plat}.${archive_fmt}";
-      url = "https://update.code.visualstudio.com/${version}/${plat}/stable";
-      inherit sha256;
+      name = "vscode-server-${rev}.tar.gz";
+      url = "https://update.code.visualstudio.com/commit:${rev}/server-linux-x64/stable";
+      hash = "sha256-Myq0OUrwv6bq53Q5FDCVtt+wfGlEX2bjz9CMeVLfd+4=";
     };
+    stdenv = stdenvNoCC;
+  };
 
-    sourceRoot = "";
+  tests = { inherit (nixosTests) vscode-remote-ssh; };
 
-    updateScript = ./update-vscode.sh;
+  updateScript = ./update-vscode.sh;
 
-    # Editing the `code` binary within the app bundle causes the bundle's signature
-    # to be invalidated, which prevents launching starting with macOS Ventura, because VS Code is notarized.
-    # See https://eclecticlight.co/2022/06/17/app-security-changes-coming-in-ventura/ for more information.
-    dontFixup = stdenv.isDarwin;
+  # Editing the `code` binary within the app bundle causes the bundle's signature
+  # to be invalidated, which prevents launching starting with macOS Ventura, because VS Code is notarized.
+  # See https://eclecticlight.co/2022/06/17/app-security-changes-coming-in-ventura/ for more information.
+  dontFixup = stdenv.hostPlatform.isDarwin;
 
-    meta = with lib; {
-      description = ''
-        Open source source code editor developed by Microsoft for Windows,
-        Linux and macOS
-      '';
-      mainProgram = "code";
-      longDescription = ''
-        Open source source code editor developed by Microsoft for Windows,
-        Linux and macOS. It includes support for debugging, embedded Git
-        control, syntax highlighting, intelligent code completion, snippets,
-        and code refactoring. It is also customizable, so users can change the
-        editor's theme, keyboard shortcuts, and preferences
-      '';
-      homepage = "https://code.visualstudio.com/";
-      downloadPage = "https://code.visualstudio.com/Updates";
-      license = licenses.unfree;
-      maintainers = with maintainers; [ eadwu synthetica maxeaubrey bobby285271 ];
-      platforms = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" "aarch64-linux" "armv7l-linux" ];
-    };
-  }
+  hasVsceSign = true;
+
+  meta = {
+    description = ''
+      Open source source code editor developed by Microsoft for Windows,
+      Linux and macOS
+    '';
+    mainProgram = "code";
+    longDescription = ''
+      Open source source code editor developed by Microsoft for Windows,
+      Linux and macOS. It includes support for debugging, embedded Git
+      control, syntax highlighting, intelligent code completion, snippets,
+      and code refactoring. It is also customizable, so users can change the
+      editor's theme, keyboard shortcuts, and preferences
+    '';
+    homepage = "https://code.visualstudio.com/";
+    downloadPage = "https://code.visualstudio.com/Updates";
+    license = lib.licenses.unfree;
+    maintainers = with lib.maintainers; [
+      eadwu
+      synthetica
+      bobby285271
+      johnrtitor
+      jefflabonte
+    ];
+    platforms = [
+      "x86_64-linux"
+      "x86_64-darwin"
+      "aarch64-darwin"
+      "aarch64-linux"
+      "armv7l-linux"
+    ];
+  };
+}

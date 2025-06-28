@@ -1,10 +1,17 @@
-{ lib, buildDunePackage, fetchFromGitHub, ocaml, alcotest, result }:
+{
+  lib,
+  buildDunePackage,
+  fetchFromGitHub,
+  ocaml,
+  alcotest,
+  result,
+}:
 
 buildDunePackage rec {
   pname = "dispatch";
   version = "0.5.0";
 
-  useDune2 = true;
+  duneVersion = "3";
 
   src = fetchFromGitHub {
     owner = "inhabitedtype";

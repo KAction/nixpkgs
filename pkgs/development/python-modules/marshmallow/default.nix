@@ -1,44 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, pytz
-, simplejson
-, packaging
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flit-core,
+  packaging,
+  pytestCheckHook,
+  simplejson,
 }:
 
 buildPythonPackage rec {
   pname = "marshmallow";
-  version = "3.16.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "3.26.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "marshmallow-code";
-    repo = pname;
-    rev = version;
-    hash = "sha256-bR10hYViK7OrAaBpKaeM7S5XyHQZhlGUQTwH/EJ0kME=";
+    repo = "marshmallow";
+    tag = version;
+    hash = "sha256-l5pEhv8D6jRlU24SlsGQEkXda/b7KUdP9mAqrZCbl38=";
   };
 
-  propagatedBuildInputs = [
-    packaging
-  ];
+  nativeBuildInputs = [ flit-core ];
 
-  checkInputs = [
+  propagatedBuildInputs = [ packaging ];
+
+  nativeCheckInputs = [
     pytestCheckHook
-    pytz
     simplejson
   ];
 
-  pythonImportsCheck = [
-    "marshmallow"
-  ];
+  pythonImportsCheck = [ "marshmallow" ];
 
   meta = with lib; {
     description = "Library for converting complex objects to and from simple Python datatypes";
     homepage = "https://github.com/marshmallow-code/marshmallow";
+    changelog = "https://github.com/marshmallow-code/marshmallow/blob/${version}/CHANGELOG.rst";
     license = licenses.mit;
     maintainers = with maintainers; [ cript0nauta ];
   };

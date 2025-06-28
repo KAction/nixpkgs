@@ -1,17 +1,23 @@
-{ lib, python, buildPythonPackage, fetchFromGitHub, pydns }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  py3dns,
+}:
 
 buildPythonPackage rec {
   pname = "pyspf";
   version = "2.0.14";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "sdgathman";
-    repo = pname;
+    repo = "pyspf";
     rev = "pyspf-${version}";
     sha256 = "0bmimlmwrq9glnjc4i6pwch30n3y5wyqmkjfyayxqxkfrixqwydi";
   };
 
-  propagatedBuildInputs = [ pydns ];
+  propagatedBuildInputs = [ py3dns ];
 
   # requires /etc/resolv.conf to exist
   doCheck = false;

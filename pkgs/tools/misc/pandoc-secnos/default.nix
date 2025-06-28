@@ -1,8 +1,9 @@
-{ buildPythonApplication
-, fetchFromGitHub
-, lib
-, pandoc-xnos
-, setuptools
+{
+  buildPythonApplication,
+  fetchFromGitHub,
+  lib,
+  pandoc-xnos,
+  setuptools,
 }:
 
 buildPythonApplication rec {
@@ -35,5 +36,6 @@ buildPythonApplication rec {
     homepage = "https://github.com/tomduck/pandoc-secnos";
     license = licenses.gpl3Only;
     maintainers = with maintainers; [ ppenguin ];
+    mainProgram = "pandoc-secnos";
   };
 }

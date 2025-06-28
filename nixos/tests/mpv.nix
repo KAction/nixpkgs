@@ -1,20 +1,18 @@
-import ./make-test-python.nix ({ lib, ... }:
-
-with lib;
+{ lib, ... }:
 
 let
   port = toString 4321;
 in
 {
   name = "mpv";
-  meta.maintainers = with maintainers; [ zopieux ];
+  meta.maintainers = with lib.maintainers; [ zopieux ];
 
   nodes.machine =
     { pkgs, ... }:
     {
       environment.systemPackages = [
         pkgs.curl
-        (pkgs.wrapMpv pkgs.mpv-unwrapped {
+        (pkgs.mpv.override {
           scripts = [ pkgs.mpvScripts.simple-mpv-webui ];
         })
       ];
@@ -25,4 +23,4 @@ in
     machine.wait_for_open_port(${port})
     assert "<title>simple-mpv-webui" in machine.succeed("curl -s localhost:${port}")
   '';
-})
+}

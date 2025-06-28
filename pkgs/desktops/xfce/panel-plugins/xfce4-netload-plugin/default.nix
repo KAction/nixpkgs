@@ -1,17 +1,55 @@
-{ lib, mkXfceDerivation, gtk3, libxfce4ui, libxfce4util, xfce4-panel, xfconf }:
+{
+  stdenv,
+  lib,
+  fetchFromGitLab,
+  gettext,
+  meson,
+  ninja,
+  pkg-config,
+  glib,
+  gtk3,
+  libxfce4ui,
+  libxfce4util,
+  xfce4-panel,
+  gitUpdater,
+}:
 
-mkXfceDerivation {
-  category = "panel-plugins";
+stdenv.mkDerivation (finalAttrs: {
   pname = "xfce4-netload-plugin";
-  version = "1.4.0";
-  rev-prefix = "xfce4-netload-plugin-";
-  odd-unstable = false;
-  sha256 = "sha256-HasaMymMCPidYkaAUK4gvD+Ka7NJdFOTeq43gJ1G3jo=";
+  version = "1.5.0";
 
-  buildInputs = [ gtk3 libxfce4ui libxfce4util xfce4-panel xfconf ];
-
-  meta = with lib; {
-    description = "Internet load speed plugin for Xfce4 panel";
-    maintainers = with maintainers; [ ] ++ teams.xfce.members;
+  src = fetchFromGitLab {
+    domain = "gitlab.xfce.org";
+    owner = "panel-plugins";
+    repo = "xfce4-netload-plugin";
+    tag = "xfce4-netload-plugin-${finalAttrs.version}";
+    hash = "sha256-iZnfPCOHg0+eo8ubfIsweH2T/DSLeL2Q+giWK/Vkpko=";
   };
-}
+
+  strictDeps = true;
+
+  nativeBuildInputs = [
+    gettext
+    meson
+    ninja
+    pkg-config
+  ];
+
+  buildInputs = [
+    glib
+    gtk3
+    libxfce4ui
+    libxfce4util
+    xfce4-panel
+  ];
+
+  passthru.updateScript = gitUpdater { rev-prefix = "xfce4-netload-plugin-"; };
+
+  meta = {
+    description = "Internet load speed plugin for Xfce4 panel";
+    homepage = "https://gitlab.xfce.org/panel-plugins/xfce4-netload-plugin";
+    license = lib.licenses.gpl2Plus;
+    teams = [ lib.teams.xfce ];
+    platforms = lib.platforms.linux;
+  };
+})

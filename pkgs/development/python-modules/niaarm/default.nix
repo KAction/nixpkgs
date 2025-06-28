@@ -1,50 +1,78 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, niapy
-, nltk
-, pandas
-, poetry-core
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  poetry-core,
+
+  # dependencies
+  niapy,
+  nltk,
+  numpy,
+  pandas,
+  plotly,
+  scikit-learn,
+  pythonOlder,
+  tomli,
+
+  # tests
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
-  pname = "NiaARM";
-  version = "0.2.2";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  pname = "niaarm";
+  # nixpkgs-update: no auto update
+  version = "0.4.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "firefly-cpp";
-    repo = pname;
-    rev = version;
-    hash = "sha256-IY72hDklPkGjb2zo7Wf0MBiPn/jHtyUKW9D0jxA0P54=";
+    repo = "NiaARM";
+    tag = version;
+    hash = "sha256-WvVXL1a1DvgLF3upbGUi1+nH5aDBUNx5Bitlkb8lQkc=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
+  pythonRelaxDeps = [
+    "numpy"
+    "plotly"
+    "scikit-learn"
   ];
 
-  propagatedBuildInputs = [
+  build-system = [ poetry-core ];
+
+  dependencies = [
     niapy
     nltk
+    numpy
     pandas
-  ];
+    plotly
+    scikit-learn
+  ] ++ lib.optionals (pythonOlder "3.11") [ tomli ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  disabledTests =
+    [
+      # Test requires extra nltk data dependency
+      "test_text_mining"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      # Fatal Python error: Aborted
+      # matplotlib/backend_bases.py", line 2654 in create_with_canvas
+      "test_hill_slopes"
+      "test_two_key_plot"
+    ];
 
-  pythonImportsCheck = [
-    "niaarm"
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
-    description = "A minimalistic framework for Numerical Association Rule Mining";
+  pythonImportsCheck = [ "niaarm" ];
+
+  meta = {
+    description = "Minimalistic framework for Numerical Association Rule Mining";
+    mainProgram = "niaarm";
     homepage = "https://github.com/firefly-cpp/NiaARM";
-    license = licenses.mit;
-    maintainers = with maintainers; [ firefly-cpp ];
+    changelog = "https://github.com/firefly-cpp/NiaARM/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ firefly-cpp ];
   };
 }

@@ -1,21 +1,53 @@
-{ lib, buildPythonPackage, fetchFromGitHub, certifi, numpy, sgp4, jplephem
-, pandas, ipython, matplotlib, assay
+{
+  lib,
+  buildPythonPackage,
+  pythonOlder,
+  fetchFromGitHub,
+  setuptools,
+  certifi,
+  numpy,
+  sgp4,
+  jplephem,
+  pandas,
+  ipython,
+  matplotlib,
+  assay,
 }:
 
 buildPythonPackage rec {
   pname = "skyfield";
-  version = "1.42";
+  version = "1.49";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "skyfielders";
     repo = "python-skyfield";
     rev = version;
-    sha256 = "sha256-aoSkuLhZcEy+13EJQOBHV2/rgmN6aZQHqfj4OOirOG0=";
+    hash = "sha256-PZ63sohdfpop3nYQr2RIMjPbrL9jdfincEhw5D8NZ+Y=";
   };
 
-  propagatedBuildInputs = [ certifi numpy sgp4 jplephem ];
+  # Fix broken tests on "exotic" platforms.
+  # https://github.com/skyfielders/python-skyfield/issues/582#issuecomment-822033858
+  postPatch = ''
+    substituteInPlace skyfield/tests/test_planetarylib.py \
+      --replace-fail "if IS_32_BIT" "if True"
+  '';
 
-  checkInputs = [ pandas ipython matplotlib assay ];
+  build-system = [ setuptools ];
+
+  dependencies = [
+    certifi
+    numpy
+    sgp4
+    jplephem
+  ];
+
+  nativeCheckInputs = [
+    pandas
+    ipython
+    matplotlib
+    assay
+  ];
 
   checkPhase = ''
     runHook preCheck

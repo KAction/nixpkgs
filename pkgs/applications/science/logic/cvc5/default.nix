@@ -1,34 +1,71 @@
-{ lib, stdenv, fetchFromGitHub, pkg-config, cmake, cadical, symfpu, gmp, git, python3, gtest, libantlr3c, antlr3_4, boost, jdk }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  pkg-config,
+  cmake,
+  flex,
+  cadical,
+  symfpu,
+  gmp,
+  python3,
+  gtest,
+  boost,
+  jdk,
+  libpoly,
+}:
 
 stdenv.mkDerivation rec {
   pname = "cvc5";
-  version = "1.0.2";
+  version = "1.3.0";
 
   src = fetchFromGitHub {
-    owner  = "cvc5";
-    repo   = "cvc5";
-    rev    = "cvc5-${version}";
-    sha256 = "sha256-RDslPz9b0R9NXaXoixSCenHEh+F3wg/8p4Ksrzh41PI=";
+    owner = "cvc5";
+    repo = "cvc5";
+    rev = "cvc5-${version}";
+    hash = "sha256-w8rIGPG9BTEPV9HG2U40A4DYYnC6HaWbzqDKCRhaT00=";
   };
 
-  nativeBuildInputs = [ pkg-config cmake ];
-  buildInputs = [ cadical.dev symfpu gmp git python3 python3.pkgs.toml gtest libantlr3c antlr3_4 boost jdk ];
+  nativeBuildInputs = [
+    pkg-config
+    cmake
+    flex
+  ];
+  buildInputs = [
+    cadical.dev
+    symfpu
+    gmp
+    gtest
+    boost
+    jdk
+    libpoly
+    (python3.withPackages (
+      ps: with ps; [
+        pyparsing
+        tomli
+      ]
+    ))
+  ];
 
   preConfigure = ''
     patchShebangs ./src/
   '';
 
+  cmakeBuildType = "Production";
+
   cmakeFlags = [
-    "-DCMAKE_BUILD_TYPE=Production"
     "-DBUILD_SHARED_LIBS=1"
-    "-DANTLR3_JAR=${antlr3_4}/lib/antlr/antlr-3.4-complete.jar"
+    "-DUSE_POLY=ON"
   ];
 
+  doCheck = true;
+
   meta = with lib; {
-    description = "A high-performance theorem prover and SMT solver";
-    homepage    = "https://cvc5.github.io";
-    license     = licenses.gpl3Only;
-    platforms   = platforms.unix;
+    description = "High-performance theorem prover and SMT solver";
+    mainProgram = "cvc5";
+    homepage = "https://cvc5.github.io";
+    license = licenses.gpl3Only;
+    platforms = platforms.unix;
     maintainers = with maintainers; [ shadaj ];
   };
 }

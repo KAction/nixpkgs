@@ -1,27 +1,45 @@
-{ lib, buildPythonPackage, unittestCheckHook, fetchPypi, isPy3k, glibcLocales }:
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  pythonOlder,
+  setuptools,
+  setuptools-scm,
+  importlib-metadata,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "pystache";
-  version = "0.6.0";
+  version = "0.6.8";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "93bf92b2149a4c4b58d12142e2c4c6dd5c08d89e4c95afccd4b6efe2ee1d470d";
+  disabled = pythonOlder "3.8";
+
+  src = fetchFromGitHub {
+    owner = "PennyDreadfulMTG";
+    repo = "pystache";
+    tag = "v${version}";
+    hash = "sha256-UVmDpg7wCPnY+1BZqujIYdgt/AT4gZ+RTYdD+ORQhzE=";
   };
 
-  LC_ALL = "en_US.UTF-8";
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  buildInputs = [ glibcLocales ];
+  dependencies = lib.optionals (pythonOlder "3.10") [
+    importlib-metadata
+  ];
 
-  # SyntaxError Python 3
-  # https://github.com/defunkt/pystache/issues/181
-  doCheck = !isPy3k;
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  checkInputs = [ unittestCheckHook ];
+  pythonImportsCheck = [ "pystache" ];
 
-  meta = with lib; {
-    description = "A framework-agnostic, logic-free templating system inspired by ctemplate and et";
-    homepage = "https://github.com/defunkt/pystache";
-    license = licenses.mit;
+  meta = {
+    description = "Framework-agnostic, logic-free templating system inspired by ctemplate and et";
+    homepage = "https://github.com/PennyDreadfulMTG/pystache";
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.nickcao ];
   };
 }

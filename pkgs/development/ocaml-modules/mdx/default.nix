@@ -1,32 +1,59 @@
-{ lib, fetchFromGitHub, buildDunePackage, ocaml
-, alcotest
-, astring, cmdliner, cppo, fmt, logs, ocaml-version, odoc-parser, ocaml_lwt, re, result, csexp
-, pandoc
-, gitUpdater
+{
+  lib,
+  stdenv,
+  fetchurl,
+  buildDunePackage,
+  ocaml,
+  findlib,
+  alcotest,
+  astring,
+  cmdliner,
+  cppo,
+  fmt,
+  logs,
+  ocaml-version,
+  camlp-streams,
+  lwt,
+  re,
+  csexp,
+  gitUpdater,
 }:
 
 buildDunePackage rec {
   pname = "mdx";
-  version = "2.1.0";
+  version = "2.5.0";
 
   minimalOCamlVersion = "4.08";
 
-  src = fetchFromGitHub {
-    owner = "realworldocaml";
-    repo = pname;
-    rev = version;
-    hash = "sha256-p7jmksltgfLFTSkPxMuJWJexLq2VvPWT/DJtDveOL/A=";
+  src = fetchurl {
+    url = "https://github.com/realworldocaml/mdx/releases/download/${version}/mdx-${version}.tbz";
+    hash = "sha256-wtpY19UYLxXARvsyC7AsFmAtLufLmfNJ4/SEHCY2UCk=";
   };
 
   nativeBuildInputs = [ cppo ];
-  buildInputs = [ cmdliner ];
-  propagatedBuildInputs = [ astring fmt logs result csexp ocaml-version odoc-parser re ];
-  checkInputs = [ alcotest ocaml_lwt pandoc ];
+  propagatedBuildInputs = [
+    astring
+    fmt
+    logs
+    csexp
+    cmdliner
+    ocaml-version
+    camlp-streams
+    re
+    findlib
+  ];
+  checkInputs = [
+    alcotest
+    lwt
+  ];
 
-  # Check fails with cmdliner ≥ 1.1
-  doCheck = false;
+  doCheck = !stdenv.hostPlatform.isDarwin;
 
-  outputs = [ "bin" "lib" "out" ];
+  outputs = [
+    "bin"
+    "lib"
+    "out"
+  ];
 
   installPhase = ''
     runHook preInstall

@@ -1,13 +1,14 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, matplotlib
-, numpy
-, pillow
-, webcolors
-, flit-core
-, pytestCheckHook
-, pandas
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  matplotlib,
+  numpy,
+  pillow,
+  webcolors,
+  flit-core,
+  pytestCheckHook,
+  pandas,
 }:
 
 buildPythonPackage rec {
@@ -17,9 +18,9 @@ buildPythonPackage rec {
 
   src = fetchFromGitHub {
     owner = "nschloe";
-    repo = pname;
+    repo = "tikzplotlib";
     rev = "v${version}";
-    sha256 = "sha256-PLExHhEnxkEiXsE0rqvpNWwVZ+YoaDa2BTx8LktdHl0=";
+    hash = "sha256-PLExHhEnxkEiXsE0rqvpNWwVZ+YoaDa2BTx8LktdHl0=";
   };
 
   propagatedBuildInputs = [
@@ -30,7 +31,7 @@ buildPythonPackage rec {
     flit-core
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     pandas
   ];

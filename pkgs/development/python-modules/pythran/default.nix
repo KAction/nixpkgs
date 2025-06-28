@@ -1,49 +1,62 @@
-{ lib
-, python
-, buildPythonPackage
-, fetchFromGitHub
-, openmp
-, ply
-, networkx
-, decorator
-, gast
-, six
-, numpy
-, beniget
-, isPy3k
-, substituteAll
+{
+  lib,
+  python,
+  buildPythonPackage,
+  fetchFromGitHub,
+  replaceVars,
+
+  # build-system
+  setuptools,
+
+  # native dependencies
+  openmp,
+  xsimd,
+
+  # dependencies
+  ply,
+  gast,
+  numpy,
+  beniget,
 }:
 
 let
   inherit (python) stdenv;
-
-in buildPythonPackage rec {
+in
+buildPythonPackage rec {
   pname = "pythran";
-  version = "0.11.0";
+  version = "0.17.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "serge-sans-paille";
     repo = "pythran";
-    rev = version;
-    sha256 = "sha256-F9gUZOTSuiqvfGoN4yQqwUg9mnCeBntw5eHO7ZnjpzI=";
+    tag = version;
+    hash = "sha256-JG1FH2UAekFF9Vv7wCn/L7gJlVKv5AxqgGrj8pejqeY=";
   };
 
   patches = [
     # Hardcode path to mp library
-    (substituteAll {
-      src = ./0001-hardcode-path-to-libgomp.patch;
-      gomp = "${if stdenv.cc.isClang then openmp else stdenv.cc.cc.lib}/lib/libgomp${stdenv.hostPlatform.extensions.sharedLibrary}";
+    (replaceVars ./0001-hardcode-path-to-libgomp.patch {
+      gomp = "${
+        if stdenv.cc.isClang then openmp else (lib.getLib stdenv.cc.cc)
+      }/lib/libgomp${stdenv.hostPlatform.extensions.sharedLibrary}";
     })
   ];
 
-  propagatedBuildInputs = [
+  # xsimd: unvendor this header-only C++ lib
+  postPatch = ''
+    rm -r pythran/xsimd
+    ln -s '${lib.getDev xsimd}'/include/xsimd pythran/
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     ply
-    networkx
-    decorator
     gast
-    six
     numpy
     beniget
+    setuptools
   ];
 
   pythonImportsCheck = [
@@ -58,11 +71,11 @@ in buildPythonPackage rec {
   # Test suite is huge and has a circular dependency on scipy.
   doCheck = false;
 
-  disabled = !isPy3k;
-
   meta = {
+    changelog = "https://github.com/serge-sans-paille/pythran/blob/${src.rev}/Changelog";
     description = "Ahead of Time compiler for numeric kernels";
     homepage = "https://github.com/serge-sans-paille/pythran";
     license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ doronbehar ];
   };
 }

@@ -1,16 +1,25 @@
-{ lib, python3Packages, mopidy }:
+{
+  lib,
+  python3Packages,
+  fetchPypi,
+  mopidy,
+}:
 
 python3Packages.buildPythonApplication rec {
   pname = "mopidy-jellyfin";
-  version = "1.0.2";
+  version = "1.0.6";
 
-  src = python3Packages.fetchPypi {
+  src = fetchPypi {
     inherit version;
-    pname = "Mopidy-Jellyfin";
-    sha256 = "0j7v5xx3c401r5dw1sqm1n2263chjga1d3ml85rg79hjhhhacy75";
+    pname = "mopidy_jellyfin";
+    hash = "sha256-IKCPypMuluR0+mMALp8lB1oB1pSw4rN4rOl/eKn+Qvo=";
   };
 
-  propagatedBuildInputs = [ mopidy python3Packages.unidecode python3Packages.websocket-client ];
+  propagatedBuildInputs = [
+    mopidy
+    python3Packages.unidecode
+    python3Packages.websocket-client
+  ];
 
   # no tests implemented
   doCheck = false;

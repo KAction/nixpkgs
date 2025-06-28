@@ -1,64 +1,72 @@
-{ lib
-, aiohttp
-, aresponses
-, buildPythonPackage
-, fetchFromGitHub
-, packaging
-, poetry-core
-, pydantic
-, pytest-asyncio
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
-, yarl
+{
+  lib,
+  aiohttp,
+  aresponses,
+  async-timeout,
+  backoff,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  mashumaro,
+  orjson,
+  packaging,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytest-mock,
+  pytestCheckHook,
+  pythonOlder,
+  yarl,
 }:
 
 buildPythonPackage rec {
   pname = "python-bsblan";
-  version = "0.5.7";
-  format = "pyproject";
+  version = "2.2.5";
+  pyproject = true;
 
-  disabled = pythonOlder "3.9";
+  disabled = pythonOlder "3.12";
 
   src = fetchFromGitHub {
     owner = "liudger";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-eavARej+R8SPNuwX6LOGr43SJi1AuZszThJVG00vKhQ=";
+    repo = "python-bsblan";
+    tag = "v${version}";
+    hash = "sha256-kPkKgjze3ohaIaDax3h66JWw5tY+3S0N+lPqXSFFcRY=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  postPatch = ''
+    sed -i "/ruff/d" pyproject.toml
+  '';
 
-  propagatedBuildInputs = [
+  env.PACKAGE_VERSION = version;
+
+  build-system = [ hatchling ];
+
+  pythonRelaxDeps = [ "async-timeout" ];
+
+  dependencies = [
     aiohttp
+    async-timeout
+    backoff
+    mashumaro
+    orjson
     packaging
-    pydantic
     yarl
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     aresponses
     pytest-asyncio
+    pytest-cov-stub
     pytest-mock
     pytestCheckHook
   ];
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'version = "0.0.0"' 'version = "${version}"' \
-      --replace "--cov" ""
-  '';
-
-  pythonImportsCheck = [
-    "bsblan"
-  ];
+  pythonImportsCheck = [ "bsblan" ];
 
   meta = with lib; {
     description = "Module to control and monitor an BSBLan device programmatically";
     homepage = "https://github.com/liudger/python-bsblan";
-    license = with licenses; [ mit ];
+    changelog = "https://github.com/liudger/python-bsblan/releases/tag/${src.tag}";
+    license = licenses.mit;
     maintainers = with maintainers; [ fab ];
   };
 }

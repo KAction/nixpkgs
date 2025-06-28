@@ -1,69 +1,90 @@
-{ lib
-, fetchFromSourcehut
-, buildGoModule
-, buildPythonPackage
-, srht
-, redis
-, alembic
-, pystache
-, pytest
-, factory_boy
-, python
-, unzip
+{
+  lib,
+  fetchFromSourcehut,
+  buildGoModule,
+  buildPythonPackage,
+  srht,
+  alembic,
+  pytest,
+  factory-boy,
+  python,
+  unzip,
+  pythonOlder,
+  setuptools-scm,
 }:
 
-buildPythonPackage rec {
-  pname = "todosrht";
-  version = "0.72.2";
+let
+  version = "0.77.5";
+  gqlgen = import ./fix-gqlgen-trimpath.nix {
+    inherit unzip;
+    gqlgenVersion = "0.17.64";
+  };
 
   src = fetchFromSourcehut {
     owner = "~sircmpwn";
     repo = "todo.sr.ht";
     rev = version;
-    sha256 = "sha256-FLjVO8Y/9s2gFfMXwcY7Rj3WNzPEBYs1AEjiVZFWsT8=";
+    hash = "sha256-P+ypiW3GHoMClBmW5lUNAG6/sydHHnFGyGajmC3WARg=";
   };
 
-  postPatch = ''
-    substituteInPlace Makefile \
-      --replace "all: api" ""
-  '';
+  patches = [ ./patches/core-go-update/todo/patch-deps.patch ];
 
-  todosrht-api = buildGoModule ({
-    inherit src version;
-    pname = "todosrht-api";
-    modRoot = "api";
-    vendorSha256 = "sha256-LB1H4jwnvoEyaaYJ09NI/M6IkgZwRet/fkso6b9EPV0=";
-  } // import ./fix-gqlgen-trimpath.nix { inherit unzip; });
+  todosrht-api = buildGoModule (
+    {
+      inherit src version patches;
+      pname = "todosrht-api";
+      modRoot = "api";
+      vendorHash = "sha256-ny6cyUIgmupeU8SFP8+RSQU7DD3Lk+j+mZQBoXKv63I=";
+    }
+    // gqlgen
+  );
+in
+buildPythonPackage rec {
+  inherit src version patches;
+  pname = "todosrht";
+  pyproject = true;
+
+  disabled = pythonOlder "3.7";
+
+  nativeBuildInputs = [
+    setuptools-scm
+  ];
 
   propagatedBuildInputs = [
     srht
-    redis
     alembic
-    pystache
   ];
 
-  preBuild = ''
-    export PKGVER=${version}
-    export SRHT_PATH=${srht}/${python.sitePackages}/srht
+  env = {
+    PKGVER = version;
+    SRHT_PATH = "${srht}/${python.sitePackages}/srht";
+    PREFIX = placeholder "out";
+  };
+
+  postBuild = ''
+    make SASSC_INCLUDE=-I${srht}/share/sourcehut/scss/ all-share
   '';
 
   postInstall = ''
-    ln -s ${todosrht-api}/bin/api $out/bin/todosrht-api
+    ln -s ${todosrht-api}/bin/api $out/bin/todo.sr.ht-api
+    install -Dm644 schema.sql $out/share/sourcehut/todo.sr.ht-schema.sql
+    make install-share
   '';
 
   # pytest tests fail
-  checkInputs = [
+  nativeCheckInputs = [
     pytest
-    factory_boy
+    factory-boy
   ];
-
-  dontUseSetuptoolsCheck = true;
   pythonImportsCheck = [ "todosrht" ];
 
   meta = with lib; {
     homepage = "https://todo.sr.ht/~sircmpwn/todo.sr.ht";
     description = "Ticket tracking service for the sr.ht network";
     license = licenses.agpl3Only;
-    maintainers = with maintainers; [ eadwu ];
+    maintainers = with maintainers; [
+      eadwu
+      christoph-heiss
+    ];
   };
 }

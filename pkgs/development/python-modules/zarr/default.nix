@@ -1,48 +1,59 @@
-{ lib
-, buildPythonPackage
-, isPy27
-, fetchPypi
-, setuptools-scm
-, asciitree
-, numpy
-, fasteners
-, numcodecs
-, pytest
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pythonOlder,
+
+  # build-system
+  setuptools-scm,
+
+  # dependencies
+  asciitree,
+  numpy,
+  fasteners,
+  numcodecs,
+
+  # tests
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "zarr";
-  version = "2.12.0";
-  disabled = isPy27;
+  version = "2.18.7";
+  pyproject = true;
+
+  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-UVox7kuta7SK4FF4xYiuSaAqNd76Ad2aMpMwaQM2gWU=";
+    hash = "sha256-srj2bxTaxK9msYDSM4gZmBuYH3Dhlsmmbmv6qeWVcvU=";
   };
 
-  nativeBuildInputs = [
+  build-system = [
     setuptools-scm
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     asciitree
     numpy
     fasteners
     numcodecs
+  ] ++ numcodecs.optional-dependencies.msgpack;
+
+  nativeCheckInputs = [
+    pytestCheckHook
   ];
 
-  checkInputs = [
-    pytest
-  ];
+  pythonImportsCheck = [ "zarr" ];
 
-  checkPhase = ''
-    pytest
-  '';
+  # FIXME remove once zarr's reverse dependencies support v3
+  passthru.skipBulkUpdate = true;
 
-  meta = with lib; {
-    description = "An implementation of chunked, compressed, N-dimensional arrays for Python";
+  meta = {
+    description = "Implementation of chunked, compressed, N-dimensional arrays for Python";
     homepage = "https://github.com/zarr-developers/zarr";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/zarr-developers/zarr-python/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ doronbehar ];
   };
 }

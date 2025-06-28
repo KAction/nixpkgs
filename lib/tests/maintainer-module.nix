@@ -1,13 +1,15 @@
 { lib, ... }:
 let
   inherit (lib) types;
-in {
+in
+{
   options = {
     name = lib.mkOption {
       type = types.str;
     };
     email = lib.mkOption {
-      type = types.str;
+      type = types.nullOr types.str;
+      default = null;
     };
     matrix = lib.mkOption {
       type = types.nullOr types.str;
@@ -22,10 +24,12 @@ in {
       default = null;
     };
     keys = lib.mkOption {
-      type = types.listOf (types.submodule {
-        options.fingerprint = lib.mkOption { type = types.str; };
-      });
-      default = [];
+      type = types.listOf (
+        types.submodule {
+          options.fingerprint = lib.mkOption { type = types.str; };
+        }
+      );
+      default = [ ];
     };
   };
 }

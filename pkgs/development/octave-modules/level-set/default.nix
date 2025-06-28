@@ -1,11 +1,11 @@
-{ buildOctavePackage
-, stdenv
-, lib
-, fetchgit
-, automake
-, autoconf
-, autoconf-archive
-, parallel
+{
+  buildOctavePackage,
+  lib,
+  fetchgit,
+  automake,
+  autoconf,
+  autoconf-archive,
+  parallel,
 }:
 
 buildOctavePackage rec {
@@ -23,7 +23,7 @@ buildOctavePackage rec {
   # corrected to have a %s format specifier. However, logic_error() also
   # exists, (a simple regex also matches that), but logic_error() doesn't
   # require a format specifier. So, this regex was born to handle that...
-  patchPhase = ''
+  postPatch = ''
     substituteInPlace build.sh --replace "level-set-0.3.1" "${pname}-${version}" \
                                --replace "\`pwd\`" '/build'
     sed -i -E 's#[^[:graph:]]error \(# error \(\"%s\", #g' src/*.cpp
@@ -45,13 +45,13 @@ buildOctavePackage rec {
     cd -
   '';
 
-  meta = with lib; {
+  meta = {
     name = "Level Set";
-    homepage = "https://octave.sourceforge.io/level-set/index.html";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ KarlJoad ];
+    homepage = "https://gnu-octave.github.io/packages/level-set/";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ KarlJoad ];
     description = "Routines for calculating the time-evolution of the level-set equation and extracting geometric information from the level-set function";
-    # /build/level-set-2019-04-13.tar.gz: Cannot open: No such file or directory
-    broken = stdenv.isDarwin;
+    # Got broke with octave 8.x update, and wasn't updated since 2019
+    broken = true;
   };
 }

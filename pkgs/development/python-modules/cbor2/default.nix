@@ -1,51 +1,60 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
-, pythonOlder
-, setuptools-scm
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pythonOlder,
+
+  withCExtensions ? true,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # tests
+  hypothesis,
+  pytest-cov-stub,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "cbor2";
-  version = "5.4.3";
-  format = "setuptools";
+  version = "5.6.5";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-Yrhjxe5s7UAyr+lI88FITzdVUJldO4SYFFI3/ijlRsI=";
+    hash = "sha256-toKCBnfuHbukX32hGJjScg+S4Gvjas7CkIZ9Xr89fgk=";
   };
 
-  nativeBuildInputs = [
+  build-system = [
+    setuptools
     setuptools-scm
   ];
 
-  checkInputs = [
+  pythonImportsCheck = [ "cbor2" ];
+
+  nativeCheckInputs = [
+    hypothesis
+    pytest-cov-stub
     pytestCheckHook
   ];
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace " --cov" ""
-  '';
+  env = lib.optionalAttrs (!withCExtensions) {
+    CBOR2_BUILD_C_EXTENSION = "0";
+  };
 
-  # https://github.com/agronholm/cbor2/issues/99
-  disabledTests = lib.optionals stdenv.is32bit [
-    "test_huge_truncated_bytes"
-    "test_huge_truncated_string"
-  ];
-
-  pythonImportsCheck = [
-    "cbor2"
-  ];
+  passthru = {
+    inherit withCExtensions;
+  };
 
   meta = with lib; {
+    changelog = "https://github.com/agronholm/cbor2/releases/tag/${version}";
     description = "Python CBOR (de)serializer with extensive tag support";
+    mainProgram = "cbor2";
     homepage = "https://github.com/agronholm/cbor2";
     license = licenses.mit;
-    maintainers = with maintainers; [ taneb ];
+    maintainers = [ ];
   };
 }

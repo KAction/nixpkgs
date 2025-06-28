@@ -1,37 +1,41 @@
-{ lib, buildPythonPackage, fetchPypi, isPy27
-, backports_csv
-, configobj
-, mock
-, pytest
-, tabulate
-, terminaltables
-, wcwidth
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pythonOlder,
+  configobj,
+  mock,
+  pytestCheckHook,
+  pygments,
+  tabulate,
 }:
 
 buildPythonPackage rec {
-  pname = "cli_helpers";
-  version = "2.3.0";
+  pname = "cli-helpers";
+  version = "2.4.0";
+  format = "setuptools";
+
+  disabled = pythonOlder "3.6";
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-5xdNADorWP0+Mac/u8RdWqUT3mLL1C1Df3i5ZYvV+Wc=";
+    pname = "cli_helpers";
+    inherit version;
+    hash = "sha256-VZA7cFohKkc3Mdsg+ib1hlXjVAeLmcsTyZ7AaUAoek0=";
   };
 
   propagatedBuildInputs = [
     configobj
-    terminaltables
     tabulate
-    wcwidth
-  ] ++ (lib.optionals isPy27 [ backports_csv ]);
+  ] ++ tabulate.optional-dependencies.widechars;
 
-  # namespace collision between backport.csv and backports.configparser
-  doCheck = !isPy27;
+  optional-dependencies = {
+    styles = [ pygments ];
+  };
 
-  checkInputs = [ pytest mock ];
-
-  checkPhase = ''
-    py.test
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+    mock
+  ] ++ lib.flatten (builtins.attrValues optional-dependencies);
 
   meta = with lib; {
     description = "Python helpers for common CLI tasks";
@@ -56,7 +60,7 @@ buildPythonPackage rec {
       Read the documentation at http://cli-helpers.rtfd.io
     '';
     homepage = "https://cli-helpers.readthedocs.io/en/stable/";
-    license = licenses.bsd3 ;
+    license = licenses.bsd3;
     maintainers = [ maintainers.kalbasit ];
   };
 }

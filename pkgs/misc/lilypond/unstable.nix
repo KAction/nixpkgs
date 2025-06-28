@@ -1,11 +1,21 @@
-{ lib, fetchurl, guile, lilypond }:
+{
+  lib,
+  fetchzip,
+  lilypond,
+}:
 
-(lilypond.override {
-  inherit guile;
-}).overrideAttrs (oldAttrs: rec {
-  version = "2.23.12";
-  src = fetchurl {
+lilypond.overrideAttrs (oldAttrs: rec {
+  version = "2.25.26";
+  src = fetchzip {
     url = "https://lilypond.org/download/sources/v${lib.versions.majorMinor version}/lilypond-${version}.tar.gz";
-    sha256 = "sha256-SLZ9/Jybltd8+1HANk8pTGHRb7MuZSJJDDY/S4Kwz/k=";
+    hash = "sha256-k76jt8axKu17MXuQp/TtXtQ+KKdIAjSvDStYa44EpR4=";
+  };
+
+  passthru.updateScript = {
+    command = [
+      ./update.sh
+      "unstable"
+    ];
+    supportedFeatures = [ "commit" ];
   };
 })

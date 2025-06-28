@@ -1,33 +1,35 @@
-{ lib
-, buildPythonPackage
-, coloredlogs
-, fetchFromGitHub
-, ghostscript
-, img2pdf
-, importlib-metadata
-, importlib-resources
-, jbig2enc
-, pdfminer-six
-, pikepdf
-, pillow
-, pluggy
-, pngquant
-, pytest-xdist
-, pytestCheckHook
-, pythonOlder
-, reportlab
-, setuptools-scm
-, setuptools-scm-git-archive
-, substituteAll
-, tesseract
-, tqdm
-, unpaper
-, installShellFiles
+{
+  lib,
+  buildPythonPackage,
+  deprecation,
+  fetchFromGitHub,
+  ghostscript_headless,
+  hatch-vcs,
+  hatchling,
+  hypothesis,
+  img2pdf,
+  jbig2enc,
+  packaging,
+  pdfminer-six,
+  pillow-heif,
+  pikepdf,
+  pillow,
+  pluggy,
+  pngquant,
+  pytest-xdist,
+  pytestCheckHook,
+  rich,
+  reportlab,
+  replaceVars,
+  tesseract,
+  unpaper,
+  installShellFiles,
 }:
 
 buildPythonPackage rec {
   pname = "ocrmypdf";
-  version = "13.7.0";
+  version = "16.10.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ocrmypdf";
@@ -39,50 +41,55 @@ buildPythonPackage rec {
     postFetch = ''
       rm "$out/.git_archival.txt"
     '';
-    hash = "sha256-cw2wZMPhWzxRpeM90g9NmuYBYpU13R2iDzs7a8SS/CY=";
+    hash = "sha256-kEPVufS8wpoGi/A4Eh1u9gLVIEdJmoPDmAiY38DYDv4=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
   patches = [
-    (substituteAll {
-      src = ./paths.patch;
-      gs = "${lib.getBin ghostscript}/bin/gs";
-      jbig2 = "${lib.getBin jbig2enc}/bin/jbig2";
-      pngquant = "${lib.getBin pngquant}/bin/pngquant";
-      tesseract = "${lib.getBin tesseract}/bin/tesseract";
-      unpaper = "${lib.getBin unpaper}/bin/unpaper";
+    ./use-pillow-heif.patch
+    (replaceVars ./paths.patch {
+      gs = lib.getExe ghostscript_headless;
+      jbig2 = lib.getExe jbig2enc;
+      pngquant = lib.getExe pngquant;
+      tesseract = lib.getExe tesseract;
+      unpaper = lib.getExe unpaper;
     })
+    # Fix crashing in tests on Python 3.13.4
+    ./multiprocessing.patch
   ];
 
-  nativeBuildInputs = [
-    setuptools-scm-git-archive
-    setuptools-scm
-    installShellFiles
+  build-system = [
+    hatch-vcs
+    hatchling
   ];
 
-  propagatedBuildInputs = [
-    coloredlogs
+  nativeBuildInputs = [ installShellFiles ];
+
+  dependencies = [
+    deprecation
     img2pdf
+    packaging
     pdfminer-six
+    pillow-heif
     pikepdf
     pillow
     pluggy
-    reportlab
-    tqdm
-  ] ++ (lib.optionals (pythonOlder "3.8") [
-    importlib-metadata
-  ]) ++ (lib.optionals (pythonOlder "3.9") [
-    importlib-resources
-  ]);
-
-  checkInputs = [
-    pytest-xdist
-    pytestCheckHook
+    rich
   ];
 
-  pythonImportsCheck = [
-    "ocrmypdf"
+  nativeCheckInputs = [
+    hypothesis
+    pytest-xdist
+    pytestCheckHook
+    reportlab
+  ];
+
+  pythonImportsCheck = [ "ocrmypdf" ];
+
+  disabledTests = [
+    # Broken by Python 3.13.4 change
+    # https://github.com/python/cpython/commit/8e923f36596370aedfdfb12251447bface41317a
+    # https://github.com/ocrmypdf/OCRmyPDF/blob/9f6e5a48ada5df7006a8c68b84e2aeae61943d8b/src/ocrmypdf/_exec/ghostscript.py#L66
+    "TestDuplicateFilter"
   ];
 
   postInstall = ''
@@ -94,8 +101,14 @@ buildPythonPackage rec {
   meta = with lib; {
     homepage = "https://github.com/ocrmypdf/OCRmyPDF";
     description = "Adds an OCR text layer to scanned PDF files, allowing them to be searched";
-    license = with licenses; [ mpl20 mit ];
-    maintainers = with maintainers; [ kiwi dotlambda ];
-    changelog = "https://github.com/ocrmypdf/OCRmyPDF/blob/${src.rev}/docs/release_notes.rst";
+    license = with licenses; [
+      mpl20
+      mit
+    ];
+    maintainers = with maintainers; [
+      dotlambda
+    ];
+    changelog = "https://github.com/ocrmypdf/OCRmyPDF/blob/${src.rev}/docs/release_notes.md";
+    mainProgram = "ocrmypdf";
   };
 }

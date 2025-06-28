@@ -1,58 +1,76 @@
-{ lib
-, mkDerivation
-, fetchFromGitHub
-, cmake
-, extra-cmake-modules
-, qtbase
-, qtscript
-, libXfixes
-, libXtst
-, qtx11extras
-, knotifications
-, qtwayland
-, wayland
-, fetchpatch
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchpatch,
+  cmake,
+  ninja,
+  qtbase,
+  qtsvg,
+  qttools,
+  qtdeclarative,
+  libXfixes,
+  libXtst,
+  qtwayland,
+  wayland,
+  pkg-config,
+  wrapQtAppsHook,
+  kdePackages,
 }:
 
-mkDerivation rec {
+stdenv.mkDerivation (rec {
   pname = "CopyQ";
-  version = "6.3.2";
+  version = "10.0.0";
 
   src = fetchFromGitHub {
     owner = "hluk";
     repo = "CopyQ";
     rev = "v${version}";
-    hash = "sha256-Ge/TD9Llq4YTAqaL9LBEsgNI9qrf2jLDt7q2ZTI9rmE=";
+    hash = "sha256-lH3WJ6cK2eCnmcLVLnYUypABj73UZjGqqDPp92QE+V4=";
   };
 
   nativeBuildInputs = [
     cmake
-    extra-cmake-modules
+    ninja
+    kdePackages.extra-cmake-modules
+    wrapQtAppsHook
+    pkg-config
   ];
 
   buildInputs = [
     qtbase
-    qtscript
+    qtsvg
+    qttools
+    qtdeclarative
     libXfixes
     libXtst
-    qtx11extras
-    knotifications
     qtwayland
     wayland
+    kdePackages.kconfig
+    kdePackages.kstatusnotifieritem
+    kdePackages.knotifications
   ];
 
-  postPatch = ''
-    substituteInPlace shared/com.github.hluk.copyq.desktop.in \
-      --replace copyq "$out/bin/copyq"
-  '';
+  patches = [
+    (fetchpatch {
+      # Can be removed after next release
+      name = "fix-qchar-construction-for-qt-6.9.patch";
+      url = "https://github.com/hluk/CopyQ/commit/f08c0d46a239362c5d3525ef9c3ba943bb00f734.patch";
+      hash = "sha256-dsDIUVJHFFqzZ3tFOcYdwol/tm4viHM0CRs6wYfVKbQ=";
+    })
+  ];
 
-  meta = with lib; {
+  cmakeFlags = [
+    (lib.cmakeBool "WITH_QT6" true)
+  ];
+
+  meta = {
     homepage = "https://hluk.github.io/CopyQ";
     description = "Clipboard Manager with Advanced Features";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ artturin ];
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ artturin ];
     # NOTE: CopyQ supports windows and osx, but I cannot test these.
-    # OSX build requires QT5.
-    platforms = platforms.linux;
+    platforms = lib.platforms.linux;
+    mainProgram = "copyq";
   };
-}
+})

@@ -1,47 +1,52 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, oauthlib
-, pytest-asyncio
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
-, requests
-, requests-oauthlib
-, requests-mock
-, setuptools-scm
-, time-machine
+{
+  lib,
+  aiohttp,
+  anyio,
+  buildPythonPackage,
+  fetchFromGitHub,
+  oauthlib,
+  pytest-asyncio,
+  pytest-mock,
+  pytestCheckHook,
+  pythonOlder,
+  requests,
+  requests-oauthlib,
+  requests-mock,
+  setuptools-scm,
+  time-machine,
 }:
 
 buildPythonPackage rec {
   pname = "pyatmo";
-  version = "7.2.0";
-  format = "pyproject";
+  version = "9.2.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.8";
+  disabled = pythonOlder "3.11";
 
   src = fetchFromGitHub {
     owner = "jabesq";
     repo = "pyatmo";
-    rev = "refs/tags/v${version}";
-    sha256 = "sha256-5RlYTgxWm6BM/V2+1IF/rje5dNirN7PJs0eSiYeOpOQ=";
+    tag = "v${version}";
+    hash = "sha256-vSyZsWhqyQqKFukD6GbtkAJd3QBmRwdmRIYD19DXQW0=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
-  nativeBuildInputs = [
-    setuptools-scm
+  pythonRelaxDeps = [
+    "oauthlib"
+    "requests-oauthlib"
+    "requests"
   ];
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools-scm ];
+
+  dependencies = [
     aiohttp
     oauthlib
     requests
     requests-oauthlib
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    anyio
     pytest-asyncio
     pytest-mock
     pytestCheckHook
@@ -49,20 +54,13 @@ buildPythonPackage rec {
     time-machine
   ];
 
-  postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "oauthlib~=3.1" "oauthlib" \
-      --replace "requests~=2.24" "requests"
-  '';
-
-  pythonImportsCheck = [
-    "pyatmo"
-  ];
+  pythonImportsCheck = [ "pyatmo" ];
 
   meta = with lib; {
     description = "Simple API to access Netatmo weather station data";
     homepage = "https://github.com/jabesq/pyatmo";
+    changelog = "https://github.com/jabesq/pyatmo/blob/${src.tag}/CHANGELOG.md";
     license = licenses.mit;
-    maintainers = with maintainers; [ delroth ];
+    maintainers = [ ];
   };
 }

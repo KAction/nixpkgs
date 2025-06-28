@@ -1,104 +1,148 @@
-{ stdenv, lib, fetchurl, rpmextract, autoPatchelfHook, wrapGAppsHook
-
-# Dynamic libraries
-, alsa-lib, atk, at-spi2-atk, at-spi2-core, cairo, dbus, cups, expat
-, gdk-pixbuf, glib, gtk3, libX11, libXScrnSaver, libXcomposite, libXcursor
-, libXdamage, libXext, libXfixes, libXi, libXrandr, libXrender, libXtst
-, libxcb, libuuid, libxshmfence, nspr, nss, pango, mesa
-
-, systemd
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchYarnDeps,
+  makeDesktopItem,
+  copyDesktopItems,
+  fixup-yarn-lock,
+  makeWrapper,
+  autoSignDarwinBinariesHook,
+  nodejs,
+  yarn,
+  electron,
 }:
 
 stdenv.mkDerivation rec {
   pname = "drawio";
-  version = "20.3.0";
+  version = "26.1.1";
 
-  src = fetchurl {
-    url = "https://github.com/jgraph/drawio-desktop/releases/download/v${version}/drawio-x86_64-${version}.rpm";
-    sha256 = "bfcd363f549ce8dc13ae2287cec5099e4bf1d0d4b6f8deef40a81279f78817e1";
+  src = fetchFromGitHub {
+    owner = "jgraph";
+    repo = "drawio-desktop";
+    rev = "v${version}";
+    fetchSubmodules = true;
+    hash = "sha256-h9APkOtH7s31r89hqqH12zYqkVMrR2ZxMyc+Zwq21+A=";
   };
 
-  nativeBuildInputs = [
-    autoPatchelfHook
-    rpmextract
-    wrapGAppsHook
-  ];
-
-  buildInputs = [
-    alsa-lib
-    atk
-    at-spi2-atk
-    at-spi2-core
-    cairo
-    cups
-    dbus
-    expat
-    gdk-pixbuf
-    glib
-    gtk3
-    libX11
-    libXScrnSaver
-    libXcomposite
-    libXcursor
-    libXdamage
-    libXext
-    libXfixes
-    libXi
-    libXrandr
-    libXrender
-    libxshmfence
-    libXtst
-    libxcb
-    libuuid
-    mesa # for libgbm
-    nspr
-    nss
-    pango
-    systemd
-  ];
-
-  runtimeDependencies = [
-    (lib.getLib systemd)
-  ];
-
-  dontBuild = true;
-  dontConfigure = true;
-
-  unpackPhase = "rpmextract ${src}";
-
-  installPhase = ''
-    mkdir -p $out/share
-    cp -r opt/drawio $out/share/
-
-    # Application icon
-    mkdir -p $out/share/icons/hicolor
-    cp -r usr/share/icons/hicolor/* $out/share/icons/hicolor/
-
-    # XDG desktop item
-    cp -r usr/share/applications $out/share/applications
-
-    # Symlink wrapper
-    mkdir -p $out/bin
-    ln -s $out/share/drawio/drawio $out/bin/drawio
-
-    # Update binary path
-    substituteInPlace $out/share/applications/drawio.desktop \
-      --replace /opt/drawio/drawio $out/bin/drawio
+  # `@electron/fuses` tries to run `codesign` and fails. Disable and use autoSignDarwinBinariesHook instead
+  postPatch = ''
+    sed -i -e 's/resetAdHocDarwinSignature:.*/resetAdHocDarwinSignature: false,/' build/fuses.cjs
   '';
 
-  doInstallCheckPhase = true;
+  offlineCache = fetchYarnDeps {
+    yarnLock = src + "/yarn.lock";
+    hash = "sha256-kmA0z/vmWH+yD2OQ6VVSE0yPxInTAGjjG+QfcoZHlQ0=";
+  };
 
-  installCheckPhase = ''
-    $out/bin/drawio --help > /dev/null
+  nativeBuildInputs =
+    [
+      fixup-yarn-lock
+      makeWrapper
+      nodejs
+      yarn
+    ]
+    ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [
+      copyDesktopItems
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      autoSignDarwinBinariesHook
+    ];
+
+  ELECTRON_SKIP_BINARY_DOWNLOAD = true;
+
+  configurePhase = ''
+    runHook preConfigure
+
+    export HOME="$TMPDIR"
+    yarn config --offline set yarn-offline-mirror "$offlineCache"
+    fixup-yarn-lock yarn.lock
+    # Ensure that the node_modules folder is created by yarn install.
+    # See https://github.com/yarnpkg/yarn/issues/5500#issuecomment-1221456246
+    echo "nodeLinker: node-modules" > .yarnrc.yml
+    yarn install --offline --frozen-lockfile --ignore-platform --ignore-scripts --no-progress --non-interactive
+    patchShebangs node_modules/
+
+    runHook postConfigure
   '';
 
-  meta = with lib; {
-    description = "A desktop application for creating diagrams";
+  buildPhase =
+    ''
+      runHook preBuild
+
+    ''
+    + lib.optionalString stdenv.hostPlatform.isDarwin ''
+      cp -R ${electron.dist}/Electron.app Electron.app
+      chmod -R u+w Electron.app
+      export CSC_IDENTITY_AUTO_DISCOVERY=false
+      sed -i "/afterSign/d" electron-builder-linux-mac.json
+    ''
+    + ''
+      yarn --offline run electron-builder --dir \
+        ${lib.optionalString stdenv.hostPlatform.isDarwin "--config electron-builder-linux-mac.json"} \
+        -c.electronDist=${if stdenv.hostPlatform.isDarwin then "." else electron.dist} \
+        -c.electronVersion=${electron.version}
+
+      runHook postBuild
+    '';
+
+  installPhase =
+    ''
+      runHook preInstall
+
+    ''
+    + lib.optionalString stdenv.hostPlatform.isDarwin ''
+      mkdir -p $out/{Applications,bin}
+      mv dist/mac*/draw.io.app $out/Applications
+
+      # Symlinking `draw.io` doesn't work; seems to look for files in the wrong place.
+      makeWrapper $out/Applications/draw.io.app/Contents/MacOS/draw.io $out/bin/drawio
+    ''
+    + lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
+      mkdir -p "$out/share/lib/drawio"
+      cp -r dist/*-unpacked/{locales,resources{,.pak}} "$out/share/lib/drawio"
+
+      install -Dm644 build/icon.svg "$out/share/icons/hicolor/scalable/apps/drawio.svg"
+
+      makeWrapper '${electron}/bin/electron' "$out/bin/drawio" \
+        --add-flags "$out/share/lib/drawio/resources/app.asar" \
+        --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}" \
+        --inherit-argv0
+    ''
+    + ''
+
+      runHook postInstall
+    '';
+
+  desktopItems = [
+    (makeDesktopItem {
+      name = "drawio";
+      exec = "drawio %U";
+      icon = "drawio";
+      desktopName = "drawio";
+      comment = "draw.io desktop";
+      mimeTypes = [
+        "application/vnd.jgraph.mxfile"
+        "application/vnd.visio"
+      ];
+      categories = [ "Graphics" ];
+      startupWMClass = "draw.io";
+    })
+  ];
+
+  meta = {
+    description = "Desktop version of draw.io for creating diagrams";
     homepage = "https://about.draw.io/";
-    sourceProvenance = with sourceTypes; [ binaryNativeCode ];
-    license = licenses.asl20;
+    license = with lib.licenses; [
+      # The LICENSE file of https://github.com/jgraph/drawio claims Apache License Version 2.0 again since https://github.com/jgraph/drawio/commit/5b2e73471e4fea83d681f0cec5d1aaf7c3884996
+      asl20
+      # But the README says:
+      # The minified code authored by us in this repo is licensed under an Apache v2 license, but the sources to build those files are not in this repo. This is not an open source project.
+      unfreeRedistributable
+    ];
     changelog = "https://github.com/jgraph/drawio-desktop/releases/tag/v${version}";
-    maintainers = with maintainers; [ darkonion0 ];
-    platforms = [ "x86_64-linux" ];
+    maintainers = with lib.maintainers; [ darkonion0 ];
+    platforms = lib.platforms.darwin ++ lib.platforms.linux;
+    mainProgram = "drawio";
   };
 }

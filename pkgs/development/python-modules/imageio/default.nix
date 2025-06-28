@@ -1,70 +1,101 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, substituteAll
-, imageio-ffmpeg
-, numpy
-, pillow
-, psutil
-, pytestCheckHook
-, tifffile
-, fsspec
-, libGL
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  isPyPy,
+  replaceVars,
+
+  # build-system
+  setuptools,
+
+  # native dependencies
+  libGL,
+
+  # dependencies
+  numpy,
+  pillow,
+
+  # optional-dependencies
+  astropy,
+  av,
+  imageio-ffmpeg,
+  pillow-heif,
+  psutil,
+  tifffile,
+
+  # tests
+  pytestCheckHook,
+  fsspec,
 }:
 
 buildPythonPackage rec {
   pname = "imageio";
-  version = "2.22.1";
-  disabled = pythonOlder "3.7";
+  version = "2.37.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    sha256 = "sha256-Rl7DX5GdU4kG0wI7Yczsdm2OdXX+Vfy9dmns5Vr7l8o=";
-    inherit pname version;
+  src = fetchFromGitHub {
+    owner = "imageio";
+    repo = "imageio";
+    tag = "v${version}";
+    hash = "sha256-/nxJxZrTYX7F2grafIWwx9SyfR47ZXyaUwPHMEOdKkI=";
   };
 
-  patches = [
-    (substituteAll {
-      src = ./libgl-path.patch;
+  patches = lib.optionals (!stdenv.hostPlatform.isDarwin) [
+    (replaceVars ./libgl-path.patch {
       libgl = "${libGL.out}/lib/libGL${stdenv.hostPlatform.extensions.sharedLibrary}";
     })
   ];
 
-  propagatedBuildInputs = [
-    imageio-ffmpeg
+  build-system = [ setuptools ];
+
+  dependencies = [
     numpy
     pillow
   ];
 
-  checkInputs = [
-    fsspec
-    psutil
-    pytestCheckHook
-    tifffile
-  ];
+  optional-dependencies = {
+    bsdf = [ ];
+    dicom = [ ];
+    feisem = [ ];
+    ffmpeg = [
+      imageio-ffmpeg
+      psutil
+    ];
+    fits = lib.optionals (!isPyPy) [ astropy ];
+    freeimage = [ ];
+    lytro = [ ];
+    numpy = [ ];
+    pillow = [ ];
+    simpleitk = [ ];
+    spe = [ ];
+    swf = [ ];
+    tifffile = [ tifffile ];
+    pyav = [ av ];
+    heif = [ pillow-heif ];
+  };
 
-  pytestFlagsArray = [
-    "-m 'not needs_internet'"
-  ];
+  nativeCheckInputs =
+    [
+      fsspec
+      psutil
+      pytestCheckHook
+    ]
+    ++ fsspec.optional-dependencies.github
+    ++ lib.flatten (builtins.attrValues optional-dependencies);
+
+  pytestFlagsArray = [ "-m 'not needs_internet'" ];
 
   preCheck = ''
-    export IMAGEIO_USERDIR="$TMP"
-    export HOME=$TMPDIR
+    export IMAGEIO_USERDIR=$(mktemp -d)
+    export HOME=$(mktemp -d)
   '';
 
-  disabledTestPaths = [
-    # tries to fetch fixtures over the network
-    "tests/test_freeimage.py"
-    "tests/test_pillow.py"
-    "tests/test_spe.py"
-    "tests/test_swf.py"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats";
-    homepage = "http://imageio.github.io/";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ Luflosi ];
+    homepage = "https://imageio.readthedocs.io";
+    changelog = "https://github.com/imageio/imageio/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ Luflosi ];
   };
 }

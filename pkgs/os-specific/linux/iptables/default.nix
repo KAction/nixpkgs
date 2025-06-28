@@ -1,45 +1,51 @@
-{ lib, stdenv, fetchurl, pkg-config, pruneLibtoolFiles, flex, bison
-, libmnl, libnetfilter_conntrack, libnfnetlink, libnftnl, libpcap
-, nftablesCompat ? true
-, fetchpatch
+{
+  lib,
+  stdenv,
+  fetchurl,
+  autoreconfHook,
+  pkg-config,
+  pruneLibtoolFiles,
+  flex,
+  bison,
+  libmnl,
+  libnetfilter_conntrack,
+  libnfnetlink,
+  libnftnl,
+  libpcap,
+  nftablesCompat ? true,
+  gitUpdater,
 }:
 
 stdenv.mkDerivation rec {
-  version = "1.8.8";
+  version = "1.8.11";
   pname = "iptables";
 
   src = fetchurl {
-    url = "https://www.netfilter.org/projects/${pname}/files/${pname}-${version}.tar.bz2";
-    sha256 = "sha256-ccdYidxxBnZjFVPrFRHaAXe7qvG1USZbkS0jbD9RhZ8=";
+    url = "https://www.netfilter.org/projects/${pname}/files/${pname}-${version}.tar.xz";
+    sha256 = "2HMD1V74ySvK1N0/l4sm0nIBNkKwKUJXdfW60QCf57I=";
   };
 
-  patches = [
-    # xshared: Fix build for -Werror=format-security
-    (fetchpatch {
-      url = "https://git.netfilter.org/iptables/patch/?id=b72eb12ea5a61df0655ad99d5048994e916be83a";
-      sha256 = "sha256-pnamqOagwNWoiwlxPnKCqSc2N7MP/eZlT7JiE09c8OE=";
-    })
-    # treewide: use uint* instead of u_int*
-    (fetchpatch {
-      url = "https://git.netfilter.org/iptables/patch/?id=f319389525b066b7dc6d389c88f16a0df3b8f189";
-      sha256 = "sha256-rOxCEWZoI8Ac5fQDp286YHAwvreUAoDVAbomboKrGyM=";
-    })
-    # fix Musl build
-    (fetchpatch {
-      url = "https://git.netfilter.org/iptables/patch/?id=0e7cf0ad306cdf95dc3c28d15a254532206a888e";
-      sha256 = "18mnvqfxzd7ifq3zjb4vyifcyadpxdi8iqcj8wsjgw23n49lgrbj";
-    })
+  outputs = [
+    "out"
+    "dev"
+    "man"
   ];
 
-  outputs = [ "out" "dev" "man" ];
+  nativeBuildInputs = [
+    autoreconfHook
+    pkg-config
+    pruneLibtoolFiles
+    flex
+    bison
+  ];
 
-  nativeBuildInputs = [ pkg-config pruneLibtoolFiles flex bison ];
-
-  buildInputs = [ libmnl libnetfilter_conntrack libnfnetlink libnftnl libpcap ];
-
-  preConfigure = ''
-    export NIX_LDFLAGS="$NIX_LDFLAGS -lmnl -lnftnl"
-  '';
+  buildInputs = [
+    libmnl
+    libnetfilter_conntrack
+    libnfnetlink
+    libnftnl
+    libpcap
+  ];
 
   configureFlags = [
     "--enable-bpf-compiler"
@@ -48,6 +54,8 @@ stdenv.mkDerivation rec {
     "--enable-nfsynproxy"
     "--enable-shared"
   ] ++ lib.optional (!nftablesCompat) "--disable-nftables";
+
+  enableParallelBuilding = true;
 
   postInstall = lib.optionalString nftablesCompat ''
     rm $out/sbin/{iptables,iptables-restore,iptables-save,ip6tables,ip6tables-restore,ip6tables-save}
@@ -59,12 +67,20 @@ stdenv.mkDerivation rec {
     ln -sv xtables-nft-multi $out/bin/ip6tables-save
   '';
 
+  passthru = {
+    updateScript = gitUpdater {
+      url = "https://git.netfilter.org/iptables";
+      rev-prefix = "v";
+    };
+  };
+
   meta = with lib; {
-    description = "A program to configure the Linux IP packet filtering ruleset";
+    description = "Program to configure the Linux IP packet filtering ruleset";
     homepage = "https://www.netfilter.org/projects/iptables/index.html";
     platforms = platforms.linux;
+    mainProgram = "iptables";
     maintainers = with maintainers; [ fpletz ];
-    license = licenses.gpl2;
+    license = licenses.gpl2Plus;
     downloadPage = "https://www.netfilter.org/projects/iptables/files/";
   };
 }

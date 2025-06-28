@@ -1,76 +1,89 @@
-{ stdenv
-, lib
-, billiard
-, boto3
-, buildPythonPackage
-, case
-, click
-, click-didyoumean
-, click-plugins
-, click-repl
-, dnspython
-, fetchPypi
-, fetchpatch
-, kombu
-, moto
-, pymongo
-, pytest-celery
-, pytest-subtests
-, pytest-timeout
-, pytestCheckHook
-, pythonOlder
-, pytz
-, vine
-, nixosTests
+{
+  lib,
+  stdenv,
+  azure-identity,
+  azure-storage-blob,
+  billiard,
+  buildPythonPackage,
+  click-didyoumean,
+  click-plugins,
+  click-repl,
+  click,
+  fetchPypi,
+  gevent,
+  google-cloud-firestore,
+  google-cloud-storage,
+  kombu,
+  moto,
+  msgpack,
+  nixosTests,
+  pymongo,
+  redis,
+  pydantic,
+  pytest-celery,
+  pytest-click,
+  pytest-subtests,
+  pytest-timeout,
+  pytest-xdist,
+  pytestCheckHook,
+  python-dateutil,
+  pythonOlder,
+  pyyaml,
+  setuptools,
+  vine,
 }:
 
 buildPythonPackage rec {
   pname = "celery";
-  version = "5.2.7";
-  format = "setuptools";
+  version = "5.5.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-+vvYKTTTD4oAT4Ho96Bi4xQToj1ES+juMyZVORWVjG0=";
+    hash = "sha256-TWkw81T50pKVQl16NyYSRcdKMoB8Rddkvtwoav0Ock4=";
   };
 
-  patches = [
-    (fetchpatch {
-      name = "billiard-4.0-comat.patch";
-      url = "https://github.com/celery/celery/commit/b260860988469ef8ad74f2d4225839c2fa91d590.patch";
-      hash = "sha256-NWB/UB0fE7A/vgMRYz6QGmqLmyN1ninAMyL4V2tpzto=";
-    })
-  ];
+  build-system = [ setuptools ];
 
-  postPatch = ''
-    substituteInPlace requirements/default.txt \
-      --replace "billiard>=3.6.4.0,<4.0" "billiard>=3.6.4.0"
-  '';
-
-  propagatedBuildInputs = [
+  dependencies = [
     billiard
     click
     click-didyoumean
     click-plugins
     click-repl
     kombu
-    pytz
+    python-dateutil
     vine
   ];
 
-  checkInputs = [
-    boto3
-    case
-    dnspython
+  optional-dependencies = {
+    azureblockblob = [
+      azure-identity
+      azure-storage-blob
+    ];
+    gevent = [ gevent ];
+    gcs = [
+      google-cloud-firestore
+      google-cloud-storage
+    ];
+    mongodb = [ pymongo ];
+    msgpack = [ msgpack ];
+    yaml = [ pyyaml ];
+    redis = [ redis ];
+    pydantic = [ pydantic ];
+  };
+
+  nativeCheckInputs = [
     moto
-    pymongo
     pytest-celery
+    pytest-click
     pytest-subtests
     pytest-timeout
+    pytest-xdist
     pytestCheckHook
-  ];
+  ] ++ lib.flatten (builtins.attrValues optional-dependencies);
 
   disabledTestPaths = [
     # test_eventlet touches network
@@ -78,21 +91,32 @@ buildPythonPackage rec {
     # test_multi tries to create directories under /var
     "t/unit/bin/test_multi.py"
     "t/unit/apps/test_multi.py"
+    # Test requires moto<5
+    "t/unit/backends/test_s3.py"
   ];
 
-  disabledTests = [
-    "msgpack"
-    "test_check_privileges_no_fchown"
-  ] ++ lib.optionals stdenv.isDarwin [
-    # too many open files on hydra
-    "test_cleanup"
-    "test_with_autoscaler_file_descriptor_safety"
-    "test_with_file_descriptor_safety"
-  ];
+  disabledTests =
+    [
+      "msgpack"
+      "test_check_privileges_no_fchown"
+      # seems to only fail on higher core counts
+      # AssertionError: assert 3 == 0
+      "test_setup_security_disabled_serializers"
+      # Test is flaky, especially on hydra
+      "test_ready"
+      # Tests fail with pytest-xdist
+      "test_itercapture_limit"
+      "test_stamping_headers_in_options"
+      "test_stamping_with_replace"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      # Too many open files on hydra
+      "test_cleanup"
+      "test_with_autoscaler_file_descriptor_safety"
+      "test_with_file_descriptor_safety"
+    ];
 
-  pythonImportsCheck = [
-    "celery"
-  ];
+  pythonImportsCheck = [ "celery" ];
 
   passthru.tests = {
     inherit (nixosTests) sourcehut;
@@ -101,7 +125,9 @@ buildPythonPackage rec {
   meta = with lib; {
     description = "Distributed task queue";
     homepage = "https://github.com/celery/celery/";
+    changelog = "https://github.com/celery/celery/releases/tag/v${version}";
     license = licenses.bsd3;
     maintainers = with maintainers; [ fab ];
+    mainProgram = "celery";
   };
 }

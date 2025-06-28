@@ -1,38 +1,46 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, djangorestframework
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  djangorestframework,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "djangorestframework-dataclasses";
-  version = "1.1.1";
+  version = "1.4.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "oxan";
     repo = "djangorestframework-dataclasses";
-    rev = "v${version}";
-    sha256 = "sha256-wXgA/4Dik6yG0nKl9GbrHgb2lhrPsgS23+cEyaD9MRY=";
+    tag = "v${version}";
+    hash = "sha256-nUkR5xTyeBv7ziJ6Mej9TKvMOa5/k+ELBqt4BVam/wk=";
   };
+
+  build-system = [ setuptools ];
 
   postPatch = ''
     patchShebangs manage.py
   '';
 
-  propagatedBuildInputs = [
-    djangorestframework
-  ];
+  dependencies = [ djangorestframework ];
 
   checkPhase = ''
-   ./manage.py test
+    runHook preCheck
+
+    ./manage.py test
+
+    runHook postCheck
   '';
 
   pythonImportsCheck = [ "rest_framework_dataclasses" ];
 
-  meta = with lib; {
-    description = " Dataclasses serializer for Django REST framework";
+  meta = {
+    changelog = "https://github.com/oxan/djangorestframework-dataclasses/blob/${src.tag}/CHANGELOG.rst";
+    description = "Dataclasses serializer for Django REST framework";
     homepage = "https://github.com/oxan/djangorestframework-dataclasses";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

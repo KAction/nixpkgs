@@ -1,51 +1,59 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, wrapQtAppsHook
-, makeDesktopItem
-, copyDesktopItems
-, cmake
-, pkg-config
-, catch2_3
-, qtbase
-, qtsvg
-, qttools
-, qwt
-, qscintilla
-, kissfftFloat
-, crossguid
-, reproc
-, platform-folders
-, ruby
-, erlang
-, elixir
-, beamPackages
-, alsa-lib
-, rtmidi
-, boost
-, aubio
-, jack2
-, supercollider-with-sc3-plugins
-, parallel
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  wrapQtAppsHook,
+  makeDesktopItem,
+  copyDesktopItems,
+  cmake,
+  pkg-config,
+  catch2_3,
+  qtbase,
+  qtsvg,
+  qttools,
+  qwt,
+  qscintilla,
+  kissfftFloat,
+  crossguid,
+  reproc,
+  platform-folders,
+  ruby_3_2,
+  erlang,
+  elixir,
+  beamPackages,
+  alsa-lib,
+  rtmidi,
+  boost,
+  aubio,
+  jack2,
+  jack-example-tools,
+  pipewire,
+  supercollider-with-sc3-plugins,
+  parallel,
 
-, withTauWidget ? false
-, qtwebengine
+  withTauWidget ? false,
+  qtwebengine,
 
-, withImGui ? false
-, gl3w
-, SDL2
-, fmt
+  withImGui ? false,
+  gl3w,
+  SDL2,
+  fmt,
 }:
+
+# Sonic Pi fails to build with Ruby 3.3.
+let
+  ruby = ruby_3_2;
+in
 
 stdenv.mkDerivation rec {
   pname = "sonic-pi";
-  version = "4.3.0";
+  version = "4.5.1";
 
   src = fetchFromGitHub {
     owner = "sonic-pi-net";
     repo = pname;
     rev = "v${version}";
-    hash = "sha256-R+nmjIIDLoGOoCkDvJqejE1DaweHSAV8M2RvdwN5qAQ=";
+    hash = "sha256-JMextQY0jLShWmqRQoVAbqIzDhA1mOzI7vfsG7+jjX0=";
   };
 
   mixFodDeps = beamPackages.fetchMixDeps {
@@ -53,7 +61,7 @@ stdenv.mkDerivation rec {
     pname = "mix-deps-${pname}";
     mixEnv = "test";
     src = "${src}/app/server/beam/tau";
-    sha256 = "sha256-MvwUyVTS23vQKLpGxz46tEVCs/OyYk5dDaBlv+kYg1M=";
+    hash = "sha256-7wqFI3f0CRVrXK2IUguqHNANwKMmTak/Xh9nr624TXc=";
   };
 
   strictDeps = true;
@@ -63,38 +71,41 @@ stdenv.mkDerivation rec {
     copyDesktopItems
     cmake
     pkg-config
+    ruby
     erlang
     elixir
     beamPackages.hex
   ];
 
-  buildInputs = [
-    qtbase
-    qtsvg
-    qttools
-    qwt
-    qscintilla
-    kissfftFloat
-    catch2_3
-    crossguid
-    reproc
-    platform-folders
-    ruby
-    alsa-lib
-    rtmidi
-    boost
-    aubio
-  ] ++ lib.optionals withTauWidget [
-    qtwebengine
-  ] ++ lib.optionals withImGui [
-    gl3w
-    SDL2
-    fmt
-  ];
+  buildInputs =
+    [
+      qtbase
+      qtsvg
+      qttools
+      qwt
+      qscintilla
+      kissfftFloat
+      catch2_3
+      crossguid
+      reproc
+      platform-folders
+      ruby
+      alsa-lib
+      rtmidi
+      boost
+      aubio
+    ]
+    ++ lib.optionals withTauWidget [
+      qtwebengine
+    ]
+    ++ lib.optionals withImGui [
+      gl3w
+      SDL2
+      fmt
+    ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     parallel
-    ruby
     supercollider-with-sc3-plugins
     jack2
   ];
@@ -103,6 +114,7 @@ stdenv.mkDerivation rec {
     "-DUSE_SYSTEM_LIBS=ON"
     "-DBUILD_IMGUI_INTERFACE=${if withImGui then "ON" else "OFF"}"
     "-DWITH_QT_GUI_WEBENGINE=${if withTauWidget then "ON" else "OFF"}"
+    "-DAPP_INSTALL_ROOT=${placeholder "out"}/app"
   ];
 
   doCheck = true;
@@ -134,9 +146,6 @@ stdenv.mkDerivation rec {
 
     # Prebuild Ruby vendored dependencies and Qt docs
     ./linux-prebuild.sh -o
-
-    # Append CMake flag depending on the value of $out
-    cmakeFlags+=" -DAPP_INSTALL_ROOT=$out/app"
   '';
 
   postBuild = ''
@@ -187,14 +196,30 @@ stdenv.mkDerivation rec {
   preFixup = ''
     # Wrap Qt GUI (distributed binary)
     wrapQtApp $out/bin/sonic-pi \
-      --prefix PATH : ${lib.makeBinPath [ ruby supercollider-with-sc3-plugins jack2 ]}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          ruby
+          supercollider-with-sc3-plugins
+          jack2
+          jack-example-tools
+          pipewire.jack
+        ]
+      }
 
     # If ImGui was built
     if [ -e $out/app/build/gui/imgui/sonic-pi-imgui ]; then
       # Wrap ImGui into bin
       makeWrapper $out/app/build/gui/imgui/sonic-pi-imgui $out/bin/sonic-pi-imgui \
         --inherit-argv0 \
-        --prefix PATH : ${lib.makeBinPath [ ruby supercollider-with-sc3-plugins jack2 ]}
+        --prefix PATH : ${
+          lib.makeBinPath [
+            ruby
+            supercollider-with-sc3-plugins
+            jack2
+            jack-example-tools
+            pipewire.jack
+          ]
+        }
     fi
 
     # Remove runtime Erlang references
@@ -203,7 +228,10 @@ stdenv.mkDerivation rec {
     done
   '';
 
-  stripDebugList = [ "app" "bin" ];
+  stripDebugList = [
+    "app"
+    "bin"
+  ];
 
   desktopItems = [
     (makeDesktopItem {
@@ -212,15 +240,26 @@ stdenv.mkDerivation rec {
       icon = "sonic-pi";
       desktopName = "Sonic Pi";
       comment = meta.description;
-      categories = [ "Audio" "AudioVideo" "Education" ];
+      categories = [
+        "Audio"
+        "AudioVideo"
+        "Education"
+      ];
     })
   ];
+
+  passthru.updateScript = ./update.sh;
 
   meta = with lib; {
     homepage = "https://sonic-pi.net/";
     description = "Free live coding synth for everyone originally designed to support computing and music lessons within schools";
     license = licenses.mit;
-    maintainers = with maintainers; [ Phlogistique kamilchm c0deaddict sohalt lilyinstarlight ];
+    maintainers = with maintainers; [
+      Phlogistique
+      kamilchm
+      c0deaddict
+      sohalt
+    ];
     platforms = platforms.linux;
   };
 }

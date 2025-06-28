@@ -1,23 +1,46 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
-, google-api-core
-, mock
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  google-api-core,
+  google-auth,
+  grpcio,
+  grpcio-status,
+  mock,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "google-cloud-core";
-  version = "2.3.2";
+  version = "2.4.3";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-uVKe5wR/2NS/SiGC3mGRVCQN8X++YOrTmQeMGuFSr5o=";
+  src = fetchFromGitHub {
+    owner = "googleapis";
+    repo = "python-cloud-core";
+    tag = "v${version}";
+    hash = "sha256-hYOtpHIHJVITrei6/0m1YteTog2WBWCUFCl/Zr6BLlc=";
   };
 
-  propagatedBuildInputs = [ google-api-core ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ mock pytestCheckHook ];
+  dependencies = [
+    google-auth
+    google-api-core
+  ];
+
+  optional-dependencies = {
+    grpc = [
+      grpcio
+      grpcio-status
+    ];
+  };
+
+  nativeCheckInputs = [
+    mock
+    pytestCheckHook
+  ] ++ optional-dependencies.grpc;
 
   # prevent google directory from shadowing google imports
   preCheck = ''
@@ -29,7 +52,8 @@ buildPythonPackage rec {
   meta = with lib; {
     description = "API Client library for Google Cloud: Core Helpers";
     homepage = "https://github.com/googleapis/python-cloud-core";
+    changelog = "https://github.com/googleapis/python-cloud-core/blob/v${version}/CHANGELOG.md";
     license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    maintainers = [ ];
   };
 }

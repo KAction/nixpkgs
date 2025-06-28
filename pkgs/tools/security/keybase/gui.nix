@@ -1,24 +1,50 @@
-{ stdenv, lib, fetchurl, alsa-lib, atk, cairo, cups, udev, libdrm, mesa
-, dbus, expat, fontconfig, freetype, gdk-pixbuf, glib, gtk3, libappindicator-gtk3
-, libnotify, nspr, nss, pango, systemd, xorg, autoPatchelfHook, wrapGAppsHook
-, runtimeShell, gsettings-desktop-schemas }:
+{
+  stdenv,
+  lib,
+  fetchurl,
+  alsa-lib,
+  atk,
+  cairo,
+  cups,
+  udev,
+  libdrm,
+  libgbm,
+  dbus,
+  expat,
+  fontconfig,
+  freetype,
+  gdk-pixbuf,
+  glib,
+  gtk3,
+  libappindicator-gtk3,
+  libnotify,
+  nspr,
+  nss,
+  pango,
+  systemd,
+  xorg,
+  autoPatchelfHook,
+  wrapGAppsHook3,
+  runtimeShell,
+  gsettings-desktop-schemas,
+}:
 
 let
-  versionSuffix = "20220610191041.a459abf326";
+  versionSuffix = "20250428154451.19f9cfeddb";
 in
 
 stdenv.mkDerivation rec {
   pname = "keybase-gui";
-  version = "6.0.2"; # Find latest version from https://prerelease.keybase.io/deb/dists/stable/main/binary-amd64/Packages
+  version = "6.5.1"; # Find latest version and versionSuffix from https://prerelease.keybase.io/deb/dists/stable/main/binary-amd64/Packages
 
   src = fetchurl {
     url = "https://s3.amazonaws.com/prerelease.keybase.io/linux_binaries/deb/keybase_${version + "-" + versionSuffix}_amd64.deb";
-    hash = "sha256-FMhbMSuJHq5d5E0dTVAk02y85UXmhtKZYk4qcbnhRxI=";
+    hash = "sha256-PCKi1lavGwLbCoMTMG4h6PJTIzwRAu542eYqDDKzU4Y=";
   };
 
   nativeBuildInputs = [
     autoPatchelfHook
-    wrapGAppsHook
+    wrapGAppsHook3
   ];
 
   buildInputs = [
@@ -53,7 +79,7 @@ stdenv.mkDerivation rec {
     xorg.libXtst
     xorg.libxcb
     libdrm
-    mesa.out
+    libgbm
   ];
 
   runtimeDependencies = [
@@ -98,7 +124,7 @@ stdenv.mkDerivation rec {
       checkFailed
     fi
 
-    exec $out/share/keybase/Keybase "\$@"
+    exec $out/share/keybase/Keybase \''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}} "\$@"
     EOF
     chmod +x $out/bin/keybase-gui
 
@@ -108,9 +134,18 @@ stdenv.mkDerivation rec {
 
   meta = with lib; {
     homepage = "https://www.keybase.io/";
-    description = "The Keybase official GUI";
+    description = "Keybase official GUI";
+    mainProgram = "keybase-gui";
     platforms = [ "x86_64-linux" ];
-    maintainers = with maintainers; [ avaq rvolosatovs puffnfresh np Br1ght0ne shofius ];
+    maintainers = with maintainers; [
+      avaq
+      rvolosatovs
+      puffnfresh
+      np
+      Br1ght0ne
+      shofius
+      ryand56
+    ];
     sourceProvenance = with sourceTypes; [ binaryNativeCode ];
     license = licenses.bsd3;
   };

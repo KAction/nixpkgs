@@ -1,24 +1,27 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "types-setuptools";
-  version = "65.5.0.2";
-  format = "setuptools";
+  version = "78.1.0.20250329";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-mEfebXCH+x3UqIwqIVQ9G4amF5w2dE8IGXQwP+LzD1A=";
+    pname = "types_setuptools";
+    inherit version;
+    hash = "sha256-MeYpUMOLjMHFEUsHdQTjZCaGCgZCh8rBG5ZmqzpIMjQ=";
   };
+
+  nativeBuildInputs = [ setuptools ];
 
   # Module doesn't have tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "setuptools-stubs"
-  ];
+  pythonImportsCheck = [ "setuptools-stubs" ];
 
   meta = with lib; {
     description = "Typing stubs for setuptools";

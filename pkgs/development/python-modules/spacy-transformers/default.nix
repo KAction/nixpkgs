@@ -1,56 +1,64 @@
-{ lib
-, callPackage
-, fetchPypi
-, buildPythonPackage
-, dataclasses
-, torch
-, pythonOlder
-, spacy
-, spacy-alignments
-, srsly
-, transformers
+{
+  lib,
+  callPackage,
+  buildPythonPackage,
+  pythonOlder,
+  fetchFromGitHub,
+  setuptools,
+  cython,
+  spacy,
+  numpy,
+  transformers,
+  torch,
+  srsly,
+  spacy-alignments,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "spacy-transformers";
-  version = "1.1.8";
-  format = "setuptools";
+  version = "1.3.8";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  disabled = pythonOlder "3.9";
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-e7YuBEq2yggW5G2pJ0Rjw9z3c1jqgRKCifYSfnzblVs=";
+  src = fetchFromGitHub {
+    owner = "explosion";
+    repo = "spacy-transformers";
+    tag = "release-v${version}";
+    hash = "sha256-VhFF+cbZL+sod1t4fqyVDEDdGHXqVJsOGUj81EErdMA=";
   };
 
-  propagatedBuildInputs = [
-    torch
-    spacy
-    spacy-alignments
-    srsly
-    transformers
-  ] ++ lib.optionals (pythonOlder "3.7") [
-    dataclasses
+  build-system = [
+    setuptools
+    cython
   ];
 
-  postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "transformers>=3.4.0,<4.22.0" "transformers>=3.4.0 # ,<4.22.0"
-  '';
+  dependencies = [
+    spacy
+    numpy
+    transformers
+    torch
+    srsly
+    spacy-alignments
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonRelaxDeps = [ "transformers" ];
 
   # Test fails due to missing arguments for trfs2arrays().
   doCheck = false;
 
-  pythonImportsCheck = [
-    "spacy_transformers"
-  ];
+  pythonImportsCheck = [ "spacy_transformers" ];
 
   passthru.tests.annotation = callPackage ./annotation-test { };
 
-  meta = with lib; {
+  meta = {
     description = "spaCy pipelines for pretrained BERT, XLNet and GPT-2";
     homepage = "https://github.com/explosion/spacy-transformers";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/explosion/spacy-transformers/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ nickcao ];
   };
 }

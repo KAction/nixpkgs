@@ -1,31 +1,66 @@
-{ lib, buildPythonPackage, fetchPypi, numpy, pytest, pyyaml }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+
+  # build-system
+  scikit-build-core,
+  numpy,
+  cmake,
+  ninja,
+  setuptools-scm,
+
+  # dependencies
+  typing-extensions,
+
+  # tests
+  pytestCheckHook,
+  pyyaml,
+}:
 
 buildPythonPackage rec {
   pname = "spglib";
-  version = "2.0.1";
+  version = "2.6.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-9fHKuDWuwbjXjL9CmJxUWWoomkqDP93J8MX1XKwbwsE=";
+  src = fetchFromGitHub {
+    owner = "spglib";
+    repo = "spglib";
+    tag = "v${version}";
+    hash = "sha256-rmQYFFfpyUhT9pfQZk1fN5tZWTg40wwtszhPhiZpXs4=";
   };
 
-  propagatedBuildInputs = [ numpy ];
+  build-system = [
+    scikit-build-core
+    numpy
+    cmake
+    ninja
+    setuptools-scm
+  ];
 
-  checkInputs = [ pytest pyyaml ];
+  dontUseCmakeConfigure = true;
 
-  # pytestCheckHook doesn't work
-  # ImportError: cannot import name '_spglib' from partially initialized module 'spglib'
-  checkPhase = ''
-    pytest
-  '';
+  dependencies =
+    [
+      numpy
+    ]
+    ++ lib.optionals (pythonOlder "3.13") [
+      typing-extensions
+    ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    pyyaml
+  ];
 
   pythonImportsCheck = [ "spglib" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python bindings for C library for finding and handling crystal symmetries";
     homepage = "https://spglib.github.io/spglib/";
     changelog = "https://github.com/spglib/spglib/raw/v${version}/ChangeLog";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ psyanticy ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ psyanticy ];
   };
 }

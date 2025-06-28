@@ -1,67 +1,67 @@
-{ lib
-, ascii-magic
-, buildPythonPackage
-, fetchFromGitHub
-, pillow
-, pytest-httpserver
-, pytestCheckHook
-, pythonOlder
-, requests
-, oauthlib
+{
+  lib,
+  ascii-magic,
+  buildPythonPackage,
+  fetchFromGitHub,
+  oauthlib,
+  pillow,
+  pytest-cov-stub,
+  pytestCheckHook,
+  pythonOlder,
+  requests,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "weconnect";
-  version = "0.48.3";
-  format = "setuptools";
+  version = "0.60.8";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "tillsteinbach";
     repo = "WeConnect-python";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-GXTjG/3Gk58C6TxKrgtblUZI+xf7Te9OA8HnDvNEIvA=";
+    tag = "v${version}";
+    hash = "sha256-o8g409R+3lXlwPiDFi9eCzTwcDcZhMEMcc8a1YvlomM=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace weconnect/__version.py \
+      --replace-fail "0.0.0dev" "${version}"
+    substituteInPlace setup.py \
+      --replace-fail "setup_requires=SETUP_REQUIRED" "setup_requires=[]" \
+      --replace-fail "tests_require=TEST_REQUIRED" "tests_require=[]"
+    substituteInPlace pytest.ini \
+      --replace-fail "required_plugins = pytest-cov" ""
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     oauthlib
     requests
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     Images = [
       ascii-magic
       pillow
     ];
   };
 
-  checkInputs = [
-    pytest-httpserver
+  nativeCheckInputs = [
+    pytest-cov-stub
     pytestCheckHook
   ];
 
-  postPatch = ''
-    substituteInPlace weconnect/__version.py \
-      --replace "develop" "${version}"
-    substituteInPlace setup.py \
-      --replace "setup_requires=SETUP_REQUIRED," "setup_requires=[]," \
-      --replace "tests_require=TEST_REQUIRED," "tests_require=[],"
-    substituteInPlace image_extra_requirements.txt \
-      --replace "pillow~=9.2.0" "pillow"
-    substituteInPlace pytest.ini \
-      --replace "--cov=weconnect --cov-config=.coveragerc --cov-report html" "" \
-      --replace "pytest-cov" ""
-  '';
-
-  pythonImportsCheck = [
-    "weconnect"
-  ];
+  pythonImportsCheck = [ "weconnect" ];
 
   meta = with lib; {
     description = "Python client for the Volkswagen WeConnect Services";
     homepage = "https://github.com/tillsteinbach/WeConnect-python";
-    license = with licenses; [ mit ];
+    changelog = "https://github.com/tillsteinbach/WeConnect-python/releases/tag/v${version}";
+    license = licenses.mit;
     maintainers = with maintainers; [ fab ];
   };
 }

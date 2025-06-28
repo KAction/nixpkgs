@@ -1,89 +1,116 @@
-{ lib
-, buildPythonPackage
-, aiohttp
-, bitarray
-, chacha20poly1305-reuseable
-, cryptography
-, deepdiff
-, fetchFromGitHub
-, mediafile
-, miniaudio
-, netifaces
-, protobuf
-, pytest-aiohttp
-, pytest-asyncio
-, pytest-timeout
-, pytestCheckHook
-, pythonOlder
-, requests
-, srptools
-, zeroconf
+{
+  lib,
+  buildPythonPackage,
+  aiohttp,
+  async-timeout,
+  chacha20poly1305-reuseable,
+  cryptography,
+  deepdiff,
+  fetchFromGitHub,
+  ifaddr,
+  miniaudio,
+  protobuf,
+  pydantic,
+  pyfakefs,
+  pytest-aiohttp,
+  pytest-asyncio,
+  pytest-httpserver,
+  pytest-timeout,
+  pytestCheckHook,
+  pythonAtLeast,
+  requests,
+  setuptools,
+  srptools,
+  stdenv,
+  tabulate,
+  tinytag,
+  zeroconf,
 }:
 
 buildPythonPackage rec {
   pname = "pyatv";
-  version = "0.10.3";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "0.16.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "postlund";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-ng5KfW93p2/N2a6lnGbRJC6aWOQgTl0imBLdUIUlDic=";
+    repo = "pyatv";
+    tag = "v${version}";
+    hash = "sha256-yjPbSTmHoKnVwNArZw5mGf3Eh4Ei1+DkY9y2XRRy4YA=";
   };
 
   postPatch = ''
     substituteInPlace setup.py \
-      --replace "pytest-runner" ""
-    # Remove all version pinning
-
-    substituteInPlace base_versions.txt \
-      --replace "protobuf==3.19.1,<4" "protobuf>=3.19.0,<4"
+      --replace-fail "pytest-runner" ""
   '';
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [
+    "aiohttp"
+    "async_timeout"
+    "bitarray"
+    "chacha20poly1305-reuseable"
+    "cryptography"
+    "ifaddr"
+    "miniaudio"
+    "protobuf"
+    "requests"
+    "srptools"
+    "zeroconf"
+  ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     aiohttp
-    bitarray
+    async-timeout
     chacha20poly1305-reuseable
     cryptography
-    mediafile
+    ifaddr
     miniaudio
-    netifaces
     protobuf
+    pydantic
     requests
     srptools
+    tabulate
+    tinytag
     zeroconf
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     deepdiff
+    pyfakefs
     pytest-aiohttp
     pytest-asyncio
+    pytest-httpserver
     pytest-timeout
     pytestCheckHook
   ];
 
-  pytestFlagsArray = [
-    "--asyncio-mode=legacy"
-  ];
+  disabledTests =
+    lib.optionals (pythonAtLeast "3.12") [
+      # https://github.com/postlund/pyatv/issues/2365
+      "test_simple_dispatch"
+    ]
+    ++ lib.optionals (stdenv.hostPlatform.isDarwin) [
+      # tests/protocols/raop/test_raop_functional.py::test_stream_retransmission[raop_properties2-2-True] - assert False
+      "test_stream_retransmission"
+    ];
 
   disabledTestPaths = [
     # Test doesn't work in the sandbox
     "tests/protocols/companion/test_companion_auth.py"
+    "tests/protocols/mrp/test_mrp_auth.py"
   ];
 
   __darwinAllowLocalNetworking = true;
 
-  pythonImportsCheck = [
-    "pyatv"
-  ];
+  pythonImportsCheck = [ "pyatv" ];
 
   meta = with lib; {
     description = "Python client library for the Apple TV";
     homepage = "https://github.com/postlund/pyatv";
+    changelog = "https://github.com/postlund/pyatv/blob/v${version}/CHANGES.md";
     license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    maintainers = with maintainers; [ fab ];
   };
 }

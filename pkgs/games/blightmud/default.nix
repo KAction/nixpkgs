@@ -1,32 +1,39 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, rustPlatform
-, pkg-config
-, alsa-lib
-, openssl
-, withTTS ? false
-, speechd
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  rustPlatform,
+  pkg-config,
+  alsa-lib,
+  openssl,
+  withTTS ? false,
+  speechd-minimal,
 }:
-
 rustPlatform.buildRustPackage rec {
   pname = "blightmud";
-  version = "5.0.0";
+  version = "5.3.1";
 
   src = fetchFromGitHub {
     owner = pname;
     repo = pname;
     rev = "v${version}";
-    sha256 = "sha256-AGKlkNpNdyD2cJGs350/076Qd/8M/nmRAaHJyefFRgw=";
+    hash = "sha256-9GUul5EoejcnCQqq1oX+seBtxttYIUhgcexaZk+7chk=";
   };
 
-  cargoSha256 = "sha256-RI0J60DCspJ501VR3TpqD6pjzO6//Qq1NgQb45d32ks=";
+  useFetchCargoVendor = true;
+  cargoHash = "sha256-7cMd7pNWGV5DOSCLRW5fP3L1VnDTEsZZjhVz1AQLEXM=";
 
   buildFeatures = lib.optional withTTS "tts";
 
-  nativeBuildInputs = [ pkg-config rustPlatform.bindgenHook ];
+  nativeBuildInputs = [
+    pkg-config
+    rustPlatform.bindgenHook
+  ];
 
-  buildInputs = [ alsa-lib openssl ] ++ lib.optionals withTTS [ speechd ];
+  buildInputs =
+    [ openssl ]
+    ++ lib.optionals (withTTS && stdenv.hostPlatform.isLinux) [ speechd-minimal ]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [ alsa-lib ];
 
   checkFlags =
     let
@@ -43,13 +50,18 @@ rustPlatform.buildRustPackage rec {
         "test_lua_script"
         "timer_test"
         "validate_assertion_fail"
+        "regex_smoke_test"
+        "test_tls_init_verify_err"
+        "test_tls_init_no_verify"
+        "test_tls_init_verify"
       ];
       skipFlag = test: "--skip " + test;
     in
     builtins.concatStringsSep " " (builtins.map skipFlag skipList);
 
   meta = with lib; {
-    description = "A terminal MUD client written in Rust";
+    description = "Terminal MUD client written in Rust";
+    mainProgram = "blightmud";
     longDescription = ''
       Blightmud is a terminal client for connecting to Multi User Dungeon (MUD)
       games. It is written in Rust and supports TLS, GMCP, MSDP, MCCP2, tab
@@ -62,6 +74,6 @@ rustPlatform.buildRustPackage rec {
     homepage = "https://github.com/Blightmud/Blightmud";
     license = licenses.gpl3Plus;
     maintainers = with maintainers; [ cpu ];
-    platforms = platforms.linux;
+    platforms = platforms.linux ++ platforms.darwin;
   };
 }

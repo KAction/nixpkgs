@@ -1,65 +1,85 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, setuptools-scm
-, importlib-metadata
-, dbus-python
-, jaraco_classes
-, jeepney
-, secretstorage
-, pytestCheckHook
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  installShellFiles,
+  setuptools-scm,
+  shtab,
+  importlib-metadata,
+  jaraco-classes,
+  jaraco-context,
+  jaraco-functools,
+  jeepney,
+  secretstorage,
+  pyfakefs,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "keyring";
-  version = "23.9.3";
-  format = "pyproject";
-  disabled = pythonOlder "3.7";
+  version = "25.6.0";
+  pyproject = true;
+  disabled = pythonOlder "3.8";
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-abAd2DxC9ZAlD+eh9QP8IpsU3oOFcxSxkzo92/WVxKU=";
+  src = fetchFromGitHub {
+    owner = "jaraco";
+    repo = "keyring";
+    tag = "v${version}";
+    hash = "sha256-qu9HAlZMLlIVs8c9ClzWUljezhrt88gu1kouklMNxMY=";
   };
 
+  build-system = [ setuptools-scm ];
+
   nativeBuildInputs = [
-    setuptools-scm
+    installShellFiles
+    shtab
   ];
 
-  propagatedBuildInputs = [
-    jaraco_classes
-  ] ++ lib.optionals stdenv.isLinux [
-    jeepney
-    secretstorage
-  ] ++ lib.optionals (pythonOlder "3.10") [
-    importlib-metadata
-  ];
+  dependencies =
+    [
+      jaraco-classes
+      jaraco-context
+      jaraco-functools
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [
+      jeepney
+      secretstorage
+    ]
+    ++ lib.optionals (pythonOlder "3.12") [ importlib-metadata ];
 
+  postInstall = ''
+    installShellCompletion --cmd keyring \
+      --bash <($out/bin/keyring --print-completion bash) \
+      --zsh <($out/bin/keyring --print-completion zsh)
+  '';
 
   pythonImportsCheck = [
     "keyring"
     "keyring.backend"
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pyfakefs
     pytestCheckHook
   ];
 
-  disabledTests = [
-    # E       ValueError: too many values to unpack (expected 1)
-    "test_entry_point"
-  ];
-
-  disabledTestPaths = [
-    "tests/backends/test_macOS.py"
-  ];
+  disabledTestPaths =
+    [ "tests/backends/test_macOS.py" ]
+    # These tests fail when sandboxing is enabled because they are unable to get a password from keychain.
+    ++ lib.optional stdenv.hostPlatform.isDarwin "tests/test_multiprocess.py";
 
   meta = with lib; {
     description = "Store and access your passwords safely";
-    homepage    = "https://github.com/jaraco/keyring";
-    license     = licenses.mit;
-    maintainers = with maintainers; [ lovek323 dotlambda ];
-    platforms   = platforms.unix;
+    homepage = "https://github.com/jaraco/keyring";
+    changelog = "https://github.com/jaraco/keyring/blob/${src.tag}/NEWS.rst";
+    license = licenses.mit;
+    mainProgram = "keyring";
+    maintainers = with maintainers; [
+      lovek323
+      dotlambda
+    ];
+    platforms = platforms.unix;
   };
 }

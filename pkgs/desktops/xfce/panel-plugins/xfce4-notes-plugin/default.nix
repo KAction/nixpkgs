@@ -1,46 +1,63 @@
-{ lib
-, stdenv
-, fetchurl
-, pkg-config
-, intltool
-, xfce4-panel
-, libxfce4ui
-, xfconf
-, gitUpdater
+{
+  stdenv,
+  lib,
+  fetchFromGitLab,
+  gettext,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  wrapGAppsHook3,
+  glib,
+  gtk3,
+  gtksourceview4,
+  libxfce4ui,
+  libxfce4util,
+  xfce4-panel,
+  xfconf,
+  gitUpdater,
 }:
 
-let
-  category = "panel-plugins";
-in stdenv.mkDerivation rec {
-  pname  = "xfce4-notes-plugin";
-  version = "1.9.0";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "xfce4-notes-plugin";
+  version = "1.12.0";
 
-  src = fetchurl {
-    url = "mirror://xfce/src/${category}/${pname}/${lib.versions.majorMinor version}/${pname}-${version}.tar.bz2";
-    sha256 = "sha256-E/kJyUi2Oflt5kz3k+t0yxd5WJIB05M+/yFO6PNasIg=";
+  src = fetchFromGitLab {
+    domain = "gitlab.xfce.org";
+    owner = "panel-plugins";
+    repo = "xfce4-notes-plugin";
+    tag = "xfce4-notes-plugin-${finalAttrs.version}";
+    hash = "sha256-q8XQSLhnD7rnRfmNEunc4rKpFSWg9Ja4W7fs5lrnhZ0=";
   };
 
+  strictDeps = true;
+
   nativeBuildInputs = [
+    gettext
+    meson
+    ninja
     pkg-config
-    intltool
+    vala
+    wrapGAppsHook3
   ];
 
   buildInputs = [
+    glib
+    gtk3
+    gtksourceview4
     libxfce4ui
+    libxfce4util
     xfce4-panel
     xfconf
   ];
 
-  passthru.updateScript = gitUpdater {
-    url = "https://gitlab.xfce.org/panel-plugins/${pname}";
-    rev-prefix = "${pname}-";
-  };
+  passthru.updateScript = gitUpdater { rev-prefix = "xfce4-notes-plugin-"; };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://docs.xfce.org/panel-plugins/xfce4-notes-plugin";
     description = "Sticky notes plugin for Xfce panel";
-    license = licenses.gpl2Plus;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ ] ++ teams.xfce.members;
+    license = lib.licenses.gpl2Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.xfce ];
   };
-}
+})

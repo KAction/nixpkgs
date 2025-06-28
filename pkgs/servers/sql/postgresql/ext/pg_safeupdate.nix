@@ -1,27 +1,52 @@
-{ lib, stdenv, fetchFromGitHub, postgresql }:
+{
+  fetchFromGitHub,
+  lib,
+  postgresql,
+  postgresqlBuildExtension,
+}:
 
-stdenv.mkDerivation rec {
+with {
+  "13" = {
+    version = "1.4";
+    hash = "sha256-1cyvVEC9MQGMr7Tg6EUbsVBrMc8ahdFS3+CmDkmAq4Y=";
+  };
+  "14" = {
+    version = "1.5";
+    hash = "sha256-RRSpkWLFuif+6RCncnsb1NnjKnIIRY9KgebKkjCN5cs=";
+  };
+  "15" = {
+    version = "1.5";
+    hash = "sha256-RRSpkWLFuif+6RCncnsb1NnjKnIIRY9KgebKkjCN5cs=";
+  };
+  "16" = {
+    version = "1.5";
+    hash = "sha256-RRSpkWLFuif+6RCncnsb1NnjKnIIRY9KgebKkjCN5cs=";
+  };
+  "17" = {
+    version = "1.5";
+    hash = "sha256-RRSpkWLFuif+6RCncnsb1NnjKnIIRY9KgebKkjCN5cs=";
+  };
+}
+."${lib.versions.major postgresql.version}"
+  or (throw "pg_safeupdate: version specification for pg ${postgresql.version} missing.");
+
+postgresqlBuildExtension rec {
   pname = "pg-safeupdate";
-  version = "1.4";
-
-  buildInputs = [ postgresql ];
+  inherit version;
 
   src = fetchFromGitHub {
-    owner  = "eradman";
-    repo   = pname;
-    rev    = version;
-    sha256 = "sha256-1cyvVEC9MQGMr7Tg6EUbsVBrMc8ahdFS3+CmDkmAq4Y=";
+    owner = "eradman";
+    repo = "pg-safeupdate";
+    tag = version;
+    inherit hash;
   };
 
-  installPhase = ''
-    mkdir -p $out/bin # for buildEnv, see https://github.com/NixOS/nixpkgs/issues/22653
-    install -D safeupdate.so -t $out/lib
-  '';
-
-  meta = with lib; {
-    description = "A simple extension to PostgreSQL that requires criteria for UPDATE and DELETE";
-    homepage    = "https://github.com/eradman/pg-safeupdate";
-    platforms   = postgresql.meta.platforms;
-    license     = licenses.postgresql;
+  meta = {
+    description = "Simple extension to PostgreSQL that requires criteria for UPDATE and DELETE";
+    homepage = "https://github.com/eradman/pg-safeupdate";
+    changelog = "https://github.com/eradman/pg-safeupdate/raw/${src.rev}/NEWS";
+    platforms = postgresql.meta.platforms;
+    maintainers = with lib.maintainers; [ wolfgangwalther ];
+    license = lib.licenses.postgresql;
   };
 }

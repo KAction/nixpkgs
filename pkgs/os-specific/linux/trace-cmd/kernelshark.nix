@@ -1,23 +1,50 @@
-{ lib, mkDerivation, fetchgit, qtbase, cmake, asciidoc
-, docbook_xsl, json_c, mesa_glu, freeglut, trace-cmd, pkg-config
-, libtraceevent, libtracefs, freefont_ttf
+{
+  lib,
+  stdenv,
+  fetchzip,
+  qtbase,
+  qtscxml,
+  cmake,
+  json_c,
+  mesa_glu,
+  libglut,
+  trace-cmd,
+  pkg-config,
+  libtraceevent,
+  libtracefs,
+  freefont_ttf,
+  wrapQtAppsHook,
+  qtwayland,
 }:
 
-mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "kernelshark";
-  version = "2.1.1";
+  version = "2.4.0";
 
-  src = fetchgit {
-    url = "https://git.kernel.org/pub/scm/utils/trace-cmd/kernel-shark.git/";
-    rev = "kernelshark-v${version}";
-    sha256 = "sha256-1M35y3EkMHbGkVv93Xwo4zApvy9usIcz1spm5Z+1iUs=";
+  src = fetchzip {
+    url = "https://git.kernel.org/pub/scm/utils/trace-cmd/kernel-shark.git/snapshot/kernelshark-v${finalAttrs.version}.tar.gz";
+    hash = "sha256-OT6ClyZRE+pxWwm+sfzvN3CnoCIyxcAiVsi1fdzaT4M=";
   };
 
   outputs = [ "out" ];
 
-  nativeBuildInputs = [ pkg-config cmake ];
+  nativeBuildInputs = [
+    pkg-config
+    cmake
+    wrapQtAppsHook
+  ];
 
-  buildInputs = [ qtbase json_c mesa_glu freeglut libtraceevent libtracefs trace-cmd ];
+  buildInputs = [
+    qtbase
+    qtscxml
+    qtwayland
+    json_c
+    mesa_glu
+    libglut
+    libtraceevent
+    libtracefs
+    trace-cmd
+  ];
 
   cmakeFlags = [
     "-D_INSTALL_PREFIX=${placeholder "out"}"
@@ -28,9 +55,9 @@ mkDerivation rec {
 
   meta = with lib; {
     description = "GUI for trace-cmd which is an interface for the Linux kernel ftrace subsystem";
-    homepage    = "https://kernelshark.org/";
-    license     = licenses.gpl2;
-    platforms   = platforms.linux;
+    homepage = "https://kernelshark.org/";
+    license = licenses.gpl2Only;
+    platforms = platforms.linux;
     maintainers = with maintainers; [ basvandijk ];
   };
-}
+})

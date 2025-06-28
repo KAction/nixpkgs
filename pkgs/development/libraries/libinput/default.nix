@@ -1,27 +1,30 @@
-{ lib
-, stdenv
-, fetchFromGitLab
-, gitUpdater
-, pkg-config
-, meson
-, ninja
-, libevdev
-, mtdev
-, udev
-, libwacom
-, documentationSupport ? false
-, doxygen
-, graphviz
-, runCommand
-, eventGUISupport ? false
-, cairo
-, glib
-, gtk3
-, testsSupport ? false
-, check
-, valgrind
-, python3
-, nixosTests
+{
+  lib,
+  stdenv,
+  fetchFromGitLab,
+  gitUpdater,
+  pkg-config,
+  meson,
+  ninja,
+  libevdev,
+  mtdev,
+  udev,
+  libwacom,
+  documentationSupport ? false,
+  doxygen,
+  graphviz,
+  runCommand,
+  eventGUISupport ? false,
+  cairo,
+  glib,
+  gtk3,
+  testsSupport ? false,
+  check,
+  valgrind,
+  python3,
+  nixosTests,
+  wayland-scanner,
+  udevCheckHook,
 }:
 
 let
@@ -29,11 +32,13 @@ let
 
   sphinx-build =
     let
-      env = python3.withPackages (pp: with pp; [
-        sphinx
-        recommonmark
-        sphinx-rtd-theme
-      ]);
+      env = python3.withPackages (
+        pp: with pp; [
+          sphinx
+          recommonmark
+          sphinx-rtd-theme
+        ]
+      );
     in
     # Expose only the sphinx-build binary to avoid contaminating
     # everything with Sphinx’s Python environment.
@@ -45,54 +50,66 @@ in
 
 stdenv.mkDerivation rec {
   pname = "libinput";
-  version = "1.21.0";
+  version = "1.28.1";
 
-  outputs = [ "bin" "out" "dev" ];
+  outputs = [
+    "bin"
+    "out"
+    "dev"
+  ];
 
   src = fetchFromGitLab {
     domain = "gitlab.freedesktop.org";
     owner = "libinput";
     repo = "libinput";
     rev = version;
-    sha256 = "R94BdrjI4szNbVtQ+ydRNUg9clR8mkRL7+GE9b2FcDs=";
+    hash = "sha256-kte5BzGEz7taW/ccnxmkJjXn3FeikzuD6Hm10l+X7c0=";
   };
 
   patches = [
     ./udev-absolute-path.patch
   ];
 
-  nativeBuildInputs = [
-    pkg-config
-    meson
-    ninja
-  ] ++ lib.optionals documentationSupport [
-    doxygen
-    graphviz
-    sphinx-build
-  ];
+  nativeBuildInputs =
+    [
+      pkg-config
+      meson
+      ninja
+      udevCheckHook
+    ]
+    ++ lib.optionals documentationSupport [
+      doxygen
+      graphviz
+      sphinx-build
+    ];
 
-  buildInputs = [
-    libevdev
-    mtdev
-    libwacom
-    (python3.withPackages (pp: with pp; [
-      pp.libevdev # already in scope
-      pyudev
-      pyyaml
-      setuptools
-    ]))
-  ] ++ lib.optionals eventGUISupport [
-    # GUI event viewer
-    cairo
-    glib
-    gtk3
-  ];
+  buildInputs =
+    [
+      libevdev
+      mtdev
+      libwacom
+      (python3.withPackages (
+        pp: with pp; [
+          pp.libevdev # already in scope
+          pyudev
+          pyyaml
+          setuptools
+        ]
+      ))
+    ]
+    ++ lib.optionals eventGUISupport [
+      # GUI event viewer
+      cairo
+      glib
+      gtk3
+      wayland-scanner
+    ];
 
   propagatedBuildInputs = [
     udev
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     check
     valgrind
   ];
@@ -107,14 +124,16 @@ stdenv.mkDerivation rec {
 
   doCheck = testsSupport && stdenv.hostPlatform == stdenv.buildPlatform;
 
+  doInstallCheck = true;
+
   postPatch = ''
     patchShebangs \
       test/symbols-leak-test \
       test/check-leftover-udev-rules.sh \
       test/helper-copy-and-exec-from-tmp.sh
 
-    # Don't create an empty /etc directory.
-    sed -i "/install_subdir('libinput', install_dir : dir_etc)/d" meson.build
+    # Don't create an empty directory under /etc.
+    sed -i "/install_emptydir(dir_etc \/ 'libinput')/d" meson.build
   '';
 
   passthru = {
@@ -128,9 +147,12 @@ stdenv.mkDerivation rec {
 
   meta = with lib; {
     description = "Handles input devices in Wayland compositors and provides a generic X.Org input driver";
+    mainProgram = "libinput";
     homepage = "https://www.freedesktop.org/wiki/Software/libinput/";
     license = licenses.mit;
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ codyopel ] ++ teams.freedesktop.members;
+    platforms = platforms.linux;
+    maintainers = with maintainers; [ codyopel ];
+    teams = [ teams.freedesktop ];
+    changelog = "https://gitlab.freedesktop.org/libinput/libinput/-/releases/${version}";
   };
 }

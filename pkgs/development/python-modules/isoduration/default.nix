@@ -1,11 +1,12 @@
-{ lib
-, arrow
-, buildPythonPackage
-, fetchFromGitHub
-, hypothesis
-, isodate
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  arrow,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hypothesis,
+  isodate,
+  pytestCheckHook,
+  pythonOlder,
 }:
 
 buildPythonPackage rec {
@@ -17,16 +18,14 @@ buildPythonPackage rec {
 
   src = fetchFromGitHub {
     owner = "bolsote";
-    repo = pname;
+    repo = "isoduration";
     rev = version;
-    sha256 = "sha256-6LqsH+3V/K0s2YD1gvmelo+cCH+yCAmmyTYGhUegVdk=";
+    hash = "sha256-6LqsH+3V/K0s2YD1gvmelo+cCH+yCAmmyTYGhUegVdk=";
   };
 
-  propagatedBuildInputs = [
-    arrow
-  ];
+  propagatedBuildInputs = [ arrow ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     hypothesis
     isodate
     pytestCheckHook
@@ -37,9 +36,7 @@ buildPythonPackage rec {
     "tests/test_benchmark.py"
   ];
 
-  pythonImportsCheck = [
-    "isoduration"
-  ];
+  pythonImportsCheck = [ "isoduration" ];
 
   meta = with lib; {
     description = "Library for operations with ISO 8601 durations";

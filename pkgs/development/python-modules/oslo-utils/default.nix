@@ -1,35 +1,56 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, ddt
-, debtcollector
-, eventlet
-, fixtures
-, iso8601
-, netaddr
-, netifaces
-, oslo-i18n
-, oslotest
-, packaging
-, pbr
-, pyparsing
-, pytz
-, stestr
-, testscenarios
-, pyyaml
-, iana-etc
-, libredirect
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+
+  # build-system
+  pbr,
+  setuptools,
+
+  # dependencies
+  debtcollector,
+  iso8601,
+  netaddr,
+  netifaces,
+  oslo-i18n,
+  packaging,
+  psutil,
+  pyparsing,
+  pytz,
+  tzdata,
+
+  # tests
+  ddt,
+  eventlet,
+  fixtures,
+  iana-etc,
+  libredirect,
+  libxcrypt-legacy,
+  oslotest,
+  pyyaml,
+  qemu-utils,
+  replaceVars,
+  stdenv,
+  stestr,
+  testscenarios,
 }:
 
 buildPythonPackage rec {
   pname = "oslo-utils";
-  version = "6.0.1";
+  version = "9.0.0";
+  pyproject = true;
 
   src = fetchPypi {
-    pname = "oslo.utils";
+    pname = "oslo_utils";
     inherit version;
-    sha256 = "sha256-mwRU+ZQV0MqsXIYFNxbXRtGY7Oxm5nLY5eY4a2+6orY=";
+    hash = "sha256-1FobkOoUlliVYtOP6EP9p/okf5p+YXhIhZkdIPtmOkM=";
   };
+
+  patches = [
+    (replaceVars ./ctypes.patch {
+      crypt = "${lib.getLib libxcrypt-legacy}/lib/libcrypt${stdenv.hostPlatform.extensions.sharedLibrary}";
+    })
+  ];
 
   postPatch = ''
     # only a small portion of the listed packages are actually needed for running the tests
@@ -37,43 +58,56 @@ buildPythonPackage rec {
     rm test-requirements.txt
   '';
 
-  nativeBuildInputs = [ pbr ];
+  build-system = [
+    pbr
+    setuptools
+  ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     debtcollector
     iso8601
     netaddr
     netifaces
     oslo-i18n
     packaging
+    psutil
     pyparsing
     pytz
+    tzdata
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     ddt
     eventlet
     fixtures
+    libredirect.hook
     oslotest
+    pyyaml
+    qemu-utils
     stestr
     testscenarios
-    pyyaml
   ];
 
+  # disabled tests:
+  # https://bugs.launchpad.net/oslo.utils/+bug/2054134
+  # netaddr default behaviour changed to be stricter
   checkPhase = ''
     echo "nameserver 127.0.0.1" > resolv.conf
     export NIX_REDIRECTS=/etc/protocols=${iana-etc}/etc/protocols:/etc/resolv.conf=$(realpath resolv.conf)
-    export LD_PRELOAD=${libredirect}/lib/libredirect.so
 
-    stestr run
+    stestr run -e <(echo "
+      oslo_utils.tests.test_netutils.NetworkUtilsTest.test_is_valid_ip
+      oslo_utils.tests.test_netutils.NetworkUtilsTest.test_is_valid_ipv4
+      oslo_utils.tests.test_eventletutils.EventletUtilsTest.test_event_set_clear_timeout
+    ")
   '';
 
   pythonImportsCheck = [ "oslo_utils" ];
 
-  meta = with lib; {
+  meta = {
     description = "Oslo Utility library";
     homepage = "https://github.com/openstack/oslo.utils";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.openstack ];
   };
 }

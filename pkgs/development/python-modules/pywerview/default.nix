@@ -1,55 +1,57 @@
-{ lib
-, beautifulsoup4
-, buildPythonPackage
-, fetchFromGitHub
-, gssapi
-, impacket
-, ldap3
-, lxml
-, pyasn1
-, pythonOlder
+{
+  lib,
+  beautifulsoup4,
+  buildPythonPackage,
+  fetchFromGitHub,
+  impacket,
+  ldap3-bleeding-edge,
+  lxml,
+  pyasn1,
+  pycryptodome,
+  pythonOlder,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pywerview";
-  version = "0.4.0";
-  format = "setuptools";
+  version = "0.7.3";
+  pyproject = true;
 
   disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "the-useless-one";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-nrPhyBHW13dkXFC5YJfrkiztAxMw4KuEif0zCdjQEq0=";
+    repo = "pywerview";
+    tag = "v${version}";
+    hash = "sha256-ZIv0IW7oruMBwinXvH/n1YEtbBFyLb8h/Qlh4JxvV4k=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     beautifulsoup4
-    gssapi
     impacket
-    ldap3
+    ldap3-bleeding-edge
     lxml
+    pycryptodome
     pyasn1
   ];
+
+  optional-dependencies = {
+    kerberos = [ ldap3-bleeding-edge ] ++ ldap3-bleeding-edge.optional-dependencies.kerberos;
+  };
 
   # Module has no tests
   doCheck = false;
 
-  postPatch = ''
-    # https://github.com/the-useless-one/pywerview/pull/51
-    substituteInPlace setup.py \
-      --replace "bs4" "beautifulsoup4"
-  '';
-
-  pythonImportsCheck = [
-    "pywerview"
-  ];
+  pythonImportsCheck = [ "pywerview" ];
 
   meta = with lib; {
     description = "Module for PowerSploit's PowerView support";
     homepage = "https://github.com/the-useless-one/pywerview";
+    changelog = "https://github.com/the-useless-one/pywerview/releases/tag/v${version}";
     license = licenses.gpl3Plus;
     maintainers = with maintainers; [ fab ];
+    mainProgram = "pywerview";
   };
 }

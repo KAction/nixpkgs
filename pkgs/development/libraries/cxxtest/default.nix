@@ -1,6 +1,11 @@
-{ lib, python3Packages, fetchFromGitHub }:
+{
+  lib,
+  buildPythonApplication,
+  fetchFromGitHub,
+  ply,
+}:
 
-python3Packages.buildPythonApplication rec {
+buildPythonApplication rec {
   pname = "cxxtest";
   version = "4.4";
 
@@ -11,9 +16,9 @@ python3Packages.buildPythonApplication rec {
     sha256 = "19w92kipfhp5wvs47l0qpibn3x49sbmvkk91yxw6nwk6fafcdl17";
   };
 
-  sourceRoot = "source/python";
+  sourceRoot = "${src.name}/python";
 
-  checkInputs = [ python3Packages.ply ];
+  nativeCheckInputs = [ ply ];
 
   preCheck = ''
     cd ../
@@ -38,8 +43,9 @@ python3Packages.buildPythonApplication rec {
   dontWrapPythonPrograms = true;
 
   meta = with lib; {
-    homepage = "http://cxxtest.com";
+    homepage = "https://github.com/CxxTest/cxxtest";
     description = "Unit testing framework for C++";
+    mainProgram = "cxxtestgen";
     license = licenses.lgpl3;
     platforms = platforms.unix;
     maintainers = with maintainers; [ juliendehos ];

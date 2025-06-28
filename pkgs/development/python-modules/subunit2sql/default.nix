@@ -1,21 +1,25 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, mock
-, oslo-concurrency
-, oslo-db
-, pbr
-, python-dateutil
-, stestr
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  mock,
+  oslo-concurrency,
+  oslo-db,
+  pbr,
+  python-dateutil,
+  stestr,
+  testresources,
+  testscenarios,
 }:
 
 buildPythonPackage rec {
   pname = "subunit2sql";
   version = "1.10.0";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-c+Dg6moKiv30M0mmwGQSOEbc94gfH//ZnF7lnBgv8EU=";
+    hash = "sha256-c+Dg6moKiv30M0mmwGQSOEbc94gfH//ZnF7lnBgv8EU=";
   };
 
   propagatedBuildInputs = [
@@ -24,10 +28,12 @@ buildPythonPackage rec {
     python-dateutil
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     mock
     oslo-concurrency
     stestr
+    testresources
+    testscenarios
   ];
 
   checkPhase = ''
@@ -50,6 +56,8 @@ buildPythonPackage rec {
     description = "Command to Read a subunit file or stream and put the data in a SQL DB";
     homepage = "https://opendev.org/opendev/subunit2sql";
     license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    teams = [ teams.openstack ];
+    # version 1.10.0 is incomptaible with oslo-db 14.0.0
+    broken = true;
   };
 }

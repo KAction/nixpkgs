@@ -1,45 +1,41 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchFromGitHub
-, sqlite
-, isPyPy
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchurl,
+  setuptools,
+  sqlite,
 }:
 
 buildPythonPackage rec {
   pname = "apsw";
-  version = "3.39.3.0";
-  format = "setuptools";
+  version = "3.48.0.0";
+  pyproject = true;
 
-  disabled = isPyPy;
-
-  src = fetchFromGitHub {
-    owner = "rogerbinns";
-    repo = "apsw";
-    rev = "refs/tags/${version}";
-    hash = "sha256-rUG6TXGdF+XaRTFn2luffYw+1EEChxtLgQx2Gn+7J6A=";
+  # https://github.com/rogerbinns/apsw/issues/548
+  src = fetchurl {
+    url = "https://github.com/rogerbinns/apsw/releases/download/${version}/apsw-${version}.tar.gz";
+    hash = "sha256-iwvUW6vOQu2EiUuYWVaz5D3ePSLrj81fmLxoGRaTzRk=";
   };
 
-  buildInputs = [
-    sqlite
-  ];
+  build-system = [ setuptools ];
 
-  # Project uses custom test setup to exclude some tests by default, so using pytest
-  # requires more maintenance
-  # https://github.com/rogerbinns/apsw/issues/335
+  buildInputs = [ sqlite ];
+
+  # apsw explicitly doesn't use pytest
+  # see https://github.com/rogerbinns/apsw/issues/548#issuecomment-2891633403
   checkPhase = ''
-    ${python.interpreter} setup.py test
+    runHook preCheck
+    python -m apsw.tests
+    runHook postCheck
   '';
 
-  pythonImportsCheck = [
-    "apsw"
-  ];
+  pythonImportsCheck = [ "apsw" ];
 
-  meta = with lib; {
-    description = "A Python wrapper for the SQLite embedded relational database engine";
+  meta = {
+    changelog = "https://github.com/rogerbinns/apsw/blob/${version}/doc/changes.rst";
+    description = "Python wrapper for the SQLite embedded relational database engine";
     homepage = "https://github.com/rogerbinns/apsw";
-    license = licenses.zlib;
-    maintainers = with maintainers; [ gador ];
+    license = lib.licenses.zlib;
+    maintainers = with lib.maintainers; [ gador ];
   };
 }

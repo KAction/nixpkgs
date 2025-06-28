@@ -1,25 +1,17 @@
-{  buildPythonPackage
-, stestr
-}:
+{ buildPythonPackage, stestr }:
 
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "stestr-tests";
-  inherit (stestr) version;
-
-  src = stestr.src;
-
-  postPatch = ''
-    # only a small portion of the listed packages are actually needed for running the tests
-    # so instead of removing them one by one remove everything
-    rm test-requirements.txt
-  '';
+  inherit (stestr) version src;
+  format = "other";
 
   dontBuild = true;
   dontInstall = true;
+  preConfigure = ''
+    pythonOutputDistPhase() { touch $dist; }
+  '';
 
-  checkInputs = [
-    stestr
-  ];
+  nativeCheckInputs = [ stestr ];
 
   checkPhase = ''
     export PATH=$out/bin:$PATH

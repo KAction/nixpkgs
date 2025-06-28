@@ -1,47 +1,59 @@
-{ lib
-, asynctest
-, buildPythonPackage
-, click
-, fetchFromGitHub
-, justbackoff
-, pythonOlder
-, pytest-asyncio
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  click,
+  fetchFromGitHub,
+  justbackoff,
+  pyserial-asyncio-fast,
+  pythonOlder,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "nessclient";
-  version = "0.10.0";
-  format = "setuptools";
+  version = "1.2.0";
+  pyproject = true;
 
   disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "nickw444";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    sha256 = "sha256-zjUYdSHIMCB4cCAsOOQZ9YgmFTskzlTUs5z/xPFt01Q=";
+    repo = "nessclient";
+    tag = version;
+    hash = "sha256-AKZwKEwICuwKyCjIFxx4Zb2r9EriC0+3evBsBE9Btak=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail "version = '0.0.0-dev'" "version = '${version}'"
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     justbackoff
-    click
+    pyserial-asyncio-fast
   ];
 
-  checkInputs = [
-    asynctest
+  optional-dependencies = {
+    cli = [ click ];
+  };
+
+  nativeCheckInputs = [
     pytest-asyncio
     pytestCheckHook
   ];
 
-  pythonImportsCheck = [
-    "nessclient"
-  ];
+  pythonImportsCheck = [ "nessclient" ];
 
   meta = with lib; {
     description = "Python implementation/abstraction of the Ness D8x/D16x Serial Interface ASCII protocol";
     homepage = "https://github.com/nickw444/nessclient";
-    license = with licenses; [ mit ];
+    changelog = "https://github.com/nickw444/nessclient/releases/tag/${version}";
+    license = licenses.mit;
     maintainers = with maintainers; [ fab ];
+    mainProgram = "ness-cli";
   };
 }
