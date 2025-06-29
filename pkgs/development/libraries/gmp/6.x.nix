@@ -61,6 +61,11 @@ let
         "--build=${stdenv.buildPlatform.config}"
       ]
       ++ optional (cxx && stdenv.hostPlatform.isDarwin) "CPPFLAGS=-fexceptions"
+      # gcc-15 have c23 standard by default, where "void foo()" now means "void foo(void)".
+      #
+      # The "configure" script relies on c17 and below semantics for "long long
+      # reliability test 1" (defined in aclocal.m4)
+      ++ optional (stdenv.cc.isGNU && lib.versionAtLeast stdenv.cc.version "15.0") "CFLAGS=-std=c99"
       ++ optional (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.is64bit) "ABI=64"
       # to build a .dll on windows, we need --disable-static + --enable-shared
       # see https://gmplib.org/manual/Notes-for-Particular-Systems.html
