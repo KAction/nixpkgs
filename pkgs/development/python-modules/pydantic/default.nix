@@ -17,7 +17,6 @@
   mkdocs-redirects,
   mkdocstrings,
   mkdocstrings-python,
-  python,
   pydantic-extra-types,
   pydantic-settings,
   pyupgrade,
