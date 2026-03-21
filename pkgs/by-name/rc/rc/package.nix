@@ -7,9 +7,11 @@
   ed,
   ncurses,
   readline,
+  editline,
   installShellFiles,
   historySupport ? true,
   readlineSupport ? true,
+  editlineSupport ? false,
   lineEditingLibrary ?
     if (stdenv.hostPlatform.isDarwin || stdenv.hostPlatform.isStatic) then "null" else "readline",
 }:
@@ -24,10 +26,10 @@ assert lib.elem lineEditingLibrary [
 assert
   !(lib.elem lineEditingLibrary [
     "edit"
-    "editline"
     "vrl"
   ]); # broken
 assert (lineEditingLibrary == "readline") -> readlineSupport;
+assert (lineEditingLibrary == "editline") -> editlineSupport;
 stdenv.mkDerivation (finalAttrs: {
   pname = "rc";
   version = "unstable-2025-10-01";
@@ -60,9 +62,8 @@ stdenv.mkDerivation (finalAttrs: {
   buildInputs = [
     ncurses
   ]
-  ++ lib.optionals readlineSupport [
-    readline
-  ];
+  ++ lib.optional readlineSupport readline
+  ++ lib.optional editlineSupport editline;
 
   strictDeps = true;
 
