@@ -17,6 +17,7 @@
   mkdocs-redirects,
   mkdocstrings,
   mkdocstrings-python,
+  pydantic-docs,
   pydantic-extra-types,
   pydantic-settings,
   pyupgrade,
@@ -127,6 +128,7 @@ buildPythonPackage rec {
         mkdocstrings
         mkdocstrings-python
         pydantic
+        pydantic-docs
         pydantic-core
         pydantic-extra-types
         pydantic-settings
