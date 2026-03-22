@@ -14339,6 +14339,8 @@ self: super: with self; {
 
   pydantic-scim = callPackage ../development/python-modules/pydantic-scim { };
 
+  pydantic-docs = callPackage ../development/python-modules/pydantic-docs { };
+
   pydantic-settings = callPackage ../development/python-modules/pydantic-settings { };
 
   pydantic-zarr = callPackage ../development/python-modules/pydantic-zarr { };
