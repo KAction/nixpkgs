@@ -19,6 +19,7 @@
   pydantic-docs,
   pydantic-extra-types,
   pydantic-settings,
+  python,
   pyupgrade,
   ruff,
   tomli,
