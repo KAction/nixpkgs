@@ -53,6 +53,8 @@ in
         description = "Whether to run the dnscache caching dns server.";
       };
 
+      package = lib.mkPackageOption pkgs "djbdns" { };
+
       ip = lib.mkOption {
         default = "0.0.0.0";
         type = lib.types.str;
@@ -113,7 +115,7 @@ in
   ###### implementation
 
   config = lib.mkIf config.services.dnscache.enable {
-    environment.systemPackages = [ pkgs.djbdns ];
+    environment.systemPackages = [ cfg.package ];
     users.users.dnscache = {
       isSystemUser = true;
       group = "dnscache";
