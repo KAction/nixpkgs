@@ -1760,7 +1760,9 @@ runPhase() {
 
     # Evaluate the variable named $curPhase if it exists, otherwise the
     # function named $curPhase.
+    [[ $curPhase =~ ^(.*)Phase$ ]] && runHook "pre${BASH_REMATCH[1]^}"
     eval "${!curPhase:-$curPhase}"
+    [[ $curPhase =~ ^(.*)Phase$ ]] && runHook "post${BASH_REMATCH[1]^}"
 
     endTime=$(date +"%s")
 
