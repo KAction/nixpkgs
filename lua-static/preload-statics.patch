@@ -1,0 +1,85 @@
+--- a/src/Makefile	2026-10-22 00:58:14.792063431 +0000
++++ b/src/Makefile	2026-10-22 16:53:58.833956528 +0000
+@@ -27,7 +27,12 @@
+ 	lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o ltm.o  \
+ 	lundump.o lvm.o lzio.o
+ LIB_O=	lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
+-	lstrlib.o loadlib.o linit.o
++	lstrlib.o loadlib.o linit.o staticmods.o
++
++# Build knobs for statically compiled-in Lua C modules: link overrides
++# (MYCFLAGS/MYLIBS/MYLDFLAGS) baking the modules' search path and their thin
++# archive into the interpreter. Absent by default, so a plain build is a no-op.
++-include staticmods.mk
+ 
+ LUA_T=	lua
+ LUA_O=	lua.o
+--- a/src/linit.c	2026-10-22 00:58:14.790954393 +0000
++++ b/src/linit.c	2026-10-22 00:58:24.746465014 +0000
+@@ -14,6 +14,24 @@
+ #include "lauxlib.h"
+ 
+ 
++/*
++** Statically compiled-in modules. Defined in staticmods.c (default empty);
++** overwrite that file to register loaders without touching this patch.
++*/
++extern const luaL_Reg staticmods[];
++
++static void preload_statics (lua_State *L) {
++  const luaL_Reg *m;
++  lua_getglobal(L, "package");
++  lua_getfield(L, -1, "preload");
++  for (m = staticmods; m->name; m++) {
++    lua_pushcfunction(L, m->func);
++    lua_setfield(L, -2, m->name);
++  }
++  lua_pop(L, 2);  /* remove package.preload and package */
++}
++
++
+ static const luaL_Reg lualibs[] = {
+   {"", luaopen_base},
+   {LUA_LOADLIBNAME, luaopen_package},
+@@ -34,5 +52,6 @@
+     lua_pushstring(L, lib->name);
+     lua_call(L, 1, 0);
+   }
++  preload_statics(L);  /* package is open now, so package.preload exists */
+ }
+ 
+--- a/src/luaconf.h	2026-10-22 17:58:16.257095462 +0000
++++ b/src/luaconf.h	2026-10-22 17:58:30.287363314 +0000
+@@ -99,7 +99,13 @@
+ #define LUA_ROOT	"/usr/local/"
+ #define LUA_LDIR	LUA_ROOT "share/lua/5.1/"
+ #define LUA_CDIR	LUA_ROOT "lib/lua/5.1/"
+-#define LUA_PATH_DEFAULT  \
++/* Extra entries prepended to the module search path, injected at build time
++** (e.g. -DLUA_PATH_DEFAULT_EXTRA='"...;"'). Empty by default, so a plain build
++** is unchanged. Used to bake in statically-provided modules' Lua companions. */
++#ifndef LUA_PATH_DEFAULT_EXTRA
++#define LUA_PATH_DEFAULT_EXTRA ""
++#endif
++#define LUA_PATH_DEFAULT  LUA_PATH_DEFAULT_EXTRA \
+ 		"./?.lua;"  LUA_LDIR"?.lua;"  LUA_LDIR"?/init.lua;" \
+ 		            LUA_CDIR"?.lua;"  LUA_CDIR"?/init.lua"
+ #define LUA_CPATH_DEFAULT \
+--- /dev/null	2026-10-15 20:16:09.643417212 +0000
++++ b/src/staticmods.c	2026-10-22 00:58:38.546483656 +0000
+@@ -0,0 +1,15 @@
++/*
++** Statically compiled-in Lua modules, registered into package.preload by
++** linit.c:preload_statics(). This default definition is empty; override this
++** file (suckless config.h style) to add { "modname", luaopen_modname } rows
++** and matching extern declarations, then link the modules' objects in.
++*/
++
++#define LUA_LIB
++
++#include "lua.h"
++#include "lauxlib.h"
++
++const luaL_Reg staticmods[] = {
++  {NULL, NULL}
++};
