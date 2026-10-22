@@ -1,0 +1,42 @@
+--- a/src/luarocks/build/builtin.lua	2026-10-22 12:37:46.198329193 +0000
++++ b/src/luarocks/build/builtin.lua	2026-10-22 13:08:50.584030852 +0000
+@@ -235,17 +235,7 @@
+          return execute(variables.CC .. " " .. variables.CFLAGS, "-I" .. variables.LUA_INCDIR, "-c", source, "-o", object, _tl_table_unpack(extras))
+       end
+       compile_library = function(library, objects, libraries, libdirs)
+-         local extras = { _tl_table_unpack(objects) }
+-         add_flags(extras, "-L%s", libdirs)
+-         if cfg.gcc_rpath then
+-            add_flags(extras, "-Wl,-rpath,%s", libdirs)
+-         end
+-         add_flags(extras, "-l%s", libraries)
+-         if cfg.link_lua_explicitly then
+-            extras[#extras + 1] = "-L" .. variables.LUA_LIBDIR
+-            extras[#extras + 1] = "-llua"
+-         end
+-         return execute(variables.LD .. " " .. variables.LDFLAGS .. " " .. variables.LIBFLAG, "-o", library, _tl_table_unpack(extras))
++         return execute(variables.AR .. " rcs", library, _tl_table_unpack(objects))
+       end
+ 
+ 
+@@ -348,7 +338,7 @@
+             util.schedule_function(fs.delete, compile_temp_dir)
+          end
+ 
+-         local module_name = name:match("([^.]*)$") .. "." .. util.matchquote(cfg.lib_extension)
++         local module_name = name:match("([^.]*)$") .. "." .. util.matchquote(cfg.static_lib_extension)
+          if moddir ~= "" then
+             module_name = dir.path(moddir, module_name)
+          end
+--- a/src/luarocks/core/path.lua	2026-10-22 15:37:22.740149786 +0000
++++ b/src/luarocks/core/path.lua	2026-10-22 15:37:33.461102657 +0000
+@@ -60,6 +60,9 @@
+          exts[ext] = true
+       end
+    end
++   if cfg.static_lib_extension then
++      exts[cfg.static_lib_extension] = true
++   end
+ 
+    local name
+    for ext, _ in pairs(exts) do

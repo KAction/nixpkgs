@@ -76,6 +76,23 @@
 
 let
 
+  # Under a static toolchain the builtin builder cannot link a .so (the static
+  # crt rejects -shared). Use a luarocks that archives objects into a .a via ar
+  # instead. The staticness is only visible here, not on the build-platform
+  # luarocks that actually runs the build, so we patch that tool from here
+  # rather than in luarocks' own derivation (which keeps non-static builds
+  # untouched). The patch unconditionally archives, so it is only ever applied
+  # to this static-only instance.
+  luarocks_bootstrap' =
+    if lua.stdenv.hostPlatform.isStatic then
+      luarocks_bootstrap.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [
+          ../../tools/misc/luarocks/static-builtin.patch
+        ];
+      })
+    else
+      luarocks_bootstrap;
+
   # TODO fix warnings "Couldn't load rockspec for ..." during manifest
   # construction -- from initial investigation, appears it will require
   # upstream luarocks changes to fix cleanly (during manifest construction,
@@ -104,7 +121,7 @@ let
         nativeBuildInputs = [
           lua # for lua.h
           wrapLua
-          luarocks_bootstrap
+          luarocks_bootstrap'
         ]
         ++ nativeBuildInputs
         ++ lib.optionals self.doCheck self.nativeCheckInputs;
@@ -123,7 +140,7 @@ let
             # example externalDeps': [ { name = "CRYPTO"; dep = pkgs.openssl; } ]
             externalDeps' = lib.filter (dep: !lib.isDerivation dep) self.externalDeps;
           in
-          [ luarocks_bootstrap ] ++ buildInputs ++ (map (d: d.dep) externalDeps');
+          [ luarocks_bootstrap' ] ++ buildInputs ++ (map (d: d.dep) externalDeps');
 
         # propagate lua to active setup-hook in nix-shell
         propagatedBuildInputs = propagatedBuildInputs ++ [ lua ];
