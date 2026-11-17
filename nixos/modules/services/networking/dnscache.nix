@@ -128,11 +128,11 @@ in
       path = with pkgs; [
         bash
         daemontools
-        djbdns
+        cfg.package
       ];
       preStart = ''
         rm -rf /var/lib/dnscache
-        dnscache-conf dnscache dnscache /var/lib/dnscache ${config.services.dnscache.ip}
+        ${cfg.package}/bin/dnscache-conf dnscache dnscache /var/lib/dnscache ${config.services.dnscache.ip}
         rm -rf /var/lib/dnscache/root
         ln -sf ${dnscache-root} /var/lib/dnscache/root
       '';
